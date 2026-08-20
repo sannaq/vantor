@@ -440,7 +440,8 @@ async function loadCoins(){
     arr.sort(function(a,b){return b.score-a.score;});
     var top=arr.slice(0,12);
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
-      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+'<small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → ONEXCORE 코인 터미널에서 상세"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+    $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ window.open('https://sannaq.github.io/onexcore-dashboard/?s='+encodeURIComponent(tr.dataset.sym),'_blank','noopener'); }; });
     if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
     // 코인 지표 카드(BTC/ETH/SOL/총시총)
     var pick=function(id){return arr.find(function(c){return c.id===id;});};
