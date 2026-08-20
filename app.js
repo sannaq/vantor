@@ -235,7 +235,7 @@ window.setTune=setTune; window.resetTune=resetTune;
 function renderIdx(){
   var el=$('#idxstrip'); if(!el)return;
   el.innerHTML=IDX.map(function(x){ var pc=cls(x.c), col=x.c>0?'var(--up)':x.c<0?'var(--down)':'var(--flat)';
-    return '<div class="idx"><div class="nm">'+x.nm+'</div>'+sparkline(x.tr,96,44,col)
+    return '<div class="idx"><div class="nm">'+x.nm+' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span></div>'+sparkline(x.tr,96,44,col)
       +'<div class="v num '+pc+'">'+x.v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
       +'<div class="d num '+pc+'">'+arw(x.c)+' '+Math.abs(x.d).toFixed(2)+' ('+pctTxt(x.c)+')</div>'
       +'<div class="foot"><span>거래대금 '+x.val+'</span><span>'+(x.fx?'고가 1,363':'거래량 '+x.vol)+'</span></div></div>';
