@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   AUREUM Pro — app.js
-   - AUREUM DAY SCORE 100점 엔진 (스펙 §3~4)
+   VANTOR Pro — app.js
+   - VANTOR DAY SCORE 100점 엔진 (스펙 §3~4)
    - 데모 목데이터로 즉시 작동, KIS_PROXY 설정 시 실데이터로 확장
    ═══════════════════════════════════════════════════════════ */
 const KIS_PROXY=''; // ← 프록시 URL 넣으면 실데이터 모드(추후 연결)
@@ -21,7 +21,7 @@ function sparkline(data,w,h,color){
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 }
 
-/* ═══════════ AUREUM DAY SCORE 엔진 (100점) ═══════════ */
+/* ═══════════ VANTOR DAY SCORE 엔진 (100점) ═══════════ */
 function sVal(p){ return p>=99?10:p>=97?9:p>=95?8:p>=90?7:p>=80?5:p>=60?3:p>=40?2:0; }         // 거래대금 순위 백분위
 function sValInc(i){ return i>=300?10:i>=200?9:i>=150?8:i>=100?7:i>=70?6:i>=40?5:i>=20?3:i>0?1:0; } // 전일동시간대비 증가율
 function sAccel(x){ return x>=4?10:x>=3?9:x>=2.5?8:x>=2?7:x>=1.5?5:x>=1.2?3:x>=1?1:0; }          // 5분 가속도
@@ -301,7 +301,7 @@ function openStock(code){
         +'<div id="stab-score" style="display:none"></div>'
       +'</div>'
       +'<div>'
-        +'<div class="card"><div class="ch"><h2>AUREUM SCORE</h2></div><div class="pad" style="padding-top:12px">'
+        +'<div class="card"><div class="ch"><h2>VANTOR SCORE</h2></div><div class="pad" style="padding-top:12px">'
           +'<div style="display:flex;align-items:center;gap:16px"><div class="ring" style="background:conic-gradient(var(--gold) '+gaugeDeg+'deg, var(--line) 0)"><div class="rc"><b>'+r.score+'</b><br><span>/100</span></div></div>'
             +'<div><div style="font-size:18px;font-weight:800" class="'+grd[1]+'">'+grd[0]+'</div><div style="font-size:12px;color:var(--sub);margin-top:3px;line-height:1.4">'+(r.score>=80?'모멘텀·수급이 강하고 단기 추세가 살아있는 종목':'추세·수급을 함께 확인하며 접근')+'</div></div></div>'
           +'<div class="subs">'+Object.keys(subs).map(function(k){var v=subs[k];var g=gradeTxt(v);return '<div class="sub"><div class="sk">'+k+'</div><div class="sv">'+v+'</div><div class="sg '+g[1]+'">'+g[0]+'</div></div>';}).join('')+'</div>'
@@ -381,6 +381,58 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('
 /* ═══════════ 검색 ═══════════ */
 $('#q').oninput=function(){ var t=this.value.trim().toLowerCase(); if(!t)return; var hit=STK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.includes(t);}); if(hit){ /* 엔터 시 이동 */ } };
 $('#q').onkeydown=function(e){ if(e.key==='Enter'){ var t=this.value.trim().toLowerCase(); var hit=STK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.includes(t);}); if(hit)openStock(hit.c); } };
+
+/* ═══════════ 초기화 ═══════════ */
+/* ═══════════ 코인 모드 (CoinGecko 실시간) ═══════════ */
+let coinMode=false;
+function fmtBig(v){ v=+v||0; if(v>=1e12)return (v/1e12).toFixed(2)+'T'; if(v>=1e9)return (v/1e9).toFixed(2)+'B'; if(v>=1e6)return (v/1e6).toFixed(1)+'M'; if(v>=1e3)return (v/1e3).toFixed(1)+'K'; return Math.round(v).toLocaleString('en-US'); }
+function coinPx(p){ return '$'+(p>=1?(+p).toLocaleString('en-US',{maximumFractionDigits:2}):(+p).toPrecision(3)); }
+function cCol(ch){ return ch>=0?'#16b364':'#f6465d'; } // 코인=초록↑/빨강↓(크립토 관례)
+async function loadCoins(){
+  var rr=$('#coinRadar');
+  try{
+    var arr=await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&price_change_percentage=24h').then(r=>r.json());
+    if(!Array.isArray(arr)||!arr.length)throw 0;
+    var maxVol=Math.max.apply(null,arr.map(function(c){return c.total_volume||0;}))||1;
+    arr.forEach(function(c){ var mom=c.price_change_percentage_24h||0, turn=(c.total_volume||0)/(c.market_cap||1), volp=(c.total_volume||0)/maxVol;
+      var s1=Math.max(0,Math.min(45,(mom+5)/25*45)), s2=Math.max(0,Math.min(30,turn*260)), s3=volp*25;
+      c.score=Math.round(s1+s2+s3); });
+    arr.sort(function(a,b){return b.score-a.score;});
+    var top=arr.slice(0,12);
+    rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
+      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+'<small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+    if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
+    // 코인 지표 카드(BTC/ETH/SOL/총시총)
+    var pick=function(id){return arr.find(function(c){return c.id===id;});};
+    var cm=$('#coinMetrics'); if(cm){ var cards=['bitcoin','ethereum','solana'].map(function(id){var c=pick(id)||arr[0];var ch=c.price_change_percentage_24h||0;return '<div class="idx"><div class="nm">'+esc((c.symbol||'').toUpperCase())+' · '+esc(c.name)+'</div><div class="v num" style="color:'+cCol(ch)+'">'+coinPx(c.current_price)+'</div><div class="d num" style="color:'+cCol(ch)+'">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</div><div class="foot"><span>시총 $'+fmtBig(c.market_cap)+'</span><span>거래 $'+fmtBig(c.total_volume)+'</span></div></div>';}).join('');
+      cm.innerHTML='<div class="idxstrip" style="margin-bottom:0">'+cards+'<div class="idx"><div class="nm">🪙 코인 RADAR</div><div class="v" style="color:var(--gold);font-size:22px">'+top.length+'종목</div><div class="d" style="color:var(--sub)">실시간 스코어링</div><div class="foot"><span>CoinGecko</span><span>'+nowHM()+'</span></div></div></div>'; }
+  }catch(e){ rr.innerHTML='<tbody><tr><td style="color:var(--faint);padding:14px">코인 데이터를 불러오지 못했어요(잠시 후 자동 재시도)</td></tr></tbody>'; }
+  loadCoinMarket();
+}
+async function loadCoinMarket(){
+  var el=$('#coinMarket'); if(!el)return; var h='';
+  try{ var fg=await fetch('https://api.alternative.me/fng/?limit=1').then(r=>r.json()); var v=+fg.data[0].value, kc={'Extreme Fear':'극단적 공포','Fear':'공포','Neutral':'중립','Greed':'탐욕','Extreme Greed':'극단적 탐욕'}[fg.data[0].value_classification]||fg.data[0].value_classification;
+    h+='<div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:34px;font-weight:800;color:var(--gold)">'+v+'</span><span style="font-weight:800">'+kc+'</span></div><div style="height:9px;border-radius:5px;background:linear-gradient(90deg,#f6465d,#e0a83e,#16b364);position:relative;margin:10px 0"><i style="position:absolute;left:'+v+'%;top:-3px;width:4px;height:15px;background:var(--ink);border-radius:2px;transform:translateX(-2px)"></i></div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint)"><span>0 극단공포</span><span>50</span><span>100 극단탐욕</span></div>';
+  }catch(e){}
+  try{ var g=await fetch('https://api.coingecko.com/api/v3/global').then(r=>r.json()); var d=g.data, mc=d.total_market_cap.usd, ch=d.market_cap_change_percentage_24h_usd;
+    h+='<div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px">'
+      +'<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--sub)">전체 시가총액</span><b>$'+fmtBig(mc)+' <span style="color:'+cCol(ch)+'">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</span></b></div>'
+      +'<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--sub)">BTC 도미넌스</span><b>'+d.market_cap_percentage.btc.toFixed(1)+'%</b></div>'
+      +'<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--sub)">ETH 도미넌스</span><b>'+d.market_cap_percentage.eth.toFixed(1)+'%</b></div></div>';
+  }catch(e){}
+  el.innerHTML=h||'<div style="color:var(--faint);font-size:12px">시장 데이터를 불러오지 못했어요</div>';
+}
+function setMode(m){ coinMode=(m==='coin');
+  $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
+  var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
+  var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
+  var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
+  $$('.view').forEach(function(v){v.classList.remove('on');});
+  if(coinMode){ $('#v-coin').classList.add('on'); loadCoins(); }
+  else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+$$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
 /* ═══════════ 초기화 ═══════════ */
 renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews();

@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>AUREUM · 실시간 한국주식 분석</title>
-<meta name="description" content="AUREUM — 시장 자금 흐름·업종 강도·DAY TRADE RADAR로 지금 돈이 들어오는 종목을 실시간으로 포착하는 한국주식 분석 터미널."/>
+<title>VANTOR 반토르 · 실시간 주식·코인 분석</title>
+<meta name="description" content="VANTOR(반토르) — 시장 자금 흐름·업종 강도·DAY TRADE RADAR로 지금 돈이 들어오는 주식과 코인을 실시간으로 포착하는 분석 터미널."/>
 <style>
-  /* ===== AUREUM Pro — 디자인 토큰 ===== */
+  /* ===== VANTOR Pro — 디자인 토큰 ===== */
   :root{
     --bg:#f4f5f8;--panel:#ffffff;--panel2:#f7f8fa;--ink:#1a2230;--sub:#6b7686;--faint:#9aa4b2;
     --line:#e7eaf0;--line2:#eef1f6;
@@ -45,6 +45,10 @@
     border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 clamp(14px,3vw,34px);height:60px}
   .logo{display:flex;align-items:center;gap:8px;flex:0 0 auto}
   .logo .wm{font-weight:800;font-size:20px;letter-spacing:1.5px;color:var(--ink)}
+  .segmode{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:2px;flex:0 0 auto}
+  .segmode button{border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:800;color:var(--sub);padding:5px 13px;border-radius:7px;cursor:pointer}
+  .segmode button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.14)}
+  .segmode button.on[data-m="coin"]{color:var(--gold)}
   .menu{display:flex;gap:3px;flex:1;min-width:0;overflow-x:auto}
   .menu a{position:relative;padding:8px 13px;font-weight:700;font-size:13.5px;color:var(--sub);border-radius:9px;white-space:nowrap;cursor:pointer}
   .menu a:hover{color:var(--ink);background:var(--panel2)}
@@ -187,7 +191,8 @@
 <body>
 
 <nav class="nav">
-  <div class="logo"><svg width="27" height="27" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6c260"/><stop offset="1" stop-color="#b7902f"/></linearGradient></defs><path d="M12 2 L22 21.5 L15.2 21.5 L12 13.6 L8.8 21.5 L2 21.5 Z" fill="url(#lg)"/></svg><span class="wm">AUREUM</span></div>
+  <div class="logo"><svg width="27" height="27" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6c260"/><stop offset="1" stop-color="#b7902f"/></linearGradient></defs><path d="M12 2 L22 21.5 L15.2 21.5 L12 13.6 L8.8 21.5 L2 21.5 Z" fill="url(#lg)"/></svg><span class="wm">VANTOR</span></div>
+  <div class="segmode"><button class="on" data-m="stock">주식</button><button data-m="coin">코인</button></div>
   <div class="menu" id="menu">
     <a data-v="home" class="on">HOME</a>
     <a data-v="market">MARKET</a>
@@ -238,13 +243,13 @@
   <!-- ===== RADAR ===== -->
   <div class="view" id="v-radar">
     <div class="sec-title">🔥 DAY TRADE RADAR</div>
-    <p class="sec-sub">전 시장을 동일한 <b>AUREUM 100점</b> 공식으로 평가해, 지금 <b>돈이 몰리고 움직임이 강해지는</b> 종목 TOP을 포착합니다. 단순 등락률 순위가 아닙니다.</p>
+    <p class="sec-sub">전 시장을 동일한 <b>VANTOR 100점</b> 공식으로 평가해, 지금 <b>돈이 몰리고 움직임이 강해지는</b> 종목 TOP을 포착합니다. 단순 등락률 순위가 아닙니다.</p>
     <div id="tunePanel" style="margin-bottom:16px"></div>
     <div class="row a">
       <div class="card">
         <div class="ch"><h2>RADAR TOP 10</h2><div class="r"><span id="radarupd2">–</span><span id="mktfilter"></span></div></div>
         <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="fullRadar"></table></div>
-        <div style="font-size:11px;color:var(--faint);margin-top:10px">SCORE=AUREUM 100점 · 1M=1분 전 대비 순위 변화 · 압력=체결·호가 종합 · 상태 🚀SURGING ↑RISING →STEADY ⚠️COOLING</div></div>
+        <div style="font-size:11px;color:var(--faint);margin-top:10px">SCORE=VANTOR 100점 · 1M=1분 전 대비 순위 변화 · 압력=체결·호가 종합 · 상태 🚀SURGING ↑RISING →STEADY ⚠️COOLING</div></div>
       </div>
       <div class="card qv" id="qvCard"><div class="pad" id="quickView"></div></div>
     </div>
@@ -290,10 +295,27 @@
       임시로 기존 자료는 여기서 볼 수 있어요 → <a href="https://sannaq.github.io/stock-guide/" target="_blank" rel="noopener" style="color:var(--gold);font-weight:700">주식 자료 허브 열기 ↗</a>
     </div></div>
   </div>
+
+  <!-- ===== COIN (코인 모드) ===== -->
+  <div class="view" id="v-coin">
+    <div class="sec-title">🪙 COIN · 실시간 코인 시장</div>
+    <p class="sec-sub"><b>바이낸스·CoinGecko 실시간</b> 데이터로 지금 강한 코인을 봅니다. 코인은 프록시 없이 바로 실시간입니다.</p>
+    <div id="coinMetrics" style="margin-bottom:16px"></div>
+    <div class="row a">
+      <div class="card">
+        <div class="ch"><h2>🔥 COIN RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">지금 강한 코인</span></h2><div class="r"><span id="coinupd">–</span></div></div>
+        <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="coinRadar"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>😱 공포·탐욕 & 시장</h2></div>
+        <div class="pad" id="coinMarket"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <footer class="foot"><div class="in">
-  <span class="lg">◆ AUREUM</span>
+  <span class="lg">◆ VANTOR</span>
   <span style="color:var(--faint)">© 2026 · 교육용 분석 도구 · 투자 권유 아님</span>
   <span class="tk" id="footTicker"></span>
 </div></footer>
