@@ -135,11 +135,32 @@ const FLOW={
 
 /* ═══════════ RADAR 계산 ═══════════ */
 let RADAR=[]; let SEL=null; let _lastNews=[];
+let useReal=false, KISUNIV=null; // KIS 프록시 실데이터 유니버스
+function radarUniverse(){ return (useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK; }
+/* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
+async function loadKisRadar(){
+  if(!KIS_PROXY) return;
+  try{
+    var j=await fetch(KIS_PROXY+'/radar?mkt=KR&limit=40').then(function(r){return r.json();});
+    if(j&&Array.isArray(j.stocks)&&j.stocks.length){
+      // 이전 순위 저장 → 1분 순위변화(dRank) 계산
+      var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
+      j.stocks.forEach(function(s){ s.ccy='KRW'; });
+      KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
+      var db=$('#demoban'); if(db)db.style.display='none';
+      var sm=$$('.disc'); // 데모 문구는 남겨도 무방
+      renderRadar(); renderCats();
+    }
+  }catch(e){}
+}
 function computeRadar(){
-  RADAR=STK.map(function(s){ var r=aureumScore(s); return Object.assign({},s,{score:r.total,g:r.groups,reasons:r.reasons,grade:r.grade}); });
+  var uni=radarUniverse();
+  RADAR=uni.map(function(s){ var r=aureumScore(s); return Object.assign({},s,{score:r.total,g:r.groups,reasons:r.reasons,grade:r.grade}); });
   RADAR.sort(function(a,b){return b.score-a.score;});
-  RADAR.forEach(function(r,i){ r.rank=i+1; var st=radarStatus(r.dRank,r.cooling); r.status=st[0]; r.stcls=st[1]; });
-  if(!SEL) SEL=RADAR[0];
+  RADAR.forEach(function(r,i){ r.rank=i+1;
+    if(useReal && window._prevRank && window._prevRank[r.c]!=null){ r.dRank=window._prevRank[r.c]-r.rank; }
+    var st=radarStatus(r.dRank,r.cooling); r.status=st[0]; r.stcls=st[1]; });
+  if(!SEL||!radarUniverse().find(function(x){return x.c===SEL.c;})) SEL=RADAR[0];
 }
 function pressBar(g){ var n=Math.round(g.press/25*5); var h=''; for(var i=0;i<5;i++)h+='<i class="'+(i<n?'on':'')+'"></i>'; return '<span class="press">'+h+'</span>'; }
 function mvHtml(d){ if(d>0)return '<span class="mv up">↑ +'+d+'</span>'; if(d<0)return '<span class="mv down">↓ '+d+'</span>'; return '<span class="mv flat">→</span>'; }
@@ -441,7 +462,7 @@ async function loadCoins(){
     var top=arr.slice(0,12);
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
       +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → ONEXCORE 코인 터미널에서 상세"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
-    $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ window.open('https://sannaq.github.io/onexcore-dashboard/?s='+encodeURIComponent(tr.dataset.sym),'_blank','noopener'); }; });
+    $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openCoin(tr.dataset.sym); }; });
     if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
     // 코인 지표 카드(BTC/ETH/SOL/총시총)
     var pick=function(id){return arr.find(function(c){return c.id===id;});};
@@ -463,7 +484,17 @@ async function loadCoinMarket(){
   }catch(e){}
   el.innerHTML=h||'<div style="color:var(--faint);font-size:12px">시장 데이터를 불러오지 못했어요</div>';
 }
-function setMode(m){ coinMode=(m==='coin');
+function openCoin(sym){
+  var host=$('#coinHost'), body=$('#coinBody'); if(!host)return;
+  var src='https://sannaq.github.io/onexcore-dashboard/'+(sym?('?s='+encodeURIComponent(sym)):'?v=new');
+  host.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;font-size:13px">◀ 코인 목록</button><span style="color:var(--faint);font-size:12px">'+(sym?esc(sym)+' · ':'')+'ONEXCORE 코인 터미널</span><a href="'+src+'" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
+    +'<iframe src="'+src+'" style="width:100%;height:82vh;min-height:540px;border:1px solid var(--line);border-radius:14px;background:var(--panel)" loading="lazy" title="ONEXCORE"></iframe>';
+  host.style.display='block'; if(body)body.style.display='none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} if(body)body.style.display=''; }
+window.openCoin=openCoin; window.closeCoin=closeCoin;
+function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
   var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
@@ -477,4 +508,5 @@ $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.datas
 
 /* ═══════════ 초기화 ═══════════ */
 renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews();
+if(KIS_PROXY){ loadKisRadar(); setInterval(loadKisRadar,60000); } // 실데이터: 1분마다 RADAR 갱신
 setInterval(fetchNews,300000);
