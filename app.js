@@ -500,9 +500,15 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
   $$('.view').forEach(function(v){v.classList.remove('on');});
-  if(coinMode){ $('#v-coin').classList.add('on'); loadCoins(); }
+  if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); }
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
+}
+/* 코인 모드 = onexcore 터미널 통째로(VANTOR 색) */
+function openCoinTerminal(){
+  var v=$('#v-coin'); if(!v)return;
+  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급</span><a href="https://sannaq.github.io/onexcore-dashboard/" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
+    +'<iframe id="coinFrame" src="https://sannaq.github.io/onexcore-dashboard/" style="width:100%;height:calc(100vh - 150px);min-height:600px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
