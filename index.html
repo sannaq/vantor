@@ -43,9 +43,8 @@
   /* ===== 상단 네비 ===== */
   .nav{position:sticky;top:0;z-index:50;background:color-mix(in srgb,var(--panel) 88%,transparent);backdrop-filter:blur(12px);
     border-bottom:1px solid var(--line);display:flex;align-items:center;gap:22px;padding:0 clamp(14px,3vw,34px);height:60px}
-  .logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:19px;letter-spacing:.5px;flex:0 0 auto}
-  .logo .mk{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--gold2),var(--gold));display:grid;place-items:center;color:#3a2c07;font-size:15px;font-weight:900;transform:rotate(0deg)}
-  .logo b{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .logo{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .logo .wm{font-weight:800;font-size:20px;letter-spacing:1.5px;color:var(--ink)}
   .menu{display:flex;gap:3px;flex:1;min-width:0;overflow-x:auto}
   .menu a{position:relative;padding:8px 13px;font-weight:700;font-size:13.5px;color:var(--sub);border-radius:9px;white-space:nowrap;cursor:pointer}
   .menu a:hover{color:var(--ink);background:var(--panel2)}
@@ -156,22 +155,49 @@
   .sec-title{font-size:26px;font-weight:800;letter-spacing:-.8px;margin:6px 0 2px;display:flex;align-items:center;gap:10px}
   .sec-sub{color:var(--sub);font-size:13.5px;margin:0 0 18px}
   .pad{padding:16px 18px 18px}
+  /* STOCK 상세 */
+  .sgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:980px){.sgrid{grid-template-columns:1fr}}
+  .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:16px}
+  @media(max-width:900px){.metrics{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.metrics{grid-template-columns:repeat(2,1fr)}}
+  .met{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--panel)}
+  .met .k{font-size:10.5px;color:var(--faint);font-weight:700}
+  .met .v{font-size:16px;font-weight:800;margin-top:3px}
+  .met .s{font-size:10.5px;color:var(--sub);margin-top:1px}
+  .ring{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;position:relative;flex:0 0 auto}
+  .ring::after{content:"";position:absolute;inset:11px;border-radius:50%;background:var(--panel)}
+  .ring .rc{position:relative;text-align:center;z-index:1}
+  .ring .rc b{font-size:28px;font-weight:800;line-height:1;color:var(--gold)}
+  .ring .rc span{font-size:10px;color:var(--faint);font-weight:700}
+  .subs{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:14px}
+  @media(max-width:560px){.subs{grid-template-columns:repeat(2,1fr)}}
+  .sub{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 8px;text-align:center}
+  .sub .sk{font-size:10px;color:var(--faint);font-weight:700}
+  .sub .sv{font-size:17px;font-weight:800;margin-top:2px}
+  .sub .sg{font-size:9.5px;font-weight:700;margin-top:1px}
+  .stabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 0}
+  .stabs button{border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--sub);padding:9px 12px;cursor:pointer;position:relative}
+  .stabs button.on{color:var(--ink)}
+  .stabs button.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2.5px;background:var(--gold);border-radius:2px}
+  .schart{width:100%;height:230px;display:block;border:1px solid var(--line);border-radius:12px;margin-top:10px}
+  .cmprow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line2);font-size:13px;align-items:center}
 </style>
 </head>
 <body>
 
 <nav class="nav">
-  <div class="logo"><span class="mk">△</span> <span><b>AUREUM</b></span></div>
+  <div class="logo"><svg width="27" height="27" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6c260"/><stop offset="1" stop-color="#b7902f"/></linearGradient></defs><path d="M12 2 L22 21.5 L15.2 21.5 L12 13.6 L8.8 21.5 L2 21.5 Z" fill="url(#lg)"/></svg><span class="wm">AUREUM</span></div>
   <div class="menu" id="menu">
     <a data-v="home" class="on">HOME</a>
+    <a data-v="market">MARKET</a>
     <a data-v="radar">RADAR</a>
-    <a data-v="category">CATEGORY</a>
     <a data-v="stock">STOCK</a>
     <a data-v="news">NEWS</a>
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="관심종목">★</button></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="알림">🔔</button><button class="ibtn" title="관심종목">★</button><button class="ibtn" title="내 계정">👤</button></div>
 </nav>
 
 <div class="wrap">
@@ -184,30 +210,27 @@
   <div class="view on" id="v-home">
     <div class="row a">
       <div class="card">
-        <div class="ch"><h2>🔥 DAY TRADE RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">TOP 10</span></h2><div class="r"><span class="op" id="opmode" style="display:none">OPENING</span><span id="radarupd">–</span><span class="more" data-v="radar">더보기 ›</span></div></div>
-        <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="homeRadar"></table></div></div>
-      </div>
-      <div class="card">
-        <div class="ch"><h2>💰 SMART MONEY</h2><div class="r"><span class="more">더보기 ›</span></div></div>
-        <div class="pad" style="padding-top:10px" id="smartMoney"></div>
-      </div>
-    </div>
-
-    <div class="row b">
-      <div class="card" style="grid-column:1/3">
         <div class="ch"><h2>🌊 MARKET FLOW</h2><div class="r"><span id="flowupd">–</span></div></div>
         <div class="pad" id="marketFlow"></div>
       </div>
       <div class="card">
-        <div class="ch"><h2>📰 MARKET NEWS</h2><div class="r"><span class="more" data-v="news">더보기 ›</span></div></div>
-        <div class="pad" style="padding-top:8px"><div class="nlist" id="homeNews"><div style="color:var(--faint);font-size:12px;padding:8px 0">불러오는 중…</div></div></div>
+        <div class="ch"><h2>👑 오늘 강한 업종</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
+        <div class="pad" style="padding-top:8px" id="strongSectors"></div>
       </div>
     </div>
 
-    <div class="row" style="grid-template-columns:1fr">
+    <div class="row b">
       <div class="card">
-        <div class="ch"><h2>⚡ CATEGORY RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">업종 강도</span></h2><div class="r"><span class="more" data-v="category">더보기 ›</span></div></div>
-        <div class="pad"><div class="catgrid" id="homeCats"></div></div>
+        <div class="ch"><h2>🎯 DAY TRADE RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">TOP 10</span></h2><div class="r"><span class="op" id="opmode" style="display:none">OPENING</span><span class="more" data-v="radar">더보기 ›</span></div></div>
+        <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="homeRadar"></table></div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>💰 SMART MONEY</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
+        <div class="pad" style="padding-top:10px" id="smartMoney"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>📰 MARKET NEWS</h2><div class="r"><span class="more" data-v="news">더보기 ›</span></div></div>
+        <div class="pad" style="padding-top:8px"><div class="nlist" id="homeNews"><div style="color:var(--faint);font-size:12px;padding:8px 0">불러오는 중…</div></div></div>
       </div>
     </div>
   </div>
@@ -228,9 +251,9 @@
     <div class="row b" id="radarStats"></div>
   </div>
 
-  <!-- ===== CATEGORY ===== -->
-  <div class="view" id="v-category">
-    <div class="sec-title">⚡ CATEGORY RADAR</div>
+  <!-- ===== MARKET (업종 강도 · CATEGORY RADAR) ===== -->
+  <div class="view" id="v-market">
+    <div class="sec-title">📊 MARKET · 업종 강도</div>
     <p class="sec-sub">개별 종목이 튀기 전에 <b>업종 전체로 돈이 이동하는 흐름</b>을 봅니다. 각 업종의 강도 점수와 대장주·TOP3.</p>
     <div class="card"><div class="pad"><div class="catgrid" id="allCats"></div></div></div>
     <div class="row a" style="margin-top:16px">
