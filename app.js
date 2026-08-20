@@ -95,6 +95,25 @@ const STK=[
   {c:'042700',n:'한미반도체',mk:'KOSPI',px:84300,ch:4.90,valPct:86,valInc:140,accel:2.6,rvol:2.9,openPct:3.8,highGap:1.3,momPct:78,strength:129,bidRatio:62,progPct:3.9,invest:'foreign',breakout:3,dRank:6,cooling:false},
   {c:'196170',n:'알테오젠',mk:'KOSDAQ',px:342000,ch:3.10,valPct:83,valInc:110,accel:2.2,rvol:2.5,openPct:2.6,highGap:1.6,momPct:66,strength:124,bidRatio:60,progPct:0.9,invest:'one',breakout:3,dRank:2,cooling:false}
 ];
+// 미국 주식 데모 (ccy USD)
+const USTK=[
+  {c:'NVDA',n:'엔비디아',mk:'NASDAQ',ccy:'USD',px:194.69,ch:2.14,valPct:99,valInc:120,accel:2.1,rvol:2.4,openPct:2.3,highGap:1.2,momPct:82,strength:135,bidRatio:62,progPct:0,invest:'foreign',breakout:4,dRank:0,cooling:false},
+  {c:'TSLA',n:'테슬라',mk:'NASDAQ',ccy:'USD',px:304.92,ch:3.42,valPct:97,valInc:160,accel:2.6,rvol:2.8,openPct:3.6,highGap:1.0,momPct:86,strength:139,bidRatio:65,progPct:0,invest:'foreign',breakout:4,dRank:0,cooling:false},
+  {c:'AAPL',n:'애플',mk:'NASDAQ',ccy:'USD',px:229.87,ch:0.86,valPct:96,valInc:60,accel:1.6,rvol:1.7,openPct:0.9,highGap:1.9,momPct:58,strength:118,bidRatio:56,progPct:0,invest:'inst',breakout:3,dRank:0,cooling:false},
+  {c:'MSFT',n:'마이크로소프트',mk:'NASDAQ',ccy:'USD',px:428.76,ch:1.24,valPct:95,valInc:70,accel:1.7,rvol:1.8,openPct:1.4,highGap:1.7,momPct:62,strength:120,bidRatio:57,progPct:0,invest:'inst',breakout:3,dRank:0,cooling:false},
+  {c:'GOOGL',n:'알파벳',mk:'NASDAQ',ccy:'USD',px:205.12,ch:1.02,valPct:93,valInc:55,accel:1.5,rvol:1.6,openPct:1.1,highGap:2.1,momPct:55,strength:116,bidRatio:55,progPct:0,invest:'inst',breakout:2,dRank:0,cooling:false},
+  {c:'AMZN',n:'아마존',mk:'NASDAQ',ccy:'USD',px:231.44,ch:1.58,valPct:94,valInc:75,accel:1.8,rvol:1.9,openPct:1.7,highGap:1.6,momPct:64,strength:122,bidRatio:58,progPct:0,invest:'foreign',breakout:3,dRank:0,cooling:false},
+  {c:'META',n:'메타',mk:'NASDAQ',ccy:'USD',px:612.30,ch:-0.74,valPct:92,valInc:40,accel:1.3,rvol:1.4,openPct:-0.5,highGap:3.4,momPct:38,strength:106,bidRatio:49,progPct:0,invest:'sell',breakout:1,dRank:0,cooling:false},
+  {c:'AMD',n:'AMD',mk:'NASDAQ',ccy:'USD',px:167.85,ch:4.10,valPct:90,valInc:170,accel:2.7,rvol:2.9,openPct:4.3,highGap:1.1,momPct:84,strength:137,bidRatio:64,progPct:0,invest:'foreign',breakout:4,dRank:0,cooling:false},
+  {c:'NFLX',n:'넷플릭스',mk:'NASDAQ',ccy:'USD',px:842.10,ch:0.62,valPct:88,valInc:45,accel:1.4,rvol:1.5,openPct:0.7,highGap:2.3,momPct:50,strength:112,bidRatio:54,progPct:0,invest:'inst',breakout:2,dRank:0,cooling:false},
+  {c:'AVGO',n:'브로드컴',mk:'NASDAQ',ccy:'USD',px:178.42,ch:2.88,valPct:91,valInc:110,accel:2.2,rvol:2.3,openPct:2.9,highGap:1.3,momPct:76,strength:130,bidRatio:61,progPct:0,invest:'foreign',breakout:3,dRank:0,cooling:false},
+  {c:'PLTR',n:'팔란티어',mk:'NASDAQ',ccy:'USD',px:78.34,ch:5.62,valPct:86,valInc:220,accel:3.2,rvol:3.5,openPct:6.4,highGap:0.8,momPct:90,strength:144,bidRatio:68,progPct:0,invest:'one',breakout:4,dRank:0,cooling:false},
+  {c:'COIN',n:'코인베이스',mk:'NASDAQ',ccy:'USD',px:312.55,ch:6.80,valPct:84,valInc:250,accel:3.4,rvol:3.7,openPct:7.1,highGap:1.4,momPct:88,strength:142,bidRatio:67,progPct:0,invest:'one',breakout:4,dRank:0,cooling:false},
+  {c:'MSTR',n:'마이크로스트래티지',mk:'NASDAQ',ccy:'USD',px:398.20,ch:7.94,valPct:82,valInc:280,accel:3.6,rvol:3.9,openPct:8.4,highGap:1.6,momPct:87,strength:140,bidRatio:66,progPct:0,invest:'one',breakout:4,dRank:0,cooling:false},
+  {c:'TSM',n:'TSMC',mk:'NYSE',ccy:'USD',px:198.76,ch:1.90,valPct:90,valInc:85,accel:1.9,rvol:2.0,openPct:2.0,highGap:1.5,momPct:68,strength:124,bidRatio:59,progPct:0,invest:'foreign',breakout:3,dRank:0,cooling:false}
+];
+STK.forEach(function(s){s.ccy='KRW';});
+const ALLSTK=STK.concat(USTK);
 const CATS=[
   {ic:'🔲',nm:'반도체',sc:87,d:2,chg:2.45,val:284,top:[['SK하이닉스',89],['삼성전자',84],['한미반도체',74]]},
   {ic:'🚢',nm:'조선',sc:82,d:5,chg:2.18,val:196,top:[['HD현대중공업',94],['한화오션',82],['삼성중공업',72]]},
@@ -271,23 +290,32 @@ function drawStockChart(cv,r){
   // 현재가 라인
   ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(0,y(r.px));ctx.lineTo(W,y(r.px));ctx.stroke();ctx.setLineDash([]);
 }
+function scoredOf(code){
+  var r=RADAR.find(function(x){return x.c===code;}); if(r)return r;
+  var s=(typeof ALLSTK!=='undefined'?ALLSTK:STK).find(function(x){return x.c===code;}); if(!s)return RADAR[0];
+  var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0});
+}
+function priceFmt(r,v){ if(v==null)v=r.px; return r.ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):won(v); }
 function openStock(code){
-  var r=RADAR.find(function(x){return x.c===code;})||RADAR[0]; SEL=r; showView('stock');
+  var r=scoredOf(code); SEL=r; showView('stock');
   var el=$('#stockPanel'); if(!el)return;
+  var isUS=r.ccy==='USD';
   var subs=stockSubs(r), grd=gradeTxt(r.score);
-  var mcap=Math.round(r.px*(r.c==='005930'?5.97e9:r.c==='000660'?7.28e8:2.2e8)/1e8); // 억(데모)
-  var value=Math.round(r.px*r.rvol*1.2e6/1e8); // 거래대금 억(데모)
+  var mcap, value, mcapT, valueT;
+  if(isUS){ mcap=r.px*(r.c==='NVDA'?4.75e9:r.c==='AAPL'?1.5e10:2.2e9); value=r.px*r.rvol*3e7; mcapT='$'+fmtBig(mcap); valueT='$'+fmtBig(value); }
+  else { mcap=Math.round(r.px*(r.c==='005930'?5.97e9:r.c==='000660'?7.28e8:2.2e8)/1e8); value=Math.round(r.px*r.rvol*1.2e6/1e8); mcapT=fmtEok(mcap); valueT=fmtEok(value); }
   function met(k,v,s,c){ return '<div class="met"><div class="k">'+k+'</div><div class="v '+(c||'')+'">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>'; }
   var peers=RADAR.filter(function(x){return x.c!==r.c&&x.mk===r.mk;}).slice(0,4);
   var relNews=(_lastNews||[]).filter(function(x){return x.title.indexOf(r.n)>-1;}); if(relNews.length<3)relNews=(_lastNews||[]).slice(0,5);
   var gaugeDeg=r.score*3.6;
   el.innerHTML=
-    '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+r.n+'</span><span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
+    '<button class="more" onclick="renderStockBrowse()" style="background:none;border:none;font-family:inherit;margin-bottom:10px;padding:0">◀ 종목 목록</button>'
+    +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+r.n+'</span><span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
       +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-weight:700">RADAR SCORE <span class="scorepill">'+r.score+'</span></span></div>'
-    +'<div style="font-size:30px;font-weight:800;margin-top:4px" class="'+cls(r.ch)+'">'+won(r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span></div>'
+    +'<div style="font-size:30px;font-weight:800;margin-top:4px" class="'+cls(r.ch)+'">'+priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span></div>'
     +'<div class="metrics">'
-      +met('거래대금',fmtEok(value),'상위권',null)
-      +met('시가총액',fmtEok(mcap),r.mk+' 상위',null)
+      +met('거래대금',valueT,'상위권',null)
+      +met('시가총액',mcapT,r.mk+' 상위',null)
       +met('체결강도',Math.round(r.strength),r.strength>=100?'매수 우위':'매도 우위',r.strength>=100?'up':'down')
       +met('호가 압력',(r.bidRatio>=55?'+':'')+Math.round(r.bidRatio)+'%',r.bidRatio>=55?'매수 우위':'균형',r.bidRatio>=55?'up':'')
       +met('프로그램',(r.progPct>=0?'+':'')+r.progPct.toFixed(1)+'%','거래대금 대비',cls(r.progPct))
@@ -333,12 +361,25 @@ function showView(v){
   var el=$('#v-'+v); if(el)el.classList.add('on');
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
   if(v==='news')fetchNews();
+  if(v==='stock')renderStockBrowse();
   window.scrollTo({top:0,behavior:'smooth'});
+}
+let stkMkt='KR';
+function renderStockBrowse(){
+  var el=$('#stockPanel'); if(!el)return;
+  var list=(stkMkt==='US'?USTK:STK);
+  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 VANTOR SCORE·수급·차트 분석을 봅니다. 검색창에서 종목명·코드로도 찾을 수 있어요.</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:14px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
+    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>VANTOR SCORE</th></tr></thead><tbody>'
+    +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">🧪 데모 데이터 · 미국은 크립토처럼 즉시 실시간화 가능, 국내는 KIS 프록시 연결 시 실시간. 국내 종목은 RADAR·수급까지 완전 연동됩니다.</div>';
+  $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
+  $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
 }
 function bindNav(a){ a.onclick=function(e){ if(a.dataset.v)showView(a.dataset.v); }; }
 $$('#menu a').forEach(bindNav);
 $$('.more[data-v]').forEach(bindNav);
-window.openStock=openStock;
+window.openStock=openStock; window.renderStockBrowse=renderStockBrowse;
 
 /* ═══════════ 뉴스 (한국/미국 + 번역) ═══════════ */
 const NEWS_FEEDS={
@@ -379,8 +420,7 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('
 })();
 
 /* ═══════════ 검색 ═══════════ */
-$('#q').oninput=function(){ var t=this.value.trim().toLowerCase(); if(!t)return; var hit=STK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.includes(t);}); if(hit){ /* 엔터 시 이동 */ } };
-$('#q').onkeydown=function(e){ if(e.key==='Enter'){ var t=this.value.trim().toLowerCase(); var hit=STK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.includes(t);}); if(hit)openStock(hit.c); } };
+$('#q').onkeydown=function(e){ if(e.key==='Enter'){ var t=this.value.trim().toLowerCase(); if(!t)return; var hit=ALLSTK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.toLowerCase().includes(t);}); if(hit){ if(coinMode)setMode('stock'); openStock(hit.c); } } };
 
 /* ═══════════ 초기화 ═══════════ */
 /* ═══════════ 코인 모드 (CoinGecko 실시간) ═══════════ */
