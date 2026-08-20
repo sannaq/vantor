@@ -34,14 +34,22 @@ function sBid(r){ return r>=75?5:r>=68?4:r>=60?3:r>=55?2:r>=50?1:0; }           
 function sProg(p){ return p>=10?10:p>=7?9:p>=5?8:p>=3?6:p>=1?4:p>=0?2:0; }                         // 프로그램 강도
 function sInv(s){ return s==='both'?5:s==='inst'?4:s==='foreign'?4:s==='one'?2:s==='neutral'?1:0; }// 외인·기관 수급
 
+/* 그룹 만점 + 튜닝 가중치(기본=만점 → 스펙 배점과 동일). 슬라이더로 조정 */
+const GMAX={trade:35,price:30,press:25,flow:5,trend:5};
+const TUNE={w:Object.assign({},GMAX)};
+try{var _tw=JSON.parse(localStorage.getItem('aurtune')||'null'); if(_tw)TUNE.w=Object.assign({},GMAX,_tw);}catch(e){}
+function weightedTotal(g){ var keys=['trade','price','press','flow','trend'], num=0, den=0;
+  keys.forEach(function(k){ if(k==='flow'&&g.flow==null)return; num+=TUNE.w[k]*(g[k]/GMAX[k]); den+=TUNE.w[k]; });
+  return den? Math.round(100*num/den):0;
+}
 function aureumScore(s){
   var trade = sVal(s.valPct)+sValInc(s.valInc)+sAccel(s.accel)+sRvol(s.rvol);   // /35
   var price = sOpen(s.openPct)+sHigh(s.highGap)+sMom(s.momPct);                 // /30
   var press = sStr(s.strength)+sBid(s.bidRatio)+sProg(s.progPct);               // /25
   var flow  = (s.invest==null)? null : sInv(s.invest);                          // /5
   var trend = s.breakout||0;                                                    // /5
-  var sum = trade+price+press+trend + (flow==null?0:flow);
-  var total = (flow==null)? Math.round(sum/95*100) : Math.round(sum);
+  var groups={trade:trade,price:price,press:press,flow:flow,trend:trend};
+  var total = weightedTotal(groups);
   var reasons=[];
   if(s.accel>=2) reasons.push('최근 5분 거래대금 '+s.accel.toFixed(1)+'배 증가');
   if(s.valInc>=70) reasons.push('전일 동시간 대비 거래대금 +'+Math.round(s.valInc)+'%');
@@ -156,6 +164,19 @@ function renderQuickView(){
     +'<div style="margin-top:12px"><a class="more" data-v="stock" onclick="openStock(\''+r.c+'\')" style="cursor:pointer">종목 상세 분석 ›</a></div>';
   $$('#quickView .more[data-v]').forEach(bindNav);
 }
+
+/* ⚙️ RADAR 엔진 튜닝 패널 */
+const TLAB={trade:'거래 활성',price:'가격 움직임',press:'실시간 압력',flow:'수급',trend:'추세'};
+function renderTune(){
+  var el=$('#tunePanel'); if(!el)return;
+  el.innerHTML='<div class="card"><div class="ch"><h2>⚙️ RADAR 엔진 튜닝 <span style="font-weight:600;color:var(--faint);font-size:12px">그룹 배점 조정 → 즉시 재순위</span></h2><div class="r"><span class="more" onclick="resetTune()">스펙 기본값 ↺</span></div></div>'
+    +'<div class="pad"><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px">'
+    +['trade','price','press','flow','trend'].map(function(k){return '<label style="font-size:12px;font-weight:700;color:var(--sub);display:block">'+TLAB[k]+' <b style="color:var(--gold);float:right" id="tw-'+k+'">'+TUNE.w[k]+'</b><input type="range" min="0" max="50" step="1" value="'+TUNE.w[k]+'" oninput="setTune(\''+k+'\',this.value)" style="width:100%;margin-top:8px;accent-color:var(--gold)"></label>';}).join('')
+    +'</div><div style="font-size:11px;color:var(--faint);margin-top:12px;line-height:1.5">기본값 <b>거래35·가격30·압력25·수급5·추세5</b> = 스펙 배점. 슬라이더로 비중을 바꾸면 TOP 10이 즉시 재정렬됩니다(100점 정규화). 예: 이미 급등한 종목보다 <b>초기 자금유입</b>을 잡으려면 거래 활성↑, 추격 방지엔 가격↓.</div></div></div>';
+}
+function setTune(k,v){ TUNE.w[k]=+v; var b=$('#tw-'+k); if(b)b.textContent=v; try{localStorage.setItem('aurtune',JSON.stringify(TUNE.w));}catch(e){} renderRadar(); renderCats(); }
+function resetTune(){ TUNE.w=Object.assign({},GMAX); try{localStorage.removeItem('aurtune');}catch(e){} renderTune(); renderRadar(); renderCats(); }
+window.setTune=setTune; window.resetTune=resetTune;
 
 /* 지수 스트립 */
 function renderIdx(){
@@ -277,5 +298,5 @@ $('#q').oninput=function(){ var t=this.value.trim().toLowerCase(); if(!t)return;
 $('#q').onkeydown=function(e){ if(e.key==='Enter'){ var t=this.value.trim().toLowerCase(); var hit=STK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.includes(t);}); if(hit)openStock(hit.c); } };
 
 /* ═══════════ 초기화 ═══════════ */
-renderIdx(); renderRadar(); renderSmart(); renderFlow(); renderCats(); fetchNews();
+renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); fetchNews();
 setInterval(fetchNews,300000);
