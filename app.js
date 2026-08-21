@@ -38,18 +38,23 @@ function sInv(s){ return s==='both'?5:s==='inst'?4:s==='foreign'?4:s==='one'?2:s
 const GMAX={trade:35,price:30,press:25,flow:5,trend:5};
 const TUNE={w:Object.assign({},GMAX)};
 try{var _tw=JSON.parse(localStorage.getItem('aurtune')||'null'); if(_tw)TUNE.w=Object.assign({},GMAX,_tw);}catch(e){}
-function weightedTotal(g){ var keys=['trade','price','press','flow','trend'], num=0, den=0;
-  keys.forEach(function(k){ if(k==='flow'&&g.flow==null)return; num+=TUNE.w[k]*(g[k]/GMAX[k]); den+=TUNE.w[k]; });
+function weightedTotal(g,gmax){ var keys=['trade','price','press','flow','trend'], num=0, den=0;
+  keys.forEach(function(k){ if(gmax[k]>0){ num+=TUNE.w[k]*(g[k]/gmax[k]); den+=TUNE.w[k]; } });
   return den? Math.round(100*num/den):0;
 }
+function comp(v,fn,max){ return (v==null)?null:[fn(v),max]; }
 function aureumScore(s){
-  var trade = sVal(s.valPct)+sValInc(s.valInc)+sAccel(s.accel)+sRvol(s.rvol);   // /35
-  var price = sOpen(s.openPct)+sHigh(s.highGap)+sMom(s.momPct);                 // /30
-  var press = sStr(s.strength)+sBid(s.bidRatio)+sProg(s.progPct);               // /25
-  var flow  = (s.invest==null)? null : sInv(s.invest);                          // /5
-  var trend = s.breakout||0;                                                    // /5
-  var groups={trade:trade,price:price,press:press,flow:flow,trend:trend};
-  var total = weightedTotal(groups);
+  // 각 지표: 값 없으면(null) 그 그룹 만점에서 제외 → 부분 데이터도 공정 스코어(실데이터 대응)
+  var defs={
+    trade:[comp(s.valPct,sVal,10),comp(s.valInc,sValInc,10),comp(s.accel,sAccel,10),comp(s.rvol,sRvol,5)],
+    price:[comp(s.openPct,sOpen,10),comp(s.highGap,sHigh,8),comp(s.momPct,sMom,12)],
+    press:[comp(s.strength,sStr,10),comp(s.bidRatio,sBid,5),comp(s.progPct,sProg,10)],
+    flow:[s.invest==null?null:[sInv(s.invest),5]],
+    trend:[s.breakout==null?null:[s.breakout,5]]
+  };
+  var groups={}, gmax={};
+  Object.keys(defs).forEach(function(k){ var sc=0,mx=0; defs[k].forEach(function(c){ if(c){sc+=c[0];mx+=c[1];} }); groups[k]=+sc.toFixed(1); gmax[k]=mx; });
+  var total = weightedTotal(groups,gmax);
   var reasons=[];
   if(s.accel>=2) reasons.push('최근 5분 거래대금 '+s.accel.toFixed(1)+'배 증가');
   if(s.valInc>=70) reasons.push('전일 동시간 대비 거래대금 +'+Math.round(s.valInc)+'%');
@@ -61,7 +66,7 @@ function aureumScore(s){
   if(s.invest==='both') reasons.push('외국인·기관 동반 매수');
   if(s.breakout>=4) reasons.push('전일 고가·주요 저항 돌파');
   var grade = total>=90?['🔥 STRONG MOMENTUM','strong']:total>=80?['🟢 MOMENTUM','rise']:total>=70?['🟡 WATCH','steady']:total>=60?['⚪ NEUTRAL','steady']:['NO SIGNAL','steady'];
-  return { total, groups:{trade:+trade.toFixed(1),price:+price.toFixed(1),press:+press.toFixed(1),flow:flow==null?null:+flow.toFixed(1),trend:+trend.toFixed(1)}, reasons:reasons.slice(0,6), grade };
+  return { total, groups:groups, gmax:gmax, reasons:reasons.slice(0,6), grade };
 }
 function radarStatus(dRank,cooling){
   if(cooling) return ['⚠️ COOLING','cool'];
@@ -135,7 +140,18 @@ const FLOW={
 
 /* ═══════════ RADAR 계산 ═══════════ */
 let RADAR=[]; let SEL=null; let _lastNews=[];
-let useReal=false, KISUNIV=null; // KIS 프록시 실데이터 유니버스
+let useReal=false, KISUNIV=null, useRealMkt=false; // KIS 프록시 실데이터
+async function loadKisMarket(){
+  if(!KIS_PROXY) return;
+  try{
+    var m=await fetch(KIS_PROXY+'/market?mkt=KR').then(function(r){return r.json();});
+    if(m&&Array.isArray(m.indices)&&m.indices.length){
+      m.indices.forEach(function(x){ if(!x||!x.v)return; var t=IDX.find(function(i){return i.nm===x.nm;}); if(t){ t.v=x.v; t.c=x.c; t.d=x.d; t._real=true; } });
+      if(m.breadth){ var b=m.breadth; ['up','down','flat','upH','downH'].forEach(function(k){ if(b[k]!=null)FLOW.breadth[k]=b[k]; }); }
+      useRealMkt=true; renderIdx(); renderFlow();
+    }
+  }catch(e){}
+}
 function radarUniverse(){ return (useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK; }
 /* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
 async function loadKisRadar(){
@@ -155,7 +171,7 @@ async function loadKisRadar(){
 }
 function computeRadar(){
   var uni=radarUniverse();
-  RADAR=uni.map(function(s){ var r=aureumScore(s); return Object.assign({},s,{score:r.total,g:r.groups,reasons:r.reasons,grade:r.grade}); });
+  RADAR=uni.map(function(s){ var r=aureumScore(s); return Object.assign({},s,{score:r.total,g:r.groups,gmax:r.gmax,reasons:r.reasons,grade:r.grade}); });
   RADAR.sort(function(a,b){return b.score-a.score;});
   RADAR.forEach(function(r,i){ r.rank=i+1;
     if(useReal && window._prevRank && window._prevRank[r.c]!=null){ r.dRank=window._prevRank[r.c]-r.rank; }
@@ -207,11 +223,12 @@ function renderRadar(){
 }
 function renderQuickView(){
   var el=$('#quickView'); if(!el||!SEL)return; var r=SEL;
-  function bar(k,v,mx){ return '<div class="bar"><span class="k">'+k+'</span><div class="track"><div class="fill" style="width:'+(v/mx*100)+'%"></div></div><span class="vv">'+v+' / '+mx+'</span></div>'; }
+  function bar(k,v,mx){ if(!mx)return ''; return '<div class="bar"><span class="k">'+k+'</span><div class="track"><div class="fill" style="width:'+Math.min(100,v/mx*100)+'%"></div></div><span class="vv">'+v+' / '+mx+'</span></div>'; }
+  var gm=r.gmax||{trade:35,price:30,press:25,flow:5,trend:5};
   el.innerHTML='<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="big">'+r.n+'</span><span style="color:var(--faint);font-size:12px">'+r.c+'</span></div>'
     +'<div style="font-size:15px;font-weight:800;margin-top:2px" class="'+cls(r.ch)+'">'+won(r.px)+' <span style="font-size:13px">'+pctTxt(r.ch)+'</span></div>'
     +'<div class="gauge"><div class="gnum" style="color:var(--gold)">'+r.score+'</div><div><div style="font-size:11px;color:var(--faint);font-weight:700">RADAR SCORE / 100</div><div style="font-weight:800;margin-top:2px">'+r.grade[0]+'</div><div style="margin-top:3px"><span class="st '+r.stcls+'">'+r.status+'</span></div></div></div>'
-    +bar('거래 활성',r.g.trade,35)+bar('가격 움직임',r.g.price,30)+bar('실시간 압력',r.g.press,25)+bar('수급',r.g.flow==null?0:r.g.flow,5)+bar('추세',r.g.trend,5)
+    +bar('거래 활성',r.g.trade,gm.trade)+bar('가격 움직임',r.g.price,gm.price)+bar('실시간 압력',r.g.press,gm.press)+bar('수급',r.g.flow,gm.flow)+bar('추세',r.g.trend,gm.trend)
     +'<div style="font-size:11px;font-weight:700;color:var(--faint);margin:14px 0 0;text-transform:uppercase;letter-spacing:.5px">선정 이유</div>'
     +'<ul class="reasons">'+r.reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'
     +'<div style="margin-top:12px"><a class="more" data-v="stock" onclick="openStock(\''+r.c+'\')" style="cursor:pointer">종목 상세 분석 ›</a></div>';
@@ -235,7 +252,7 @@ window.setTune=setTune; window.resetTune=resetTune;
 function renderIdx(){
   var el=$('#idxstrip'); if(!el)return;
   el.innerHTML=IDX.map(function(x){ var pc=cls(x.c), col=x.c>0?'var(--up)':x.c<0?'var(--down)':'var(--flat)';
-    return '<div class="idx"><div class="nm">'+x.nm+' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span></div>'+sparkline(x.tr,96,44,col)
+    return '<div class="idx"><div class="nm">'+x.nm+(x._real?'':' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span>')+'</div>'+sparkline(x.tr,96,44,col)
       +'<div class="v num '+pc+'">'+x.v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
       +'<div class="d num '+pc+'">'+arw(x.c)+' '+Math.abs(x.d).toFixed(2)+' ('+pctTxt(x.c)+')</div>'
       +'<div class="foot"><span>거래대금 '+x.val+'</span><span>'+(x.fx?'고가 1,363':'거래량 '+x.vol)+'</span></div></div>';
@@ -282,12 +299,14 @@ function renderCats(){
 }
 /* STOCK 상세 분석 (목업 4) */
 function stockSubs(r){
+  var DM={trade:35,price:30,press:25,flow:5,trend:5};
+  function gp(k){ var mx=(r.gmax&&r.gmax[k])?r.gmax[k]:DM[k]; return mx?Math.max(0,Math.min(1,r.g[k]/mx)):0; }
   return {
-    MOMENTUM: Math.round(r.g.price/30*100),
-    VOLUME: Math.round(r.g.trade/35*100),
-    'MONEY FLOW': Math.round((r.g.press/25*55)+((r.g.flow==null?2.5:r.g.flow)/5*45)),
-    TREND: Math.round(r.g.trend/5*70 + r.g.price/30*30),
-    SENTIMENT: Math.round((sStr(r.strength)/10*60)+(sBid(r.bidRatio)/5*40))
+    MOMENTUM: Math.round(gp('price')*100),
+    VOLUME: Math.round(gp('trade')*100),
+    'MONEY FLOW': Math.round(gp('press')*55 + gp('flow')*45),
+    TREND: Math.round(gp('trend')*70 + gp('price')*30),
+    SENTIMENT: Math.round((sStr(r.strength||0)/10*60)+(sBid(r.bidRatio||0)/5*40))
   };
 }
 function gradeTxt(v){ return v>=85?['매우 양호','up']:v>=70?['양호','up']:v>=55?['보통','flat']:['주의','down']; }
@@ -370,7 +389,7 @@ function openStock(code){
       var ind=-Math.round(base*1.2*f), fr=Math.round(base*f), ins=Math.round(base*0.6*f), pr=Math.round(base*0.5*f);
       return '<tr><td class="l" style="font-weight:700">'+p[0]+'</td>'+[ind,fr,ins,pr].map(function(v){return '<td class="'+cls(v)+'" style="font-weight:700">'+(v>=0?'+':'')+v.toLocaleString()+'</td>';}).join('')+'</tr>';}).join('')
     +'</tbody></table>';
-  var scoreHtml='<div style="margin-top:12px">'+['trade|거래 활성|35','price|가격 움직임|30','press|실시간 압력|25','flow|수급|5','trend|추세|5'].map(function(g){var p=g.split('|');var v=r.g[p[0]]==null?0:r.g[p[0]];return '<div class="bar"><span class="k">'+p[1]+'</span><div class="track"><div class="fill" style="width:'+(v/(+p[2])*100)+'%"></div></div><span class="vv">'+v+'/'+p[2]+'</span></div>';}).join('')
+  var scoreHtml='<div style="margin-top:12px">'+['trade|거래 활성|35','price|가격 움직임|30','press|실시간 압력|25','flow|수급|5','trend|추세|5'].map(function(g){var p=g.split('|');var v=r.g[p[0]]==null?0:r.g[p[0]];var mx=(r.gmax&&r.gmax[p[0]]!=null)?r.gmax[p[0]]:+p[2];if(!mx)return '';return '<div class="bar"><span class="k">'+p[1]+'</span><div class="track"><div class="fill" style="width:'+Math.min(100,v/mx*100)+'%"></div></div><span class="vv">'+v+'/'+mx+'</span></div>';}).join('')
     +'<div style="font-size:12px;font-weight:800;color:var(--faint);text-transform:uppercase;margin:14px 0 6px">선정 이유</div><ul class="reasons" style="margin-top:0">'+r.reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
   $('#stab-flow').innerHTML=flowHtml; $('#stab-score').innerHTML=scoreHtml;
   $$('.stabs button').forEach(function(b){ b.onclick=function(){ $$('.stabs button').forEach(function(x){x.classList.toggle('on',x===b);}); ['chart','flow','score'].forEach(function(t){$('#stab-'+t).style.display=(t===b.dataset.t)?'':'none';}); if(b.dataset.t==='chart')drawStockChart($('#sChart'),r); }; });
@@ -514,5 +533,5 @@ $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.datas
 
 /* ═══════════ 초기화 ═══════════ */
 renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews();
-if(KIS_PROXY){ loadKisRadar(); setInterval(loadKisRadar,60000); } // 실데이터: 1분마다 RADAR 갱신
+if(KIS_PROXY){ loadKisRadar(); loadKisMarket(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); } // 실데이터: 1분마다 RADAR·MARKET 갱신
 setInterval(fetchNews,300000);
