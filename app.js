@@ -477,6 +477,85 @@ function drawStockChart(cv,r){
     ctx.fillStyle=m[1]; ctx.fillText(t,lx,6); lx+=ctx.measureText(t).width+16; });
   // 거래량 라벨
   ctx.fillStyle=sub;ctx.font='500 15px system-ui,sans-serif';ctx.fillText('거래량',8,volT+1);
+  // 크로스헤어가 참조할 기하 상태 저장
+  CHART={cv:cv,r:r,data:data,n:n,padL:padL,plotR:plotR,padT:padT,priceB:priceB,volT:volT,volB:volB,RM:RM,hi:hi,lo:lo,emas:emas,W:W,H:H,MA:MA,cw:cw,up:up,dn:dn,sub:sub,line:line,tf:_chartTF};
+}
+/* ── 차트 크로스헤어 + OHLC 툴팁 ── */
+var CHART=null;
+function crosshairIdx(clientX){
+  if(!CHART) return -1; var cv=CHART.cv, rect=cv.getBoundingClientRect();
+  var x=(clientX-rect.left)*(cv.width/rect.width);
+  var i=Math.round((x-CHART.padL)/((CHART.plotR-CHART.padL)/CHART.n)-0.5);
+  return Math.max(0,Math.min(CHART.n-1,i));
+}
+function drawCrosshair(idx){
+  if(!CHART) return; drawStockChart(CHART.cv,CHART.r); // base 재렌더
+  var C=CHART, ctx=C.cv.getContext('2d');
+  var x=C.padL+(idx+0.5)*((C.plotR-C.padL)/C.n);
+  var d=C.data[idx], yc=C.padT+(C.hi-d[3])/((C.hi-C.lo)||1)*(C.priceB-C.padT);
+  ctx.save();ctx.strokeStyle=C.sub;ctx.globalAlpha=.6;ctx.lineWidth=1;ctx.setLineDash([4,3]);
+  ctx.beginPath();ctx.moveTo(x,C.padT);ctx.lineTo(x,C.volB);ctx.stroke();           // 수직
+  ctx.beginPath();ctx.moveTo(C.padL,yc);ctx.lineTo(C.plotR,yc);ctx.stroke();          // 수평
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  // 선택 봉 하이라이트
+  ctx.fillStyle=C.sub;ctx.globalAlpha=.10;ctx.fillRect(x-C.cw/2,C.padT,C.cw,C.volB-C.padT);ctx.globalAlpha=1;ctx.restore();
+  // HTML 툴팁
+  var tip=document.querySelector('#chartTip'); if(!tip) return;
+  var r=C.r, isUS=r.ccy==='USD', fmt=function(v){return isUS?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):Math.round(v).toLocaleString('en-US');};
+  var dt=d[5]?new Date(d[5]):null;
+  var dlabel=dt?((C.tf==='1'||C.tf==='5')?((dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')):(dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate())):'';
+  var chg=idx>0?((d[3]-C.data[idx-1][3])/C.data[idx-1][3]*100):0;
+  var vfmt=function(v){ v=+v||0; if(v>=1e8)return (v/1e8).toFixed(1)+'억'; if(v>=1e4)return Math.round(v/1e4)+'만'; return Math.round(v).toLocaleString('en-US'); };
+  tip.innerHTML='<div style="font-weight:800;margin-bottom:3px;color:var(--ink)">'+dlabel+'</div>'
+    +'<div class="tr"><span>시</span><b>'+fmt(d[0])+'</b></div>'
+    +'<div class="tr"><span>고</span><b class="up">'+fmt(d[1])+'</b></div>'
+    +'<div class="tr"><span>저</span><b class="down">'+fmt(d[2])+'</b></div>'
+    +'<div class="tr"><span>종</span><b class="'+cls(chg)+'">'+fmt(d[3])+' ('+(chg>=0?'+':'')+chg.toFixed(2)+'%)</b></div>'
+    +'<div class="tr"><span>량</span><b>'+vfmt(d[4])+'</b></div>'
+    +C.MA.map(function(m,mi){return '<div class="tr"><span style="color:'+m[1]+'">MA'+m[0]+'</span><b style="color:'+m[1]+'">'+fmt(C.emas[mi][idx])+'</b></div>';}).join('');
+  tip.style.display='block';
+  // 위치: 크로스헤어 반대편
+  var rect=C.cv.getBoundingClientRect(), dispX=x/(C.cv.width/rect.width);
+  var left=dispX>rect.width/2 ? 8 : (rect.width-8-150);
+  tip.style.left=Math.max(4,left)+'px'; tip.style.top='6px';
+}
+function hideCrosshair(){ var tip=document.querySelector('#chartTip'); if(tip)tip.style.display='none'; if(CHART)drawStockChart(CHART.cv,CHART.r); }
+function attachChartCrosshair(cv){
+  if(!cv||cv._chAttached) return; cv._chAttached=true;
+  cv.addEventListener('mousemove',function(e){ var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
+  cv.addEventListener('mouseleave',hideCrosshair);
+  cv.addEventListener('touchstart',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i);} } },{passive:true});
+  cv.addEventListener('touchmove',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i); e.preventDefault();} } },{passive:false});
+  cv.addEventListener('touchend',hideCrosshair);
+}
+/* ── 상세 화면 라이브 자동 갱신 (열어둔 동안 15초마다 가격·매수/매도세·투자자 갱신) ── */
+var _detailTimer=null, _LIVE_MS=15000;
+function stopDetailLive(){ if(_detailTimer){clearInterval(_detailTimer);_detailTimer=null;} }
+function startDetailLive(r){
+  stopDetailLive(); if(!PROXY) return;
+  _detailTimer=setInterval(function(){
+    if(!SEL||SEL.c!==r.c||!$('#v-stock')||!$('#v-stock').classList.contains('on')){ stopDetailLive(); return; }
+    liveRefresh(r);
+  },_LIVE_MS);
+}
+function liveRefresh(r){
+  var isUS=r.ccy==='USD';
+  var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(r.c)+(isUS?'&exch='+usExch(r.mk):'');
+  // 가격·현재 봉 (툴팁 보는 중엔 차트 재렌더 스킵 → 크로스헤어 유지)
+  proxyJson('/candles?'+base+'&tf='+_chartTF+'&limit=120').then(function(j){
+    if(!SEL||SEL.c!==r.c||!j||!j.candles||j.candles.length<2) return;
+    r._candles=j.candles; var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
+    if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
+    var tip=$('#chartTip'); if(!tip||tip.style.display!=='block') drawStockChart($('#sChart'),r);
+    var pe=$('#stkPx'); if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
+    var lv=$('#liveDot'); if(lv) lv.style.opacity=lv.style.opacity==='1'?'0.35':'1'; // 깜빡여 갱신 표시
+  });
+  if(!isUS) proxyJson('/flow?'+base).then(function(j){
+    if(!SEL||SEL.c!==r.c||!j) return;
+    r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
+             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox};
+    renderPressureFlow(r);
+  });
 }
 /* 차트 아래 매수/매도세 + 투자자 순매수(개인·기관·외국인) 패널 */
 function renderPressureFlow(r){
@@ -487,7 +566,8 @@ function renderPressureFlow(r){
   var parts=[];
   var hasStr=hasNum(f.strength), hasBp=hasNum(f.bp);
   if(hasStr||hasBp){
-    parts.push('<div style="font-size:12px;font-weight:800;margin:12px 0 4px">⚡ 매수/매도세</div>');
+    parts.push('<div style="font-size:12px;font-weight:800;margin:12px 0 4px;display:flex;align-items:center;gap:6px">⚡ 매수/매도세'
+      +(PROXY?'<span id="liveDot" style="width:7px;height:7px;border-radius:50%;background:#16b364;opacity:1;transition:opacity .4s;box-shadow:0 0 5px #16b364"></span><span style="font-size:10px;color:var(--faint);font-weight:600">LIVE · 15초 갱신</span>':'')+'</div>');
     if(hasStr){ var st=f.strength, buyPct=Math.max(6,Math.min(94,Math.round(st/(st+100)*100)));
       parts.push('<div class="pfrow"><span style="width:60px;font-size:11px;color:var(--sub);font-weight:700">체결강도</span>'
         +'<div class="pfbar"><div style="width:'+buyPct+'%;background:var(--up)"></div><div style="flex:1;background:var(--down)"></div></div>'
@@ -515,7 +595,7 @@ function scoredOf(code){
   var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0});
 }
 function priceFmt(r,v){ if(v==null)v=r.px; return r.ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):won(v); }
-function backToBrowse(){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal)_db.style.display=''; renderStockBrowse(); window.scrollTo(0,_stkScroll); }
+function backToBrowse(){ stopDetailLive(); var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal)_db.style.display=''; renderStockBrowse(); window.scrollTo(0,_stkScroll); }
 window.backToBrowse=backToBrowse;
 /* ═══════════ 종목 상세 실데이터 보강 (/candles·/info·/flow·/orderbook) ═══════════
    스펙 §0-1(기존 기능 보존): 프록시 미연결·조회 실패 시 데모 화면을 그대로 두고,
@@ -719,7 +799,7 @@ function openStock(code){
           +'<div class="tfbar" id="tfBar">'
             +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
           +'</div>'
-          +'<canvas class="schart" id="sChart"></canvas>'
+          +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
           +'<div id="chartCap" style="font-size:11px;color:var(--faint);margin-top:6px">불러오는 중…</div>'
           +'<div id="pressureFlow"></div>'
         +'</div>'
@@ -756,7 +836,9 @@ function openStock(code){
   // 봉 선택(1분·5분·일·주·월)
   $$('#tfBar button').forEach(function(b){ b.onclick=function(){ $$('#tfBar button').forEach(function(x){x.classList.toggle('on',x===b);}); loadChartTF(r,b.dataset.tf); }; });
   renderPressureFlow(r); // 초기(RADAR 값) → /flow 도착 시 실데이터로 교체
+  attachChartCrosshair($('#sChart')); // 크로스헤어+OHLC 툴팁
   enrichStock(r); // 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
+  startDetailLive(r); // 열어둔 동안 15초마다 가격·매수매도세·투자자 자동 갱신
   var _is=$('#idxstrip'); if(_is)_is.style.display='none'; var _db=$('#demoban'); if(_db)_db.style.display='none'; // 상세 땐 시장 지수 스트립 숨김 → 상세가 네비 바로 아래
   window.scrollTo(0,0);
 }
@@ -767,6 +849,7 @@ function showView(v,noScroll){
   var el=$('#v-'+v); if(el)el.classList.add('on');
   if(!coinMode){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal&&!useRealMkt)_db.style.display=''; }
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
+  if(v!=='stock')stopDetailLive(); // 상세를 벗어나면 라이브 폴링 중단
   if(v==='news')fetchNews();
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();

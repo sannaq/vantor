@@ -189,6 +189,9 @@
   .stabs button{border:none;background:none;font-family:inherit;font-size:13px;font-weight:700;color:var(--sub);padding:9px 12px;cursor:pointer;position:relative}
   .stabs button.on{color:var(--ink)}
   .stabs button.on::after{content:"";position:absolute;left:8px;right:8px;bottom:-1px;height:2.5px;background:var(--gold);border-radius:2px}
+  #chartTip{position:absolute;display:none;pointer-events:none;background:color-mix(in srgb,var(--panel) 96%,transparent);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:11px;min-width:132px;box-shadow:var(--shadow2);z-index:5;backdrop-filter:blur(6px)}
+  #chartTip .tr{display:flex;justify-content:space-between;gap:12px;line-height:1.65}
+  #chartTip .tr span{color:var(--sub)}
   .tfbar{display:flex;gap:5px;margin:10px 0 2px}
   .tfbar button{border:1px solid var(--line);background:var(--panel2);font-family:inherit;font-size:12px;font-weight:700;color:var(--sub);padding:5px 12px;border-radius:8px;cursor:pointer;transition:all .12s}
   .tfbar button:hover{border-color:var(--gold)}
