@@ -387,7 +387,7 @@ function markReal(part){
   var d=$('#stkDisc'); if(!d) return;
   var nm={chart:'차트',info:'시총·거래량·재무',flow:'투자자 수급·체결강도',book:'호가'};
   var on=Object.keys(_realParts).map(function(k){return nm[k];}).filter(Boolean);
-  d.innerHTML='✅ 토스 실데이터 — '+on.join(' · ')+'. 그 외 항목(프로그램 매매 등)은 아직 데모 값입니다.';
+  d.innerHTML='✅ 실시간 데이터 — '+on.join(' · ')+'. 그 외 항목(프로그램 매매 등)은 아직 데모 값입니다.';
 }
 /* 투자자별 순매수 — 토스는 당일 누적 "수량(주)"을 준다(금액 아님) */
 function flowTabReal(j){
@@ -400,7 +400,7 @@ function flowTabReal(j){
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>=0?'+':'')+v.toLocaleString('en-US')+'</td>'
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>0?'순매수':v<0?'순매도':'－')+'</td></tr>'; }).join('')
     +'</tbody></table>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">토스 실데이터 · 금액이 아닌 수량 기준입니다.</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">실시간 데이터 · 금액이 아닌 수량 기준입니다.</div>';
 }
 /* 호가 10단 — 잔량 막대 + 매수/매도 총잔량 비율 */
 function bookHtml(ob,r){
@@ -424,7 +424,7 @@ function bookHtml(ob,r){
         +'<div style="width:'+bp+'%;background:var(--up)"></div><div style="flex:1;background:var(--down)"></div></div>'
       +'<span style="font-size:11px;font-weight:800;white-space:nowrap">매수 '+bp+'% · 매도 '+(100-bp)+'%</span></div>'
     +bids.map(function(x){return row(x,'b');}).join('')
-    +'<div style="font-size:11px;color:var(--faint);margin-top:8px">토스 실데이터 · 총잔량 매수 '+(+ob.totalBid||0).toLocaleString('en-US')+' / 매도 '+(+ob.totalAsk||0).toLocaleString('en-US')+'</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:8px">실시간 데이터 · 총잔량 매수 '+(+ob.totalBid||0).toLocaleString('en-US')+' / 매도 '+(+ob.totalAsk||0).toLocaleString('en-US')+'</div>';
 }
 async function enrichStock(r){
   if(!PROXY) return;
@@ -440,7 +440,7 @@ async function enrichStock(r){
     var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
     if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
     drawStockChart($('#sChart'),r);
-    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (토스 실데이터) · 빨강 상승 / 파랑 하락 · 점선=현재가';
+    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (실시간 데이터) · 빨강 상승 / 파랑 하락 · 점선=현재가';
     var pe=$('#stkPx');
     if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
     markReal('chart');
