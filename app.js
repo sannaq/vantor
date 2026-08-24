@@ -349,31 +349,63 @@ function stockSubs(r){
   };
 }
 function gradeTxt(v){ return v>=85?['매우 양호','up']:v>=70?['양호','up']:v>=55?['보통','flat']:['주의','down']; }
+/* 지수이동평균 — 종가 배열 → EMA 배열. 초기값은 첫 종가로 시드(관례) */
+function emaSeries(closes,p){ var k=2/(p+1), out=[], e=closes[0];
+  for(var i=0;i<closes.length;i++){ e=(i===0)?closes[0]:closes[i]*k+e*(1-k); out.push(e); } return out; }
 function drawStockChart(cv,r){
-  if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect(); cv.width=Math.round(rect.width*2); cv.height=460;
+  if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect();
+  cv.width=Math.round(rect.width*2); cv.height=520;
   function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
-  var up=css('--up')||'#e5384d', dn=css('--down')||'#2f6bff', line=css('--line')||'#e7eaf0';
+  var up=css('--up')||'#e5384d', dn=css('--down')||'#2f6bff', line=css('--line')||'#e7eaf0',
+      sub=css('--sub')||'#8a94a6';
+  var MA=[[5,'#f5a623'],[20,'#2f9e6e'],[60,'#8b5cf6']]; // 이동평균선 색
   var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
   var seed=parseInt(r.c,10)||1234; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
-  var n, data, last;
+  var n, data, last, real=false;
   if(r._candles&&r._candles.length>1){ // 프록시 /candles 실데이터: [ms,o,h,l,c,v]
-    data=r._candles.slice(-60).map(function(k){ return [k[1],k[2],k[3],k[4]]; });
-    n=data.length; last=data[n-1][3];
-  }else{                               // 폴백: 데모 합성 캔들(프록시 미연결·조회 실패 시)
+    data=r._candles.slice(-90).map(function(k){ return [k[1],k[2],k[3],k[4],k[5]||0]; });
+    n=data.length; last=data[n-1][3]; real=true;
+  }else{                               // 폴백: 데모 합성 캔들
     n=48; data=[]; var p=r.px*0.94;
     for(var i=0;i<n;i++){ var drift=(r.ch/100)*r.px*(i/n)*1.4; var o=p; var mv=(rnd()-0.45)*r.px*0.012; var c=r.px*0.94+drift+mv+(i===n-1?(r.px-(r.px*0.94+drift)):0);
-      var h0=Math.max(o,c)+rnd()*r.px*0.006+r.px*0.001, l0=Math.min(o,c)-rnd()*r.px*0.006-r.px*0.001; data.push([o,h0,l0,c]); p=c; }
+      var h0=Math.max(o,c)+rnd()*r.px*0.006+r.px*0.001, l0=Math.min(o,c)-rnd()*r.px*0.006-r.px*0.001; data.push([o,h0,l0,c,rnd()*1e6]); p=c; }
     data[n-1][3]=r.px; last=r.px;
   }
-  var lo=Math.min.apply(null,data.map(d=>d[2])), hi=Math.max.apply(null,data.map(d=>d[1])), gh=H-30;
-  function y(v){return 15+(hi-v)/((hi-lo)||1)*gh;}
-  ctx.strokeStyle=line;ctx.globalAlpha=.5;for(var g=0;g<=4;g++){var yy=15+gh*g/4;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}ctx.globalAlpha=1;
-  var cw=W/n, bw=cw*0.6;
-  for(var j=0;j<n;j++){var d=data[j],x=j*cw+cw/2,rise=d[3]>=d[0],col=rise?up:dn;ctx.strokeStyle=col;ctx.fillStyle=col;
+  var closes=data.map(function(d){return d[3];});
+  // 패널 분할: 위 74% 가격/이평, 아래 거래량
+  var padT=14, priceB=Math.round(H*0.72), volT=priceB+24, volB=H-18;
+  var lo=Math.min.apply(null,data.map(d=>d[2])), hi=Math.max.apply(null,data.map(d=>d[1]));
+  var emas=MA.map(function(m){return emaSeries(closes,m[0]);});
+  emas.forEach(function(e){ e.forEach(function(v){ if(v<lo)lo=v; if(v>hi)hi=v; }); }); // 이평선도 범위에 포함
+  var gh=priceB-padT;
+  function y(v){return padT+(hi-v)/((hi-lo)||1)*gh;}
+  // 가격 그리드
+  ctx.strokeStyle=line;ctx.globalAlpha=.45;ctx.lineWidth=1;
+  for(var g=0;g<=4;g++){var yy=padT+gh*g/4;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(W,yy);ctx.stroke();}ctx.globalAlpha=1;
+  var cw=W/n, bw=Math.max(2,cw*0.6);
+  // 캔들
+  for(var j=0;j<n;j++){var d=data[j],x=j*cw+cw/2,rise=d[3]>=d[0],col=rise?up:dn;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x,y(d[1]));ctx.lineTo(x,y(d[2]));ctx.stroke();
     var yo=y(d[0]),yc=y(d[3]);ctx.fillRect(x-bw/2,Math.min(yo,yc),bw,Math.max(2,Math.abs(yc-yo)));}
+  // 이동평균선
+  ctx.lineWidth=2.2;
+  MA.forEach(function(m,mi){ if(n<3)return; var e=emas[mi]; ctx.strokeStyle=m[1]; ctx.beginPath();
+    for(var i=0;i<n;i++){ var x=i*cw+cw/2, yy=y(e[i]); if(i===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);} ctx.stroke(); });
   // 현재가 라인
-  ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([4,3]);ctx.beginPath();ctx.moveTo(0,y(last));ctx.lineTo(W,y(last));ctx.stroke();ctx.setLineDash([]);
+  ctx.lineWidth=1.4;ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(0,y(last));ctx.lineTo(W,y(last));ctx.stroke();ctx.setLineDash([]);
+  // 거래량 바
+  var vmax=Math.max.apply(null,data.map(d=>d[4]))||1;
+  for(var k2=0;k2<n;k2++){var d2=data[k2],x2=k2*cw+cw/2,rise2=d2[3]>=d2[0];
+    ctx.fillStyle=rise2?up:dn;ctx.globalAlpha=.55;
+    var vh=Math.max(1,(d2[4]/vmax)*(volB-volT)); ctx.fillRect(x2-bw/2,volB-vh,bw,vh);}
+  ctx.globalAlpha=1;
+  // 이평 범례 (좌상단)
+  ctx.font='600 20px system-ui,sans-serif';ctx.textBaseline='top';
+  var lx=10;
+  MA.forEach(function(m,mi){ var val=emas[mi][n-1]; var t='MA'+m[0]+' '+(r.ccy==='USD'?('$'+val.toFixed(2)):Math.round(val).toLocaleString('en-US'));
+    ctx.fillStyle=m[1]; ctx.fillText(t,lx,8); lx+=ctx.measureText(t).width+18; });
+  // 거래량 라벨
+  ctx.fillStyle=sub;ctx.font='500 18px system-ui,sans-serif';ctx.fillText('거래량',10,volT-2);
 }
 function scoredOf(code){
   var r=RADAR.find(function(x){return x.c===code;}); if(r)return r;
@@ -457,13 +489,13 @@ async function enrichStock(r){
   var live=function(){ return seq===_enrichSeq; };
 
   /* 1) 캔들 → 실제 차트 + 헤드라인 시세(마지막 종가·전일대비) */
-  proxyJson('/candles?'+base+'&tf=D&limit=60').then(function(j){
+  proxyJson('/candles?'+base+'&tf=D&limit=120').then(function(j){
     if(!live()||!j||!Array.isArray(j.candles)||j.candles.length<2) return;
     r._candles=j.candles;
     var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
     if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
     drawStockChart($('#sChart'),r);
-    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (실시간 데이터) · 빨강 상승 / 파랑 하락 · 점선=현재가';
+    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (실시간 데이터) · 이평 MA5·20·60 · 하단 거래량 · 빨강 상승/파랑 하락';
     var pe=$('#stkPx');
     if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
     markReal('chart');
