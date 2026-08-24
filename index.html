@@ -192,6 +192,33 @@
   #chartTip{position:absolute;display:none;pointer-events:none;background:color-mix(in srgb,var(--panel) 96%,transparent);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:11px;min-width:132px;box-shadow:var(--shadow2);z-index:5;backdrop-filter:blur(6px)}
   #chartTip .tr{display:flex;justify-content:space-between;gap:12px;line-height:1.65}
   #chartTip .tr span{color:var(--sub)}
+  /* 카드 접기/숨김 + 편집기 */
+  .cardtog{margin-left:8px;background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:6px;transition:transform .18s,background .15s;line-height:1}
+  .cardtog:hover{background:var(--panel2);color:var(--ink)}
+  .card.collapsed .cardtog{transform:rotate(-90deg)}
+  .card.collapsed>*:not(.ch){display:none!important}
+  .card.collapsed{padding-bottom:0}
+  .card.collapsed .ch{padding-bottom:15px}
+  #marketSummary{margin-bottom:14px}
+  .msum{background:linear-gradient(135deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:14px 18px}
+  .msum .hl{font-size:15px;font-weight:800;letter-spacing:-.3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .msum .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .msum .chip{font-size:12px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;gap:5px;cursor:pointer}
+  .msum .chip small{color:var(--faint);font-weight:600}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow2);max-width:420px;width:100%;max-height:80vh;overflow:auto}
+  .modal h3{margin:0;padding:18px 20px 6px;font-size:16px;font-weight:800}
+  .modal .msub{padding:0 20px 12px;font-size:12px;color:var(--faint)}
+  .edrow{display:flex;align-items:center;gap:10px;padding:11px 20px;border-top:1px solid var(--line2);cursor:pointer}
+  .edrow:hover{background:var(--panel2)}
+  .edrow .sw{width:38px;height:22px;border-radius:12px;background:var(--line);position:relative;transition:background .2s;flex:0 0 auto}
+  .edrow.on .sw{background:var(--gold)}
+  .edrow .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .edrow.on .sw::after{left:18px}
+  .edrow .nm{font-weight:700;font-size:14px}
+  .modal .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+  .modal .mbtn{font-family:inherit;font-weight:700;font-size:13px;padding:8px 16px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
+  .modal .mbtn.pri{background:var(--gold);border-color:var(--gold);color:#3a2c07}
   .tfbar{display:flex;gap:5px;margin:10px 0 2px}
   .tfbar button{border:1px solid var(--line);background:var(--panel2);font-family:inherit;font-size:12px;font-weight:700;color:var(--sub);padding:5px 12px;border-radius:8px;cursor:pointer;transition:all .12s}
   .tfbar button:hover{border-color:var(--gold)}
@@ -251,13 +278,14 @@
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="알림">🔔</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button></div>
 </nav>
 
 <div class="wrap">
   <div class="demoban" id="demoban">🧪 <b>데모 모드</b> — 지금은 예시 데이터로 화면·RADAR 100점 엔진을 보여줍니다. KIS 프록시를 연결하면 <b>실시간 장중 데이터</b>로 자동 전환됩니다.</div>
 
   <!-- 지수 스트립 (모든 화면 공통) -->
+  <div id="marketSummary"></div>
   <div class="idxstrip" id="idxstrip"></div>
 
   <!-- ===== HOME ===== -->

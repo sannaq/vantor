@@ -156,7 +156,7 @@ async function loadKisMarket(){
     if(m&&Array.isArray(m.indices)&&m.indices.length){
       m.indices.forEach(function(x){ if(!x||!x.v)return; var t=IDX.find(function(i){return i.nm===x.nm;}); if(t){ t.v=x.v; t.c=x.c; t.d=x.d; t._real=true; } });
       if(m.breadth){ var b=m.breadth; ['up','down','flat','upH','downH'].forEach(function(k){ if(b[k]!=null)FLOW.breadth[k]=b[k]; }); }
-      useRealMkt=true; renderIdx(); renderFlow();
+      useRealMkt=true; renderIdx(); renderFlow(); if(typeof renderSummary==='function')renderSummary();
     }
   }catch(e){}
 }
@@ -303,6 +303,7 @@ function renderRadar(){
   // RADAR 행 클릭 → 종목 상세 바로 열기 (별 클릭은 stopPropagation 으로 제외됨)
   $$('#homeRadar .rowbtn, #fullRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openStock(tr.dataset.c); }; });
   renderEtfToggle();
+  if(typeof renderSummary==='function')renderSummary();
   var u='· '+nowHM()+' 기준'; if($('#radarupd'))$('#radarupd').textContent=u; if($('#radarupd2'))$('#radarupd2').textContent=u;
   renderQuickView();
 }
@@ -860,6 +861,7 @@ function showView(v,noScroll){
   if(!coinMode){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal&&!useRealMkt)_db.style.display=''; }
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
   if(v!=='stock')stopDetailLive(); // 상세를 벗어나면 라이브 폴링 중단
+  if(typeof initCards==='function')setTimeout(initCards,0); // 새로 보이는 카드에 접기 버튼 부여
   if(v==='news')fetchNews();
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();
@@ -869,14 +871,31 @@ let _stkScroll=0;
 let stkMkt='KR';
 function renderStockBrowse(){
   var el=$('#stockPanel'); if(!el)return;
-  var list=(stkMkt==='US'?USTK:STK);
-  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 밤톨이 SCORE·수급·차트 분석을 봅니다. 검색창에서 종목명·코드로도 찾을 수 있어요.</p>'
+  // 국내는 실제 RADAR 유니버스(있으면) 사용 → 실시간 가격. 없으면 데모.
+  var list=(stkMkt==='US')?USTK:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK);
+  var real=(stkMkt==='KR'&&useReal&&KISUNIV&&KISUNIV.length);
+  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 밤톨이 SCORE·수급·차트 분석을 봅니다. 티커·코드로도 검색돼요 (예: AAPL, 005930).</p>'
     +'<div style="display:flex;gap:6px;margin-bottom:14px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
     +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>밤톨이 SCORE</th></tr></thead><tbody>'
-    +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">🧪 데모 데이터 · 미국은 크립토처럼 즉시 실시간화 가능, 국내는 시세 프록시 연결 시 실시간. 국내 종목은 RADAR·수급까지 완전 연동됩니다.</div>';
+    +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num" id="bpx-'+s.c+'">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" id="bch-'+s.c+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+(real?'✅ 국내 실시간 시세 · 거래대금 상위 종목':(PROXY?'시세 불러오는 중…':'🧪 데모 데이터'))+'</div>';
   $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
   $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
+  browseQuotes(list.map(function(s){return s.c;}),stkMkt);
+}
+/* 목록 시세를 /quotes 실데이터로 제자리 갱신 (클릭 전에도 실시간) */
+function browseQuotes(codes,mkt){
+  if(!PROXY||!codes.length) return;
+  proxyJson('/quotes?mkt='+(mkt==='US'?'US':'KR')+'&codes='+codes.slice(0,50).join(',')).then(function(j){
+    if(!j||!j.quotes) return; var got=0;
+    j.quotes.forEach(function(q){ if(!q||q.px==null)return; got++;
+      var pxEl=$('#bpx-'+q.code), chEl=$('#bch-'+q.code); // q.code=심볼, q.c=등락률
+      var ccy=(mkt==='US')?'USD':'KRW';
+      if(pxEl) pxEl.textContent=(ccy==='USD')?('$'+(+q.px).toLocaleString('en-US',{maximumFractionDigits:2})):won(q.px);
+      if(chEl&&hasNum(q.c)){ chEl.textContent=pctTxt(q.c); chEl.className='num '+cls(q.c); }
+    });
+    var note=$('#browseNote'); if(note&&got&&stkMkt===mkt) note.textContent=(mkt==='US'?'✅ 미국 실시간 시세':'✅ 국내 실시간 시세')+' · '+got+'종목';
+  });
 }
 function bindNav(a){ a.onclick=function(e){ if(a.dataset.v)showView(a.dataset.v); }; }
 $$('#menu a').forEach(bindNav);
@@ -1019,7 +1038,71 @@ function openCoinTerminal(){
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
+/* ═══════════ 카드 접기/숨김 상태 (렌더보다 먼저 정의 — renderSummary가 참조) ═══════════ */
+var CARDPREF={collapsed:{},hidden:{}};
+try{ var _cp=JSON.parse(localStorage.getItem('aurCards')||'null'); if(_cp)CARDPREF=Object.assign({collapsed:{},hidden:{}},_cp); }catch(e){}
+function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
+
 /* ═══════════ 초기화 ═══════════ */
 renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge();
+
+/* ═══════════ 카드 편집기 ═══════════ */
+function cardId(card){
+  var h=card.querySelector('.ch h2'); var txt=h?h.textContent:'';
+  return (txt||'').replace(/[^\w가-힣]/g,'').slice(0,24)||('card'+([].indexOf.call(document.querySelectorAll('.card'),card)));
+}
+function applyCollapse(card,c){ card.classList.toggle('collapsed',!!c); }
+function initCards(){
+  $$('.card').forEach(function(card){
+    var ch=card.querySelector('.ch'), h=card.querySelector('.ch h2'); if(!ch||!h)return;
+    var id=cardId(card); card.dataset.card=id;
+    if(CARDPREF.hidden[id]){ card.style.display='none'; } else if(card.style.display==='none'){ card.style.display=''; }
+    if(!ch.querySelector('.cardtog')){
+      var btn=document.createElement('button'); btn.className='cardtog'; btn.title='접기/펴기'; btn.textContent='▾';
+      var rbox=ch.querySelector('.r'); if(rbox)rbox.appendChild(btn); else ch.appendChild(btn);
+      btn.onclick=function(ev){ ev.stopPropagation(); var c=!card.classList.contains('collapsed'); applyCollapse(card,c); CARDPREF.collapsed[id]=c; if(!c)delete CARDPREF.collapsed[id]; saveCardPref(); };
+    }
+    applyCollapse(card,CARDPREF.collapsed[id]);
+  });
+}
+function openCardEditor(){
+  var cards=$$('.card').filter(function(c){return c.querySelector('.ch h2');});
+  // 중복 id 제거(대표 1개씩)
+  var seen={}, list=[];
+  cards.forEach(function(c){ var id=cardId(c), nm=c.querySelector('.ch h2').textContent.trim(); if(seen[id])return; seen[id]=1; list.push({id:id,nm:nm}); });
+  var bg=document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML='<div class="modal"><h3>⚙️ 화면 편집</h3><div class="msub">보고 싶은 항목만 켜두세요. 카드 제목의 ▾ 로 접을 수도 있어요.</div>'
+    +list.map(function(x){return '<div class="edrow'+(CARDPREF.hidden[x.id]?'':' on')+'" data-id="'+x.id+'"><span class="sw"></span><span class="nm">'+x.nm+'</span></div>';}).join('')
+    +'<div class="mfoot"><button class="mbtn" id="edReset">전체 켜기</button><button class="mbtn pri" id="edDone">완료</button></div></div>';
+  document.body.appendChild(bg);
+  bg.addEventListener('click',function(e){ if(e.target===bg)close(); });
+  function close(){ bg.remove(); }
+  $$('.edrow',bg).forEach(function(row){ row.onclick=function(){ var id=row.dataset.id; var on=row.classList.toggle('on');
+    if(on)delete CARDPREF.hidden[id]; else CARDPREF.hidden[id]=1; saveCardPref(); initCards(); }; });
+  $('#edReset',bg).onclick=function(){ CARDPREF.hidden={}; saveCardPref(); $$('.edrow',bg).forEach(function(r){r.classList.add('on');}); initCards(); };
+  $('#edDone',bg).onclick=close;
+}
+window.openCardEditor=openCardEditor;
+
+/* ═══════════ 오늘의 시장 한 줄 요약 (상단) ═══════════ */
+function renderSummary(){
+  var el=$('#marketSummary'); if(!el) return;
+  if(CARDPREF.hidden['시장요약']){ el.innerHTML=''; return; }
+  var ks=IDX.find(function(x){return x.nm==='KOSPI';})||{}, kq=IDX.find(function(x){return x.nm==='KOSDAQ';})||{};
+  var b=FLOW.breadth||{}, up=b.up||0, dn=b.down||0;
+  var mood=(ks.c||0)>=0.3?['강세','up','📈']:(ks.c||0)<=-0.3?['약세','down','📉']:['혼조','flat','➖'];
+  var topCat=(CATS||[]).slice().sort(function(a,b){return b.sc-a.sc;})[0];
+  var topStk=(RADAR||[])[0];
+  var breadthTxt=(up+dn)>0?('상승 '+up+' · 하락 '+dn):'';
+  var line='오늘 시장은 '+mood[2]+' <span class="'+mood[1]+'">'+mood[0]+'</span>';
+  if(ks.nm)line+=' · 코스피 <span class="'+cls(ks.c)+'">'+pctTxt(ks.c||0)+'</span>';
+  el.innerHTML='<div class="msum" data-card="시장요약"><div class="hl">'+line+'</div>'
+    +'<div class="chips">'
+    +(breadthTxt?'<div class="chip">🌊 <small>등락</small> '+breadthTxt+'</div>':'')
+    +(topCat?'<div class="chip" onclick="showView(\'market\')">🔥 <small>강한 업종</small> '+topCat.ic+' '+topCat.nm+' <span class="up">'+pctTxt(topCat.chg)+'</span></div>':'')
+    +(topStk?'<div class="chip" onclick="openStock(\''+topStk.c+'\')">🎯 <small>RADAR 1위</small> '+topStk.n+' <span class="scorepill" style="min-width:0;padding:1px 6px">'+topStk.score+'</span></div>':'')
+    +'</div></div>';
+}
+initCards(); renderSummary();
 if(PROXY){ loadKisRadar(); loadKisMarket(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); } // 실데이터: 1분마다 RADAR·MARKET 갱신
 setInterval(fetchNews,300000);
