@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   VANTOR Pro — app.js
-   - VANTOR DAY SCORE 100점 엔진 (스펙 §3~4)
+   밤톨이 Pro — app.js
+   - 밤톨이 DAY SCORE 100점 엔진 (스펙 §3~4)
    - 데모 목데이터로 즉시 작동, PROXY 설정 시 실데이터로 확장
    ═══════════════════════════════════════════════════════════ */
 // 시세 프록시(Cloudflare Worker → 토스증권 Open API). 응답 실패 시 자동으로 데모 폴백
@@ -28,7 +28,7 @@ function sparkline(data,w,h,color){
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 }
 
-/* ═══════════ VANTOR DAY SCORE 엔진 (100점) ═══════════ */
+/* ═══════════ 밤톨이 DAY SCORE 엔진 (100점) ═══════════ */
 function sVal(p){ return p>=99?10:p>=97?9:p>=95?8:p>=90?7:p>=80?5:p>=60?3:p>=40?2:0; }         // 거래대금 순위 백분위
 function sValInc(i){ return i>=300?10:i>=200?9:i>=150?8:i>=100?7:i>=70?6:i>=40?5:i>=20?3:i>0?1:0; } // 전일동시간대비 증가율
 function sAccel(x){ return x>=4?10:x>=3?9:x>=2.5?8:x>=2?7:x>=1.5?5:x>=1.2?3:x>=1?1:0; }          // 5분 가속도
@@ -300,7 +300,8 @@ function renderRadar(){
   if(fr){ fr.innerHTML='<thead><tr><th class="l">#</th><th class="l">종목</th><th>SCORE</th><th>1M</th><th>등락률</th><th>압력</th><th>상태</th></tr></thead><tbody>'
     +RADAR.slice(0,10).map(function(r){return radarRow(r,true);}).join('')+'</tbody>';
   }
-  $$('#homeRadar .rowbtn, #fullRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ SEL=RADAR.find(function(x){return x.c===tr.dataset.c;}); renderRadar(); renderQuickView(); }; }); // QuickView는 제자리 갱신(스크롤 유지)
+  // RADAR 행 클릭 → 종목 상세 바로 열기 (별 클릭은 stopPropagation 으로 제외됨)
+  $$('#homeRadar .rowbtn, #fullRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openStock(tr.dataset.c); }; });
   renderEtfToggle();
   var u='· '+nowHM()+' 기준'; if($('#radarupd'))$('#radarupd').textContent=u; if($('#radarupd2'))$('#radarupd2').textContent=u;
   renderQuickView();
@@ -727,7 +728,7 @@ function openStock(code){
         +'<div id="stab-score" style="display:none"></div>'
       +'</div>'
       +'<div>'
-        +'<div class="card"><div class="ch"><h2>VANTOR SCORE</h2></div><div class="pad" style="padding-top:12px">'
+        +'<div class="card"><div class="ch"><h2>밤톨이 SCORE</h2></div><div class="pad" style="padding-top:12px">'
           +'<div style="display:flex;align-items:center;gap:16px"><div class="ring" style="background:conic-gradient(var(--gold) '+gaugeDeg+'deg, var(--line) 0)"><div class="rc"><b>'+r.score+'</b><br><span>/100</span></div></div>'
             +'<div><div style="font-size:18px;font-weight:800" class="'+grd[1]+'">'+grd[0]+'</div><div style="font-size:12px;color:var(--sub);margin-top:3px;line-height:1.4">'+(r.score>=80?'모멘텀·수급이 강하고 단기 추세가 살아있는 종목':'추세·수급을 함께 확인하며 접근')+'</div></div></div>'
           +'<div class="subs">'+Object.keys(subs).map(function(k){var v=subs[k];var g=gradeTxt(v);return '<div class="sub"><div class="sk">'+k+'</div><div class="sv">'+v+'</div><div class="sg '+g[1]+'">'+g[0]+'</div></div>';}).join('')+'</div>'
@@ -776,9 +777,9 @@ let stkMkt='KR';
 function renderStockBrowse(){
   var el=$('#stockPanel'); if(!el)return;
   var list=(stkMkt==='US'?USTK:STK);
-  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 VANTOR SCORE·수급·차트 분석을 봅니다. 검색창에서 종목명·코드로도 찾을 수 있어요.</p>'
+  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 밤톨이 SCORE·수급·차트 분석을 봅니다. 검색창에서 종목명·코드로도 찾을 수 있어요.</p>'
     +'<div style="display:flex;gap:6px;margin-bottom:14px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
-    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>VANTOR SCORE</th></tr></thead><tbody>'
+    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>밤톨이 SCORE</th></tr></thead><tbody>'
     +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:10px">🧪 데모 데이터 · 미국은 크립토처럼 즉시 실시간화 가능, 국내는 시세 프록시 연결 시 실시간. 국내 종목은 RADAR·수급까지 완전 연동됩니다.</div>';
   $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
@@ -891,11 +892,11 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/* 코인 모드 = onexcore 터미널 통째로(VANTOR 색) */
+/* 코인 모드 = onexcore 터미널 통째로(밤톨이 색) */
 function openCoinTerminal(){
   var v=$('#v-coin'); if(!v)return;
   v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급</span><a href="https://sannaq.github.io/onexcore-dashboard/" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
-    +'<iframe id="coinFrame" src="https://sannaq.github.io/onexcore-dashboard/" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>';
+    +'<iframe id="coinFrame" src="https://sannaq.github.io/onexcore-dashboard/" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="밤톨이 코인 터미널" loading="eager"></iframe>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
