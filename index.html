@@ -97,6 +97,9 @@
   tbody tr.sel{background:color-mix(in srgb,var(--gold) 9%,transparent)}
   .sym{font-weight:800}.sym small{display:block;color:var(--faint);font-weight:600;font-size:11px;margin-top:1px}
   .scorepill{display:inline-block;min-width:34px;text-align:center;font-weight:800;font-size:13px;padding:3px 8px;border-radius:8px;color:#3a2c07;background:linear-gradient(135deg,var(--gold2),var(--gold))}
+  .starbtn{cursor:pointer;background:none;border:none;font-size:16px;line-height:1;color:var(--faint);padding:2px;transition:color .15s,transform .1s;user-select:none}
+  .starbtn:hover{transform:scale(1.2)}
+  .starbtn.on{color:#f5b301}
   .scorepill.s2{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
   .st{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap}
   .st.surge{color:#fff;background:var(--up)}
@@ -190,10 +193,13 @@
   .cmprow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line2);font-size:13px;align-items:center}
   /* ===== 모바일 반응형 ===== */
   @media(max-width:760px){
-    .nav{height:auto;flex-wrap:wrap;gap:8px 10px;padding:8px 12px}
+    .nav{height:auto;flex-wrap:wrap;gap:7px 10px;padding:7px 12px}
     .logo{order:1}.segmode{order:2}.navbtns{order:3;margin-left:auto}
-    .search{order:4;flex:1 1 100%}.menu{order:5;flex:1 1 100%;gap:2px}
-    .menu a{padding:7px 11px;font-size:13px}
+    .search{order:4;flex:1 1 100%}
+    /* 메뉴는 줄바꿈 대신 가로 스크롤 한 줄 → nav 높이 절감 */
+    .menu{order:5;flex:1 1 100%;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .menu::-webkit-scrollbar{display:none}
+    .menu a{padding:7px 11px;font-size:13px;white-space:nowrap;flex:0 0 auto}
     .menu a.on::after{left:11px;right:11px}
     .navbtns .ibtn:nth-child(2),.navbtns .ibtn:nth-child(4){display:none}
     .wrap{padding:12px 12px 40px}
@@ -227,10 +233,11 @@
     <a data-v="radar">RADAR</a>
     <a data-v="stock">STOCK</a>
     <a data-v="news">NEWS</a>
+    <a data-v="watch">관심</a>
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="알림">🔔</button><button class="ibtn" title="관심종목">★</button><button class="ibtn" title="내 계정">👤</button></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="알림">🔔</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button></div>
 </nav>
 
 <div class="wrap">
@@ -297,6 +304,11 @@
 
   <!-- ===== STOCK ===== -->
   <div class="view" id="v-stock"><div class="card"><div class="pad" id="stockPanel"></div></div></div>
+  <div class="view" id="v-watch">
+    <div class="card"><div class="ch"><h2>⭐ 관심종목</h2><div class="r"><span id="watchupd">–</span></div></div>
+      <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><div id="watchPanel"></div></div></div>
+    </div>
+  </div>
 
   <!-- ===== NEWS ===== -->
   <div class="view" id="v-news">

@@ -160,6 +160,59 @@ async function loadKisMarket(){
     }
   }catch(e){}
 }
+/* ═══════════ 관심종목(WATCHLIST) — localStorage 'aurWatch' ═══════════ */
+var WATCH=[]; try{ WATCH=JSON.parse(localStorage.getItem('aurWatch')||'[]')||[]; }catch(e){ WATCH=[]; }
+function watchSave(){ try{ localStorage.setItem('aurWatch',JSON.stringify(WATCH)); }catch(e){} }
+function watchHas(code){ return WATCH.indexOf(code)>-1; }
+function watchToggle(code,nm){
+  var i=WATCH.indexOf(code);
+  if(i>-1) WATCH.splice(i,1); else WATCH.push(code);
+  watchSave();
+  // 열린 화면들 갱신
+  $$('.starbtn[data-c="'+code+'"]').forEach(function(b){ var on=watchHas(code); b.textContent=on?'★':'☆'; b.classList.toggle('on',on); });
+  if($('#v-watch')&&$('#v-watch').classList.contains('on')) renderWatch();
+  updateWatchBadge();
+}
+function starBtn(code,nm){ var on=watchHas(code);
+  return '<button class="starbtn'+(on?' on':'')+'" data-c="'+code+'" title="관심종목" '
+    +'onclick="event.stopPropagation();watchToggle(\''+code+'\')">'+(on?'★':'☆')+'</button>'; }
+function updateWatchBadge(){ var a=$('.menu a[data-v=\"watch\"]'); if(a) a.textContent='관심'+(WATCH.length?' '+WATCH.length:''); }
+/* 관심종목 화면 — 실시간 시세(/quotes 배치) + RADAR 점수 비교표 */
+async function renderWatch(){
+  var el=$('#watchPanel'); if(!el) return;
+  if(!WATCH.length){ el.innerHTML='<div style="padding:26px 8px;color:var(--faint);font-size:13px;text-align:center">'
+    +'관심종목이 없습니다. 종목 목록·상세·RADAR에서 ☆ 를 눌러 담아보세요.</div>';
+    if($('#watchupd'))$('#watchupd').textContent=''; return; }
+  // 이름·통화·시장: RADAR/ALLSTK에서 우선 확보
+  function meta(code){ var r=(RADAR||[]).find(function(x){return x.c===code;})
+      ||(typeof ALLSTK!=='undefined'?ALLSTK:STK).find(function(x){return x.c===code;});
+    return r?{n:r.n,mk:r.mk,ccy:r.ccy||'KRW',score:r.score}:{n:code,mk:'',ccy:'KRW'}; }
+  // 실시간 시세: 프록시 있으면 국내/미국 나눠 배치 조회
+  var live={};
+  if(PROXY){
+    var kr=WATCH.filter(function(c){return (meta(c).ccy||'KRW')!=='USD';});
+    var us=WATCH.filter(function(c){return meta(c).ccy==='USD';});
+    var jobs=[];
+    if(kr.length) jobs.push(proxyJson('/quotes?mkt=KR&codes='+kr.join(',')));
+    if(us.length) jobs.push(proxyJson('/quotes?mkt=US&codes='+us.join(',')));
+    var res=await Promise.all(jobs);
+    res.forEach(function(j){ if(j&&j.quotes) j.quotes.forEach(function(q){ if(q&&q.px!=null) live[q.code]={px:q.px,c:q.c}; }); });
+  }
+  var rows=WATCH.map(function(code){ var m=meta(code), q=live[code]||{};
+    var px=q.px!=null?q.px:null, ch=q.c!=null?q.c:null;
+    return {code:code,n:m.n,mk:m.mk,ccy:m.ccy,score:m.score,px:px,ch:ch}; });
+  el.innerHTML='<table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락</th><th>RADAR</th><th></th></tr></thead><tbody>'
+    +rows.map(function(r){
+      var pxT=r.px!=null?(r.ccy==='USD'?('$'+(+r.px).toLocaleString('en-US',{maximumFractionDigits:2})):won(r.px)):'—';
+      var chT=r.ch!=null?('<span class="'+cls(r.ch)+'" style="font-weight:700">'+pctTxt(r.ch)+'</span>'):'<span style="color:var(--faint)">—</span>';
+      var scT=r.score!=null?('<span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span>'):'<span style="color:var(--faint)">–</span>';
+      return '<tr class="rowbtn" data-c="'+r.code+'"><td class="l"><div class="sym">'+r.n+'<small>'+r.code+(r.mk?' · '+r.mk:'')+'</small></div></td>'
+        +'<td style="font-weight:700">'+pxT+'</td><td>'+chT+'</td><td>'+scT+'</td>'
+        +'<td><button class="starbtn on" data-c="'+r.code+'" title="관심 해제" onclick="event.stopPropagation();watchToggle(\''+r.code+'\')">★</button></td></tr>';
+    }).join('')+'</tbody></table>';
+  $$('#watchPanel .rowbtn').forEach(function(tr){ tr.onclick=function(){ openStock(tr.dataset.c); }; });
+  if($('#watchupd'))$('#watchupd').textContent='· '+nowHM()+' · '+WATCH.length+'종목';
+}
 /* ETF/ETN 판별 — 한국 ETF는 예외 없이 운용사 브랜드가 종목명 맨 앞에 붙는다.
    레버리지·인버스도 여기서 걸러진다(사용자가 토글로 제외 선택 시). */
 /* ETF 전용 브랜드만(실제 종목명과 겹치는 HK·파워 등은 제외 — HK이노엔·파워로직스 오탐 방지) */
@@ -205,7 +258,7 @@ function radarRow(r,full){
   var stCell=full?'<span class="st '+r.stcls+'">'+r.status+'</span>':'<span class="st '+hs[1]+'">'+hs[0]+'</span>';
   return '<tr class="rowbtn'+(SEL&&SEL.c===r.c?' sel':'')+'" data-c="'+r.c+'">'
     +'<td class="l"><span class="rank">'+r.rank+'</span></td>'
-    +'<td class="l"><div class="sym">'+r.n+'<small>'+r.c+' · '+r.mk+'</small></div></td>'
+    +'<td class="l"><div class="sym" style="display:flex;align-items:center;gap:6px">'+starBtn(r.c)+'<div>'+r.n+'<small>'+r.c+' · '+r.mk+'</small></div></div></td>'
     +'<td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td>'
     +(full?'<td>'+mvHtml(r.dRank)+'</td>':'')
     +'<td class="'+pc+'">'+pctTxt(r.ch)+'</td>'
@@ -574,7 +627,9 @@ function openStock(code){
   var gaugeDeg=r.score*3.6;
   el.innerHTML=
     '<button class="more" onclick="backToBrowse()" style="background:none;border:none;font-family:inherit;margin-bottom:10px;padding:0;cursor:pointer">◀ 종목 목록</button>'
-    +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+r.n+'</span><span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+r.n+'</span>'
+      +'<span class="starbtn'+(watchHas(r.c)?' on':'')+'" data-c="'+r.c+'" title="관심종목" style="font-size:22px" onclick="watchToggle(\''+r.c+'\')">'+(watchHas(r.c)?'★':'☆')+'</span>'
+      +'<span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
       +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-weight:700">RADAR SCORE <span class="scorepill">'+r.score+'</span></span></div>'
     +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+cls(r.ch)+'">'+priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span></div>'
     +'<div class="metrics" id="metGrid">'
@@ -632,6 +687,7 @@ function showView(v,noScroll){
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
   if(v==='news')fetchNews();
   if(v==='stock'&&!noScroll)renderStockBrowse();
+  if(v==='watch')renderWatch();
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
 }
 let _stkScroll=0;
@@ -763,6 +819,6 @@ function openCoinTerminal(){
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
 /* ═══════════ 초기화 ═══════════ */
-renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews();
+renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge();
 if(PROXY){ loadKisRadar(); loadKisMarket(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); } // 실데이터: 1분마다 RADAR·MARKET 갱신
 setInterval(fetchNews,300000);
