@@ -160,7 +160,17 @@ async function loadKisMarket(){
     }
   }catch(e){}
 }
-function radarUniverse(){ return (useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK; }
+/* ETF/ETN 판별 — 한국 ETF는 예외 없이 운용사 브랜드가 종목명 맨 앞에 붙는다.
+   레버리지·인버스도 여기서 걸러진다(사용자가 토글로 제외 선택 시). */
+/* ETF 전용 브랜드만(실제 종목명과 겹치는 HK·파워 등은 제외 — HK이노엔·파워로직스 오탐 방지) */
+var ETF_RE=/^(KODEX|TIGER|PLUS|ACE|SOL|RISE|KBSTAR|ARIRANG|HANARO|KOSEF|KINDEX|KIWOOM|TIMEFOLIO|FOCUS)\b/i;
+function isETF(s){ return ETF_RE.test((s&&s.n)||''); }
+var hideETF=false;
+try{ hideETF=localStorage.getItem('aurHideETF')==='1'; }catch(e){}
+function radarUniverse(){
+  var base=(useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK;
+  return hideETF ? base.filter(function(s){return !isETF(s);}) : base;
+}
 /* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
 async function loadKisRadar(){
   if(!PROXY) return;
@@ -202,6 +212,18 @@ function radarRow(r,full){
     +(full?'<td>'+pressBar(r.g)+'</td>':'')
     +'<td>'+stCell+'</td></tr>';
 }
+/* RADAR 헤더의 ETF 포함/제외 토글 (#mktfilter 자리). 기본=포함 */
+function renderEtfToggle(){
+  var el=$('#mktfilter'); if(!el) return;
+  el.innerHTML='<button id="etfToggle" style="font:inherit;font-size:11px;font-weight:700;cursor:pointer;'
+    +'border:1px solid var(--line);border-radius:12px;padding:3px 10px;margin-left:8px;'
+    +'background:'+(hideETF?'transparent':'var(--line2)')+';color:'+(hideETF?'var(--faint)':'var(--ink)')+'">'
+    +(hideETF?'ETF 제외됨':'ETF 포함')+'</button>';
+  var b=$('#etfToggle'); if(b) b.onclick=function(){
+    hideETF=!hideETF; try{localStorage.setItem('aurHideETF',hideETF?'1':'0');}catch(e){}
+    renderRadar(); renderQuickView();
+  };
+}
 function renderStrongSectors(){
   var el=$('#strongSectors'); if(!el)return;
   var arr=CATS.slice().sort(function(a,b){return b.sc-a.sc;});
@@ -226,6 +248,7 @@ function renderRadar(){
     +RADAR.slice(0,10).map(function(r){return radarRow(r,true);}).join('')+'</tbody>';
   }
   $$('#homeRadar .rowbtn, #fullRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ SEL=RADAR.find(function(x){return x.c===tr.dataset.c;}); renderRadar(); renderQuickView(); }; }); // QuickView는 제자리 갱신(스크롤 유지)
+  renderEtfToggle();
   var u='· '+nowHM()+' 기준'; if($('#radarupd'))$('#radarupd').textContent=u; if($('#radarupd2'))$('#radarupd2').textContent=u;
   renderQuickView();
 }
