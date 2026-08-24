@@ -548,7 +548,7 @@ function liveRefresh(r){
     if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
     var tip=$('#chartTip'); if(!tip||tip.style.display!=='block') drawStockChart($('#sChart'),r);
     var pe=$('#stkPx'); if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
-    var lv=$('#liveDot'); if(lv) lv.style.opacity=lv.style.opacity==='1'?'0.35':'1'; // 깜빡여 갱신 표시
+    [$('#liveDot'),$('#liveDotChart')].forEach(function(lv){ if(lv) lv.style.opacity=lv.style.opacity==='0.35'?'1':'0.35'; }); // 깜빡여 갱신 표시
   });
   if(!isUS) proxyJson('/flow?'+base).then(function(j){
     if(!SEL||SEL.c!==r.c||!j) return;
@@ -589,10 +589,17 @@ function renderPressureFlow(r){
   if(!parts.length){ el.innerHTML=PROXY?'<div style="font-size:11px;color:var(--faint);padding:10px 0">수급 데이터 불러오는 중…</div>':''; return; }
   el.innerHTML='<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:2px">'+parts.join('')+'</div>';
 }
-function scoredOf(code){
+function scoredOf(code,opt){
   var r=RADAR.find(function(x){return x.c===code;}); if(r)return r;
-  var s=(typeof ALLSTK!=='undefined'?ALLSTK:STK).find(function(x){return x.c===code;}); if(!s)return RADAR[0];
-  var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0});
+  var s=(typeof ALLSTK!=='undefined'?ALLSTK:STK).find(function(x){return x.c===code;});
+  if(s){ var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0}); }
+  // 데모·RADAR에 없는 종목(티커 검색) → 스텁 생성. 실데이터는 enrichStock이 채운다.
+  var isKR=/^\d{6}$/.test(code); opt=opt||{};
+  return { c:code, n:opt.n||code, mk:opt.mk||(isKR?'KOSPI':'NASDAQ'), ccy:isKR?'KRW':'USD',
+    px:0, ch:0, score:0, g:{trade:0,price:0,press:0,flow:0,trend:0}, gmax:{trade:35,price:30,press:25,flow:5,trend:5},
+    reasons:[], grade:['조회 중','steady'], rank:'-', dRank:0,
+    valPct:null,valInc:null,accel:null,rvol:null,openPct:null,highGap:null,momPct:null,
+    strength:null,bidRatio:null,progPct:null,invest:null,breakout:null,cooling:false };
 }
 function priceFmt(r,v){ if(v==null)v=r.px; return r.ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):won(v); }
 function backToBrowse(){ stopDetailLive(); var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal)_db.style.display=''; renderStockBrowse(); window.scrollTo(0,_stkScroll); }
@@ -796,8 +803,11 @@ function openStock(code){
       +'<div>'
         +'<div class="stabs"><button class="on" data-t="chart">차트</button><button data-t="flow">투자자 수급</button><button data-t="book">호가</button><button data-t="score">점수 구성</button></div>'
         +'<div id="stab-chart">'
-          +'<div class="tfbar" id="tfBar">'
-            +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
+          +'<div style="display:flex;align-items:center">'
+            +'<div class="tfbar" id="tfBar">'
+              +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
+            +'</div>'
+            +(PROXY?'<span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint);font-weight:700"><span id="liveDotChart" style="width:7px;height:7px;border-radius:50%;background:#16b364;box-shadow:0 0 5px #16b364;transition:opacity .4s"></span>LIVE 15초</span>':'')
           +'</div>'
           +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
           +'<div id="chartCap" style="font-size:11px;color:var(--faint);margin-top:6px">불러오는 중…</div>'
@@ -879,7 +889,16 @@ const NEWS_FEEDS={
   US:[{u:'https://www.cnbc.com/id/20910258/device/rss/rss.html',s:'CNBC 마켓'},{u:'https://www.cnbc.com/id/100003114/device/rss/rss.html',s:'CNBC 톱뉴스'},{u:'https://www.cnbc.com/id/10000664/device/rss/rss.html',s:'CNBC 이코노미'}]
 };
 let newsCat='KR', usTr=false, _trC={};
-function relTime(d){var s=(Date.now()-d)/1000;if(s<60)return '방금';if(s<3600)return Math.floor(s/60)+'분 전';if(s<86400)return Math.floor(s/3600)+'시간 전';return Math.floor(s/86400)+'일 전';}
+function relTime(d){var s=(Date.now()-d)/1000;if(s<0)s=0;if(s<60)return '방금';if(s<3600)return Math.floor(s/60)+'분 전';if(s<86400)return Math.floor(s/3600)+'시간 전';return Math.floor(s/86400)+'일 전';}
+/* rss2json은 pubDate를 UTC 'YYYY-MM-DD HH:MM:SS'(타임존 표기 없음)로 준다.
+   그대로 Date.parse 하면 브라우저가 로컬(KST)로 해석해 정확히 9시간 어긋난다 → UTC로 강제 해석 */
+function parseNewsTime(pd){
+  if(!pd) return Date.now();
+  var t;
+  if(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(pd)) t=Date.parse(pd.replace(' ','T')+'Z');
+  else t=Date.parse(pd);
+  return isFinite(t)?t:Date.now();
+}
 function nowHM(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
 function esc(t){return String(t).replace(/[&<>"]/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m];});}
 function sentiment(t){var neg=['하락','급락','규제','관세','폭락','우려','경고','소송','제재','하향','파산','약세','손실','벌금','위기','충격','부진','논란','적자'];var pos=['상승','급등','호재','승인','유입','신고가','돌파','완화','호조','성장','상향','상장','투자','반등','회복','기대','최고','호실적','흑자','수주'];for(var i=0;i<neg.length;i++)if(t.indexOf(neg[i])>-1)return 'neg';for(var j=0;j<pos.length;j++)if(t.indexOf(pos[j])>-1)return 'pos';return '';}
@@ -892,7 +911,7 @@ async function fetchNews(){
   try{
     var res=await Promise.all(feeds.map(function(f){return fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(f.u)).then(r=>r.json()).then(j=>({j:j,s:f.s})).catch(()=>null);}));
     if(cat!==newsCat)return;
-    var all=[];res.forEach(function(x){if(x&&x.j&&x.j.items)x.j.items.forEach(function(it){all.push({title:it.title,link:it.link,t:Date.parse(it.pubDate)||Date.now(),src:x.s});});});
+    var all=[];res.forEach(function(x){if(x&&x.j&&x.j.items)x.j.items.forEach(function(it){all.push({title:it.title,link:it.link,t:parseNewsTime(it.pubDate),src:x.s});});});
     all.sort(function(a,b){return b.t-a.t;});all=all.slice(0,18);
     if(cat==='KR')_lastNews=all.slice();
     if(cat==='US'&&usTr){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px;padding:8px 0">🌐 번역 중…</div>'; var tt=await Promise.all(all.map(function(n){return trOne(n.title);})); if(cat!==newsCat)return; all.forEach(function(n,i){n.title=tt[i];}); }
@@ -912,7 +931,24 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('
 })();
 
 /* ═══════════ 검색 ═══════════ */
-$('#q').onkeydown=function(e){ if(e.key==='Enter'){ var t=this.value.trim().toLowerCase(); if(!t)return; var hit=ALLSTK.find(function(s){return s.n.toLowerCase().includes(t)||s.c.toLowerCase().includes(t);}); if(hit){ if(coinMode)setMode('stock'); openStock(hit.c); } } };
+function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false; var t=raw.toLowerCase();
+  var pool=(RADAR||[]).concat(typeof ALLSTK!=='undefined'?ALLSTK:STK);
+  function open(code){ if(coinMode)setMode('stock'); openStock(code); return true; }
+  // 1) 정확 코드/이름 일치
+  var exact=pool.find(function(s){return s.c.toLowerCase()===t||s.n.toLowerCase()===t;});
+  if(exact) return open(exact.c);
+  // 2) 티커 형태 우선 (6자리 숫자=국내 / 전부 대문자 영문=미국 티커 의도)
+  if(/^\d{6}$/.test(raw)) return open(raw);
+  if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw) && raw===raw.toUpperCase()) return open(raw.toUpperCase());
+  // 3) 부분 일치(이름/코드 포함)
+  var part=pool.find(function(s){return s.n.toLowerCase().includes(t)||s.c.toLowerCase().includes(t);});
+  if(part) return open(part.c);
+  // 4) 그래도 영문이면 미국 티커로 시도
+  if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw)) return open(raw.toUpperCase());
+  return false;
+}
+$('#q').onkeydown=function(e){ if(e.key!=='Enter')return; if(doSearch(this.value)){ this.blur(); }
+  else { this.style.borderColor='var(--down)'; var self=this; setTimeout(function(){self.style.borderColor='';},900); } };
 
 /* ═══════════ 초기화 ═══════════ */
 /* ═══════════ 코인 모드 (CoinGecko 실시간) ═══════════ */
