@@ -1,9 +1,11 @@
 /* ═══════════════════════════════════════════════════════════
    VANTOR Pro — app.js
    - VANTOR DAY SCORE 100점 엔진 (스펙 §3~4)
-   - 데모 목데이터로 즉시 작동, KIS_PROXY 설정 시 실데이터로 확장
+   - 데모 목데이터로 즉시 작동, PROXY 설정 시 실데이터로 확장
    ═══════════════════════════════════════════════════════════ */
-const KIS_PROXY='https://aureum-kis.wlsghman1.workers.dev'; // KIS 프록시(Cloudflare Worker). 응답 실패 시 자동으로 데모 폴백
+// 시세 프록시(Cloudflare Worker → 토스증권 Open API). 응답 실패 시 자동으로 데모 폴백
+// 워커 이름 aureum-kis 는 KIS 로 처음 만든 흔적 — URL 유지를 위해 그대로 둔다
+const PROXY='https://aureum-kis.wlsghman1.workers.dev';
 
 /* ---------- 유틸 ---------- */
 const $=(s,r)=>(r||document).querySelector(s), $$=(s,r)=>[...(r||document).querySelectorAll(s)];
@@ -11,6 +13,11 @@ const won=n=>'₩'+Math.round(n).toLocaleString('en-US');
 const pctTxt=(c)=>(c>=0?'+':'')+(+c).toFixed(2)+'%';
 const cls=(c)=>c>0?'up':(c<0?'down':'flat');
 const arw=(c)=>c>0?'▲':(c<0?'▼':'–');
+/* 실데이터는 지표가 비어 올 수 있다(공급처가 안 주거나 보강 범위 밖).
+   null 을 0 으로 둔갑시키지 않고 그대로 드러내기 위한 헬퍼. */
+function hasNum(v){ return v!=null && isFinite(v); }
+function nz(v,d){ return hasNum(v)?+v:(d||0); }
+function numOrDash(v,fn){ return hasNum(v)?fn(+v):'—'; }
 function fmtEok(v){ // 억원 표기
   if(v>=10000) return (v/10000).toFixed(1)+'조';
   return Math.round(v).toLocaleString('en-US')+'억';
@@ -59,7 +66,8 @@ function aureumScore(s){
   if(s.accel>=2) reasons.push('최근 5분 거래대금 '+s.accel.toFixed(1)+'배 증가');
   if(s.valInc>=70) reasons.push('전일 동시간 대비 거래대금 +'+Math.round(s.valInc)+'%');
   if(s.openPct>=2&&s.openPct<10) reasons.push('시가 대비 +'+s.openPct.toFixed(1)+'% (초·중기 모멘텀 구간)');
-  if(s.highGap<=1.5) reasons.push('장중 고점 대비 -'+s.highGap.toFixed(1)+'% (고점 부근 힘 유지)');
+  // 주의: null<=1.5 는 true 로 평가된다(0으로 강제변환) → 반드시 값 존재부터 확인
+  if(hasNum(s.highGap)&&s.highGap<=1.5) reasons.push('장중 고점 대비 -'+s.highGap.toFixed(1)+'% (고점 부근 힘 유지)');
   if(s.strength>=120) reasons.push('체결강도 '+Math.round(s.strength)+' (매수 우위)');
   if(s.bidRatio>=60) reasons.push('호가 매수 우위 '+Math.round(s.bidRatio)+'%');
   if(s.progPct>=3) reasons.push('프로그램 순매수 +'+s.progPct.toFixed(1)+'%');
@@ -140,11 +148,11 @@ const FLOW={
 
 /* ═══════════ RADAR 계산 ═══════════ */
 let RADAR=[]; let SEL=null; let _lastNews=[];
-let useReal=false, KISUNIV=null, useRealMkt=false; // KIS 프록시 실데이터
+let useReal=false, KISUNIV=null, useRealMkt=false; // 프록시 실데이터
 async function loadKisMarket(){
-  if(!KIS_PROXY) return;
+  if(!PROXY) return;
   try{
-    var m=await fetch(KIS_PROXY+'/market?mkt=KR').then(function(r){return r.json();});
+    var m=await fetch(PROXY+'/market?mkt=KR').then(function(r){return r.json();});
     if(m&&Array.isArray(m.indices)&&m.indices.length){
       m.indices.forEach(function(x){ if(!x||!x.v)return; var t=IDX.find(function(i){return i.nm===x.nm;}); if(t){ t.v=x.v; t.c=x.c; t.d=x.d; t._real=true; } });
       if(m.breadth){ var b=m.breadth; ['up','down','flat','upH','downH'].forEach(function(k){ if(b[k]!=null)FLOW.breadth[k]=b[k]; }); }
@@ -155,9 +163,9 @@ async function loadKisMarket(){
 function radarUniverse(){ return (useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK; }
 /* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
 async function loadKisRadar(){
-  if(!KIS_PROXY) return;
+  if(!PROXY) return;
   try{
-    var j=await fetch(KIS_PROXY+'/radar?mkt=KR&limit=40').then(function(r){return r.json();});
+    var j=await fetch(PROXY+'/radar?mkt=KR&limit=40').then(function(r){return r.json();});
     if(j&&Array.isArray(j.stocks)&&j.stocks.length){
       // 이전 순위 저장 → 1분 순위변화(dRank) 계산
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
@@ -291,10 +299,18 @@ function renderCats(){
   var heat=$('#catHeat'); if(heat){ heat.innerHTML='<div class="heat">'+CATS.map(function(x){ var t=(x.sc-40)/55; var col='hsl('+(t*18)+','+(55+t*35)+'%,'+(58-t*16)+'%)'; return '<div class="h" style="background:'+col+'">'+x.sc+'<div class="hs">'+x.nm+'</div></div>'; }).join('')+'</div>'; }
   var cr=$('#catRank'); if(cr){ cr.innerHTML='<table><thead><tr><th class="l">순위</th><th class="l">업종</th><th>SCORE</th><th>1분 변화</th></tr></thead><tbody>'
     +CATS.map(function(x,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l">'+x.ic+' '+x.nm+'</td><td>'+x.sc+'</td><td>'+mvHtml(x.d)+'</td></tr>';}).join('')+'</tbody></table>'; }
-  var rs=$('#radarStats'); if(rs){ rs.innerHTML=
-    '<div class="card"><div class="ch"><h2>💵 거래대금 가속</h2></div><div class="pad">'+RADAR.slice(0,5).map(function(r){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line2)"><span>'+r.n+'</span><b class="up">×'+r.accel.toFixed(1)+'</b></div>';}).join('')+'</div></div>'
-    +'<div class="card"><div class="ch"><h2>🔥 체결강도 상위</h2></div><div class="pad">'+[].concat(RADAR).sort(function(a,b){return b.strength-a.strength;}).slice(0,5).map(function(r){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line2)"><span>'+r.n+'</span><b class="up">'+Math.round(r.strength)+'</b></div>';}).join('')+'</div></div>'
-    +'<div class="card"><div class="ch"><h2>📗 호가 매수우위</h2></div><div class="pad">'+[].concat(RADAR).sort(function(a,b){return b.bidRatio-a.bidRatio;}).slice(0,5).map(function(r){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line2)"><span>'+r.n+'</span><b class="up">'+Math.round(r.bidRatio)+'%</b></div>';}).join('')+'</div></div>';
+  var rs=$('#radarStats'); if(rs){
+    /* 값이 없는 종목은 순위에서 빼고, 하나도 없으면 카드에 사유를 적는다(0으로 채우지 않는다) */
+    function statCard(title,key,fmt){
+      var arr=RADAR.filter(function(r){return hasNum(r[key]);}).sort(function(a,b){return b[key]-a[key];}).slice(0,5);
+      var body=arr.length
+        ? arr.map(function(r){return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line2)"><span>'+r.n+'</span><b class="up">'+fmt(r[key])+'</b></div>';}).join('')
+        : '<div style="font-size:12px;color:var(--faint);padding:6px 0">이 지표는 아직 데이터가 없습니다.</div>';
+      return '<div class="card"><div class="ch"><h2>'+title+'</h2></div><div class="pad">'+body+'</div></div>';
+    }
+    rs.innerHTML=statCard('💵 거래대금 가속','accel',function(v){return '×'+v.toFixed(1);})
+      +statCard('🔥 체결강도 상위','strength',function(v){return Math.round(v);})
+      +statCard('📗 호가 매수우위','bidRatio',function(v){return Math.round(v)+'%';});
   }
 }
 /* STOCK 상세 분석 (목업 4) */
@@ -317,7 +333,7 @@ function drawStockChart(cv,r){
   var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
   var seed=parseInt(r.c,10)||1234; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
   var n, data, last;
-  if(r._candles&&r._candles.length>1){ // KIS /candles 실데이터: [ms,o,h,l,c,v]
+  if(r._candles&&r._candles.length>1){ // 프록시 /candles 실데이터: [ms,o,h,l,c,v]
     data=r._candles.slice(-60).map(function(k){ return [k[1],k[2],k[3],k[4]]; });
     n=data.length; last=data[n-1][3];
   }else{                               // 폴백: 데모 합성 캔들(프록시 미연결·조회 실패 시)
@@ -344,13 +360,13 @@ function scoredOf(code){
 function priceFmt(r,v){ if(v==null)v=r.px; return r.ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):won(v); }
 function backToBrowse(){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal)_db.style.display=''; renderStockBrowse(); window.scrollTo(0,_stkScroll); }
 window.backToBrowse=backToBrowse;
-/* ═══════════ 종목 상세 실데이터 보강 (KIS /candles·/info·/flow·/orderbook) ═══════════
+/* ═══════════ 종목 상세 실데이터 보강 (/candles·/info·/flow·/orderbook) ═══════════
    스펙 §0-1(기존 기능 보존): 프록시 미연결·조회 실패 시 데모 화면을 그대로 두고,
    응답이 도착한 항목만 제자리에서 교체한다. 종목을 바꾸면 이전 응답은 버린다. */
 let _enrichSeq=0, _realParts={};
-async function kisJson(path){
-  if(!KIS_PROXY) return null;
-  try{ var res=await fetch(KIS_PROXY+path); if(!res.ok) return null; var j=await res.json(); return (j&&j.error)?null:j; }
+async function proxyJson(path){
+  if(!PROXY) return null;
+  try{ var res=await fetch(PROXY+path); if(!res.ok) return null; var j=await res.json(); return (j&&j.error)?null:j; }
   catch(e){ return null; }
 }
 function usExch(mk){ return mk==='NYSE'?'NYS':mk==='AMEX'?'AMS':'NAS'; }
@@ -371,9 +387,9 @@ function markReal(part){
   var d=$('#stkDisc'); if(!d) return;
   var nm={chart:'차트',info:'시총·거래량·재무',flow:'투자자 수급·체결강도',book:'호가'};
   var on=Object.keys(_realParts).map(function(k){return nm[k];}).filter(Boolean);
-  d.innerHTML='✅ KIS 실데이터 — '+on.join(' · ')+'. 그 외 항목(프로그램 매매 등)은 아직 데모 값입니다.';
+  d.innerHTML='✅ 토스 실데이터 — '+on.join(' · ')+'. 그 외 항목(프로그램 매매 등)은 아직 데모 값입니다.';
 }
-/* 투자자별 순매수 — KIS는 당일 누적 "수량(주)"을 준다(금액 아님) */
+/* 투자자별 순매수 — 토스는 당일 누적 "수량(주)"을 준다(금액 아님) */
 function flowTabReal(j){
   var rows=[['개인',j.retail],['외국인',j.foreign],['기관',j.inst]].filter(function(x){return x[1]!=null;});
   if(!rows.length) return null;
@@ -384,7 +400,7 @@ function flowTabReal(j){
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>=0?'+':'')+v.toLocaleString('en-US')+'</td>'
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>0?'순매수':v<0?'순매도':'－')+'</td></tr>'; }).join('')
     +'</tbody></table>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">KIS 실데이터 · 금액이 아닌 수량 기준입니다.</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">토스 실데이터 · 금액이 아닌 수량 기준입니다.</div>';
 }
 /* 호가 10단 — 잔량 막대 + 매수/매도 총잔량 비율 */
 function bookHtml(ob,r){
@@ -408,30 +424,30 @@ function bookHtml(ob,r){
         +'<div style="width:'+bp+'%;background:var(--up)"></div><div style="flex:1;background:var(--down)"></div></div>'
       +'<span style="font-size:11px;font-weight:800;white-space:nowrap">매수 '+bp+'% · 매도 '+(100-bp)+'%</span></div>'
     +bids.map(function(x){return row(x,'b');}).join('')
-    +'<div style="font-size:11px;color:var(--faint);margin-top:8px">KIS 실데이터 · 총잔량 매수 '+(+ob.totalBid||0).toLocaleString('en-US')+' / 매도 '+(+ob.totalAsk||0).toLocaleString('en-US')+'</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:8px">토스 실데이터 · 총잔량 매수 '+(+ob.totalBid||0).toLocaleString('en-US')+' / 매도 '+(+ob.totalAsk||0).toLocaleString('en-US')+'</div>';
 }
 async function enrichStock(r){
-  if(!KIS_PROXY) return;
+  if(!PROXY) return;
   var seq=++_enrichSeq; _realParts={};
   var isUS=r.ccy==='USD';
   var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(r.c)+(isUS?'&exch='+usExch(r.mk):'');
   var live=function(){ return seq===_enrichSeq; };
 
   /* 1) 캔들 → 실제 차트 + 헤드라인 시세(마지막 종가·전일대비) */
-  kisJson('/candles?'+base+'&tf=D&limit=60').then(function(j){
+  proxyJson('/candles?'+base+'&tf=D&limit=60').then(function(j){
     if(!live()||!j||!Array.isArray(j.candles)||j.candles.length<2) return;
     r._candles=j.candles;
     var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
     if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
     drawStockChart($('#sChart'),r);
-    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (KIS 실데이터) · 빨강 상승 / 파랑 하락 · 점선=현재가';
+    var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (토스 실데이터) · 빨강 상승 / 파랑 하락 · 점선=현재가';
     var pe=$('#stkPx');
     if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
     markReal('chart');
   });
 
   /* 2) 종목정보 → 시총·거래량·PER/PBR·52주 위치 */
-  kisJson('/info?'+base).then(function(j){
+  proxyJson('/info?'+base).then(function(j){
     if(!live()||!j) return;
     var got=false;
     if(j.mcap!=null&&j.mcap>0){ setMet('m-mcap', j.mcapUnit==='억원'?fmtEok(j.mcap):('$'+fmtBig(j.mcap)), r.mk+' 상장', null); got=true; }
@@ -439,31 +455,44 @@ async function enrichStock(r){
     if(j.per!=null&&j.per>0){ addMet('m-per','PER',(+j.per).toFixed(2),(j.pbr!=null&&j.pbr>0)?('PBR '+(+j.pbr).toFixed(2)):'',null); got=true; }
     if(j.h52!=null&&j.l52!=null&&j.h52>j.l52){
       var pos=Math.max(0,Math.min(100,Math.round((r.px-j.l52)/(j.h52-j.l52)*100)));
-      addMet('m-52w','52주 위치',pos+'%',priceFmt(r,j.l52)+' ~ '+priceFmt(r,j.h52),pos>=70?'up':pos<=30?'down':''); got=true;
+      // 토스는 52주 고저를 직접 주지 않아 프록시가 일봉 200개(≈10개월)에서 산출한다
+      addMet('m-52w',(j.h52Approx?'52주 위치*':'52주 위치'),pos+'%',
+        (j.h52Approx?'≈10개월 · ':'')+priceFmt(r,j.l52)+' ~ '+priceFmt(r,j.h52),pos>=70?'up':pos<=30?'down':''); got=true;
     }
     if(got) markReal('info');
   });
 
-  /* KIS는 투자자 수급·호가를 국내 종목만 제공 */
+  /* 3) 수급 → 체결강도·호가 매수비율·투자자 순매수·프로그램매매
+        투자자별 매매·프로그램매매는 토스가 국내 종목만 제공한다(호가·캔들은 미국도 제공). */
   if(isUS){
-    var bk=$('#stab-book');
-    if(bk) bk.innerHTML='<div style="font-size:12px;color:var(--faint);padding:18px 0">미국 종목은 KIS가 호가·투자자 수급을 제공하지 않습니다. (차트·시세·재무는 미국도 지원)</div>';
-    return;
+    var fl=$('#stab-flow');
+    if(fl) fl.innerHTML='<div style="font-size:12px;color:var(--faint);padding:18px 0">'
+      +'미국 종목은 투자자별 매매·프로그램매매 데이터가 제공되지 않습니다. 차트·시세·호가는 실데이터입니다.</div>';
   }
-
-  /* 3) 수급 → 체결강도·호가 매수비율·투자자 순매수 */
-  kisJson('/flow?'+base).then(function(j){
+  else proxyJson('/flow?'+base).then(function(j){
     if(!live()||!j) return;
     var got=false;
-    if(j.strength!=null){ setMet('m-str',Math.round(j.strength),j.strength>=100?'매수 우위':'매도 우위',j.strength>=100?'up':'down'); got=true; }
-    if(j.bp!=null){ setMet('m-bid',(j.bp>=55?'+':'')+j.bp+'%',j.bp>=55?'매수 우위':'균형',j.bp>=55?'up':''); got=true; }
+    if(hasNum(j.strength)){
+      // 토스는 체결강도를 직접 주지 않아 프록시가 틱룰로 근사한다 → 근사임을 표기
+      setMet('m-str',Math.round(j.strength)+(j.strengthApprox?'*':''),
+        (j.strengthApprox?'근사· ':'')+(j.strength>=100?'매수 우위':'매도 우위'), j.strength>=100?'up':'down'); got=true;
+    }
+    if(hasNum(j.bp)){ setMet('m-bid',(j.bp>=55?'+':'')+j.bp+'%',j.bp>=55?'매수 우위':'균형',j.bp>=55?'up':''); got=true; }
+    if(hasNum(j.progNet)){
+      setMet('m-prog',(j.progNet>=0?'+':'')+(+j.progNet).toLocaleString('en-US'),
+        '프로그램 순매수(주)'+(j.progDate?' · '+j.progDate:''), cls(j.progNet)); got=true;
+    }
+    if(hasNum(j.foreign)&&hasNum(j.inst)){
+      var both=j.foreign>0&&j.inst>0, sell=j.foreign<0&&j.inst<0;
+      setMet('m-inv', both?'동반매수':sell?'동반매도':'혼조', both?'수급 양호':'', both?'up':sell?'down':''); got=true;
+    }
     var ft=flowTabReal(j);
     if(ft){ var el=$('#stab-flow'); if(el) el.innerHTML=ft; got=true; }
     if(got) markReal('flow');
   });
 
   /* 4) 호가 10단 */
-  kisJson('/orderbook?'+base).then(function(j){
+  proxyJson('/orderbook?'+base).then(function(j){
     if(!live()) return;
     var el=$('#stab-book'); if(!el) return;
     var h=bookHtml(j,r);
@@ -471,7 +500,7 @@ async function enrichStock(r){
     // 원인 구분: 응답 자체가 없음(프록시 미설정·오류) vs 응답은 왔는데 호가가 빔(장 시간 외)
     el.innerHTML='<div style="font-size:12px;color:var(--faint);padding:18px 0">'
       +(j?'호가가 비어 있습니다 — 장 시간(평일 09:00~15:30) 외이거나 미제공 종목입니다.'
-         :'호가를 불러오지 못했습니다 — KIS 프록시가 응답하지 않습니다(키 미등록이거나 일시 오류).')+'</div>';
+         :'호가를 불러오지 못했습니다 — 시세 프록시가 응답하지 않습니다(키 미등록이거나 일시 오류).')+'</div>';
   });
 }
 function openStock(code){
@@ -482,6 +511,8 @@ function openStock(code){
   var mcap, value, mcapT, valueT;
   if(isUS){ mcap=r.px*(r.c==='NVDA'?4.75e9:r.c==='AAPL'?1.5e10:2.2e9); value=r.px*r.rvol*3e7; mcapT='$'+fmtBig(mcap); valueT='$'+fmtBig(value); }
   else { mcap=Math.round(r.px*(r.c==='005930'?5.97e9:r.c==='000660'?7.28e8:2.2e8)/1e8); value=Math.round(r.px*r.rvol*1.2e6/1e8); mcapT=fmtEok(mcap); valueT=fmtEok(value); }
+  // rvol 이 없으면 거래대금 추정치를 만들지 않는다 → '—' 로 두고 /info 실값이 오면 채운다
+  if(!hasNum(r.rvol)) valueT='—';
   function met(k,v,s,c,id){ return '<div class="met"'+(id?' id="'+id+'"':'')+'><div class="k">'+k+'</div><div class="v '+(c||'')+'">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
   var peers=RADAR.filter(function(x){return x.c!==r.c&&x.mk===r.mk;}).slice(0,4);
   var relNews=(_lastNews||[]).filter(function(x){return x.title.indexOf(r.n)>-1;}); if(relNews.length<3)relNews=(_lastNews||[]).slice(0,5);
@@ -494,10 +525,10 @@ function openStock(code){
     +'<div class="metrics" id="metGrid">'
       +met('거래대금',valueT,'상위권',null,'m-value')
       +met('시가총액',mcapT,r.mk+' 상위',null,'m-mcap')
-      +met('체결강도',Math.round(r.strength),r.strength>=100?'매수 우위':'매도 우위',r.strength>=100?'up':'down','m-str')
-      +met('호가 압력',(r.bidRatio>=55?'+':'')+Math.round(r.bidRatio)+'%',r.bidRatio>=55?'매수 우위':'균형',r.bidRatio>=55?'up':'','m-bid')
-      +met('프로그램',(r.progPct>=0?'+':'')+r.progPct.toFixed(1)+'%','거래대금 대비',cls(r.progPct),'m-prog')
-      +met('외국인·기관',r.invest==='both'?'동반매수':r.invest==='sell'?'동반매도':'혼조',r.invest==='both'?'수급 양호':'',r.invest==='both'?'up':r.invest==='sell'?'down':'','m-inv')
+      +met('체결강도',numOrDash(r.strength,function(v){return Math.round(v);}),hasNum(r.strength)?(r.strength>=100?'매수 우위':'매도 우위'):'데이터 없음',hasNum(r.strength)?(r.strength>=100?'up':'down'):'','m-str')
+      +met('호가 압력',numOrDash(r.bidRatio,function(v){return (v>=55?'+':'')+Math.round(v)+'%';}),hasNum(r.bidRatio)?(r.bidRatio>=55?'매수 우위':'균형'):'데이터 없음',hasNum(r.bidRatio)&&r.bidRatio>=55?'up':'','m-bid')
+      +met('프로그램',numOrDash(r.progPct,function(v){return (v>=0?'+':'')+v.toFixed(1)+'%';}),hasNum(r.progPct)?'거래대금 대비':'데이터 없음',hasNum(r.progPct)?cls(r.progPct):'','m-prog')
+      +met('외국인·기관',r.invest==null?'—':r.invest==='both'?'동반매수':r.invest==='sell'?'동반매도':'혼조',r.invest==null?'데이터 없음':(r.invest==='both'?'수급 양호':''),r.invest==='both'?'up':r.invest==='sell'?'down':'','m-inv')
     +'</div>'
     +'<div class="sgrid">'
       +'<div>'
@@ -519,7 +550,7 @@ function openStock(code){
           +peers.map(function(p){return '<div class="cmprow"><span>'+p.n+'</span><span><span class="'+cls(p.ch)+'" style="font-weight:700">'+pctTxt(p.ch)+'</span> <span class="scorepill'+(p.score>=80?'':' s2')+'" style="margin-left:8px">'+p.score+'</span></span></div>';}).join('')+'</div></div>'
       +'</div>'
     +'</div>'
-    +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. KIS 프록시 연결 시 실시간 시세·호가·투자자 수급·재무가 채워집니다.</div>';
+    +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
   drawStockChart($('#sChart'),r);
   // 탭
   var flowHtml='<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">(억원·데모)</span></div>'
@@ -531,9 +562,9 @@ function openStock(code){
   var scoreHtml='<div style="margin-top:12px">'+['trade|거래 활성|35','price|가격 움직임|30','press|실시간 압력|25','flow|수급|5','trend|추세|5'].map(function(g){var p=g.split('|');var v=r.g[p[0]]==null?0:r.g[p[0]];var mx=(r.gmax&&r.gmax[p[0]]!=null)?r.gmax[p[0]]:+p[2];if(!mx)return '';return '<div class="bar"><span class="k">'+p[1]+'</span><div class="track"><div class="fill" style="width:'+Math.min(100,v/mx*100)+'%"></div></div><span class="vv">'+v+'/'+mx+'</span></div>';}).join('')
     +'<div style="font-size:12px;font-weight:800;color:var(--faint);text-transform:uppercase;margin:14px 0 6px">선정 이유</div><ul class="reasons" style="margin-top:0">'+r.reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
   $('#stab-flow').innerHTML=flowHtml; $('#stab-score').innerHTML=scoreHtml;
-  $('#stab-book').innerHTML='<div style="font-size:12px;color:var(--faint);padding:18px 0">'+(KIS_PROXY?'호가 불러오는 중…':'호가 10단은 KIS 프록시 연결 시 표시됩니다.')+'</div>';
+  $('#stab-book').innerHTML='<div style="font-size:12px;color:var(--faint);padding:18px 0">'+(PROXY?'호가 불러오는 중…':'호가 10단은 시세 프록시 연결 시 표시됩니다.')+'</div>';
   $$('.stabs button').forEach(function(b){ b.onclick=function(){ $$('.stabs button').forEach(function(x){x.classList.toggle('on',x===b);}); ['chart','flow','book','score'].forEach(function(t){$('#stab-'+t).style.display=(t===b.dataset.t)?'':'none';}); if(b.dataset.t==='chart')drawStockChart($('#sChart'),r); }; });
-  enrichStock(r); // KIS 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
+  enrichStock(r); // 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
   var _is=$('#idxstrip'); if(_is)_is.style.display='none'; var _db=$('#demoban'); if(_db)_db.style.display='none'; // 상세 땐 시장 지수 스트립 숨김 → 상세가 네비 바로 아래
   window.scrollTo(0,0);
 }
@@ -557,7 +588,7 @@ function renderStockBrowse(){
     +'<div style="display:flex;gap:6px;margin-bottom:14px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
     +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>VANTOR SCORE</th></tr></thead><tbody>'
     +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">🧪 데모 데이터 · 미국은 크립토처럼 즉시 실시간화 가능, 국내는 KIS 프록시 연결 시 실시간. 국내 종목은 RADAR·수급까지 완전 연동됩니다.</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">🧪 데모 데이터 · 미국은 크립토처럼 즉시 실시간화 가능, 국내는 시세 프록시 연결 시 실시간. 국내 종목은 RADAR·수급까지 완전 연동됩니다.</div>';
   $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
   $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
 }
@@ -678,5 +709,5 @@ $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.datas
 
 /* ═══════════ 초기화 ═══════════ */
 renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews();
-if(KIS_PROXY){ loadKisRadar(); loadKisMarket(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); } // 실데이터: 1분마다 RADAR·MARKET 갱신
+if(PROXY){ loadKisRadar(); loadKisMarket(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); } // 실데이터: 1분마다 RADAR·MARKET 갱신
 setInterval(fetchNews,300000);
