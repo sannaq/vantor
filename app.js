@@ -225,6 +225,31 @@ function radarUniverse(){
   return hideETF ? base.filter(function(s){return !isETF(s);}) : base;
 }
 /* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
+var KBOARD=null;
+/* 히트맵 색 — 등락률(%) → 빨강(상승)/회색(보합)/파랑(하락), 강도는 |%| */
+function heatColor(ch){
+  var t=Math.max(-1,Math.min(1,(ch||0)/6)); // ±6%에서 최대
+  var g0=[58,63,74]; // 중립 회색
+  var up=[229,56,77], dn=[47,107,255];
+  var to=t>=0?up:dn, a=Math.abs(t);
+  var r=Math.round(g0[0]+(to[0]-g0[0])*a), gg=Math.round(g0[1]+(to[1]-g0[1])*a), b=Math.round(g0[2]+(to[2]-g0[2])*a);
+  return 'rgb('+r+','+gg+','+b+')';
+}
+function renderHeatmap(){
+  var el=$('#heatmap'); if(!el) return;
+  var board=(KBOARD&&KBOARD.length)?KBOARD:null;
+  if(!board){ el.innerHTML='<div style="color:var(--faint);font-size:12px;padding:14px 2px">'+(PROXY?'불러오는 중…':'프록시 연결 시 실시간 히트맵')+'</div>'; return; }
+  var items=board.filter(function(x){return x.px&&hasNum(x.ch);}).slice(0,30);
+  var amts=items.map(function(x){return x.amount||1;});
+  var mx=Math.max.apply(null,amts)||1, mn=Math.min.apply(null,amts)||1;
+  el.innerHTML='<div class="heat">'+items.map(function(x){
+    var grow=1+Math.round((Math.sqrt(x.amount||1)-Math.sqrt(mn))/(Math.sqrt(mx)-Math.sqrt(mn)||1)*5); // 1~6
+    return '<div class="htile" data-c="'+x.c+'" style="flex-grow:'+grow+';background:'+heatColor(x.ch)+'">'
+      +'<div class="hn">'+x.n+'</div><div class="hc">'+(x.ch>=0?'+':'')+(+x.ch).toFixed(2)+'%</div></div>';
+  }).join('')+'</div>';
+  $$('#heatmap .htile').forEach(function(t){ t.onclick=function(){ openStock(t.dataset.c); }; });
+  var u='· '+nowHM()+' 기준'; if($('#heatupd'))$('#heatupd').textContent=u;
+}
 async function loadKisRadar(){
   if(!PROXY) return;
   try{
@@ -234,8 +259,8 @@ async function loadKisRadar(){
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
       j.stocks.forEach(function(s){ s.ccy='KRW'; });
       KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
+      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); }
       var db=$('#demoban'); if(db)db.style.display='none';
-      var sm=$$('.disc'); // 데모 문구는 남겨도 무방
       renderRadar(); renderCats();
     }
   }catch(e){}
@@ -946,6 +971,7 @@ function showView(v,noScroll){
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
+  if(v==='market')renderHeatmap();
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
 }
 let _stkScroll=0;

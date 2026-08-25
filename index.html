@@ -219,6 +219,12 @@
   .modal .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
   .modal .mbtn{font-family:inherit;font-weight:700;font-size:13px;padding:8px 16px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
   .modal .mbtn.pri{background:var(--gold);border-color:var(--gold);color:#3a2c07}
+  /* 히트맵 */
+  #heatmap .heat{display:flex;flex-wrap:wrap;gap:4px}
+  #heatmap .htile{flex:1 1 auto;min-width:88px;max-width:220px;border-radius:8px;padding:8px 10px;color:#fff;cursor:pointer;display:flex;flex-direction:column;justify-content:center;min-height:54px;overflow:hidden;transition:transform .1s}
+  #heatmap .htile:hover{transform:scale(1.04);z-index:2;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+  #heatmap .htile .hn{font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.3)}
+  #heatmap .htile .hc{font-size:12px;font-weight:700;opacity:.96;text-shadow:0 1px 2px rgba(0,0,0,.3)}
   /* LEARN */
   .ltabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;background:var(--panel2);padding:5px;border-radius:12px;margin-bottom:14px}
   .ltabs::-webkit-scrollbar{display:none}
@@ -367,8 +373,13 @@
 
   <!-- ===== MARKET (업종 강도 · CATEGORY RADAR) ===== -->
   <div class="view" id="v-market">
-    <div class="sec-title">📊 MARKET · 업종 강도</div>
-    <p class="sec-sub">개별 종목이 튀기 전에 <b>업종 전체로 돈이 이동하는 흐름</b>을 봅니다. 각 업종의 강도 점수와 대장주·TOP3.</p>
+    <div class="sec-title">📊 MARKET · 히트맵 · 업종 강도</div>
+    <p class="sec-sub">지금 <b>돈이 몰리는 종목</b>을 한눈에. 거래대금 상위 종목을 등락률 색으로 — 빨강 상승·파랑 하락.</p>
+    <div class="card"><div class="ch"><h2>🗺 거래대금 상위 히트맵</h2><div class="r"><span id="heatupd">–</span></div></div>
+      <div class="pad" style="padding-top:10px"><div id="heatmap"></div>
+        <div class="llegend" style="margin-top:10px;font-size:11px"><span><i class="lsw" style="background:#e5384d"></i> 강한 상승</span><span><i class="lsw" style="background:#3a3f4a"></i> 보합</span><span><i class="lsw" style="background:#2f6bff"></i> 강한 하락</span><span style="color:var(--faint)">· 타일 크기 = 거래대금</span></div>
+      </div></div>
+    <div class="sec-title" style="font-size:18px;margin-top:8px">업종 강도</div>
     <div class="card"><div class="pad"><div class="catgrid" id="allCats"></div></div></div>
     <div class="row a" style="margin-top:16px">
       <div class="card"><div class="ch"><h2>CATEGORY 순위 변화</h2></div><div class="pad" id="catRank"></div></div>
