@@ -1362,6 +1362,16 @@ function structZoneSVG(){
     +'<text x="228" y="48" text-anchor="end" font-size="11" font-weight="800" fill="var(--down)">프리미엄 · 매도 자리</text>'
     +'<text x="228" y="104" text-anchor="end" font-size="11" font-weight="800" fill="var(--up)">디스카운트 · 매수 자리</text></svg>';
 }
+function structImpulseSVG(){
+  return '<svg width="100%" height="140" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet">'
+    +'<line x1="60" y1="60" x2="250" y2="60" stroke="var(--sub)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>'
+    // 임펄스(긴 상승) + 되돌림(짧은 눌림), 얕게 유지되며 계단 상승
+    +'<polyline points="14,124 60,58 92,84 140,34 168,58 214,18" fill="none" stroke="var(--up)" stroke-width="3.2" stroke-linejoin="round"/>'
+    +'<text x="34" y="86" font-size="10" fill="var(--up)" font-weight="700">임펄스</text>'
+    +'<text x="96" y="100" font-size="10" fill="var(--sub)">되돌림(얕음)</text>'
+    +'<circle cx="92" cy="84" r="5" fill="var(--panel)" stroke="var(--up)" stroke-width="2"/><circle cx="168" cy="58" r="5" fill="var(--panel)" stroke="var(--up)" stroke-width="2"/>'
+    +'<text x="248" y="14" text-anchor="end" font-size="10" fill="var(--up)" font-weight="800">건강한 상승추세</text></svg>';
+}
 function learnStruct(){
   return '<div class="lcard"><h3>🏗 봉우리와 골 — 모든 판단의 출발점</h3><p class="lead">차트 읽기는 두 점에서 시작합니다. <b>봉우리(스윙 고점)</b>와 <b>골(스윙 저점)</b>.</p>'
     +'<div class="wavebox">'+structSwingSVG()+'</div>'
@@ -1380,6 +1390,12 @@ function learnStruct(){
     +'<div class="ltile">'+structTrendSVG(false)+'<div class="nm" style="color:var(--down)">하락 추세</div><div class="ds">봉우리·골이 <b>계단식으로 낮아짐</b></div></div>'
     +'</div>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7;margin-top:12px">시장은 생각보다 <b style="color:var(--ink)">오래 박스에 머뭅니다</b>. 추세용 기법(눌림목 매수 등)을 박스에서 휘두르면 위에서 사서 아래서 손절 — 양쪽에서 털립니다. <b style="color:var(--ink)">"추세냐 박스냐"</b>를 먼저 판단하고 기법을 골라야 합니다.</p></div>'
+    +'<div class="lcard"><h3>🫁 추세의 호흡 — 임펄스와 되돌림</h3><p class="lead">추세는 <b>추세 방향으로 크게(임펄스)</b> 갔다가 <b>반대로 조금(되돌림)</b> 쉬며 나아갑니다.</p>'
+    +'<div class="wavebox">'+structImpulseSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">되돌림의 <b style="color:var(--ink)">깊이</b>가 추세의 건강을 말해줍니다.<br>'
+    +'• <b class="up">얕은 되돌림</b>(직전 고점 위에서 멈춤) = 매수세가 강함, 추세 <b>건강</b> → 눌림목 매수 유효.<br>'
+    +'• <b class="down">깊은 되돌림</b>(직전 스윙 저점을 종가로 이탈) = 추세 <b>훼손</b> 신호 → 눌림 매수 근거 사라짐.<br>'
+    +'즉 <b style="color:var(--ink)">"같은 버티기"라도</b> 얕게 눌리면 맞고, 깊게 무너지면 틀립니다. 되돌림 깊이가 홀딩/손절을 가릅니다.</p></div>'
     +'<div class="lcard"><h3>🔭 멀티 타임프레임 — 어느 화면이 진짜인가</h3><p class="lead">1분·5분·일봉 버튼은 캔들 하나가 담는 시간을 바꿉니다. 화면마다 그림이 달라 보여요.</p>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">같은 종목도 <b style="color:var(--ink)">15분봉은 상승, 5분봉은 하락</b>으로 보일 수 있습니다. 둘 다 진짜예요 — 보는 시간의 크기가 다를 뿐.<br>'
     +'• <b style="color:var(--ink)">큰 타임프레임</b>(일·주)으로 <b>방향(추세·구조)</b>을 정하고<br>'
@@ -1416,7 +1432,16 @@ function learnTips(){
   return '<div class="lcard"><h3>매매 실전 원칙</h3><p class="lead">기법보다 중요한 건 잃지 않는 습관. 초보 생존율을 올리는 순서.</p>'
     +T.map(function(t,i){return '<div class="ltip"><div class="n">'+(i+1)+'</div><div><p class="h">'+t[0]+'</p><p class="p">'+t[1]+'</p></div></div>';}).join('')+'</div>'
     +'<div class="lcard"><h3>진입 전 체크리스트</h3><div class="chips" style="display:flex;flex-wrap:wrap;gap:6px">'
-    +['추세 방향은?','지지/저항 위치?','거래량 실렸나?','손절가 정했나?','손익비 2:1↑?','오늘 지표 발표 있나?'].map(function(c){return '<span class="rulechip" style="background:var(--panel2);color:var(--sub)">□ '+c+'</span>';}).join('')+'</div></div>';
+    +['추세 방향은?','지지/저항 위치?','거래량 실렸나?','손절가 정했나?','손익비 2:1↑?','오늘 지표 발표 있나?'].map(function(c){return '<span class="rulechip" style="background:var(--panel2);color:var(--sub)">□ '+c+'</span>';}).join('')+'</div></div>'
+    +'<div class="lcard"><h3>🎯 진입 — 어디서 방아쇠를 당기나</h3><p class="lead">아무 데서나 사지 않습니다. \'근거가 겹치는 자리\'에서 신호를 기다립니다.</p>'
+    +'<div class="ltip"><div class="n">1</div><div><p class="h">큰 흐름과 같은 방향</p><p class="p">상위 타임프레임이 상승추세면 <b>매수만</b> 노립니다. 역방향 진입은 확률이 낮아요.</p></div></div>'
+    +'<div class="ltip"><div class="n">2</div><div><p class="h">되돌림·지지 자리까지 기다림</p><p class="p">추격 대신 <b>디스카운트(싼 절반)·이평선·지지 구간</b>으로 눌릴 때. 자리가 좋아야 손절이 짧아집니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">3</div><div><p class="h">방아쇠는 확인 신호</p><p class="p">그 자리에서 <b>반전 캔들 + 거래량</b>, 또는 짧은 봉의 구조 전환(저점 높아짐)이 나올 때 진입. 근거 없이 미리 사지 않기.</p></div></div></div>'
+    +'<div class="lcard"><h3>🛡 손절·수익 관리 — 산 다음이 진짜</h3><p class="lead">진입보다 어려운 건 그 뒤. 계획대로 지키는 게 실력입니다.</p>'
+    +'<div class="ltip"><div class="n">1</div><div><p class="h">손절은 구조 아래 · 미리 걸어둠</p><p class="p">직전 스윙 저점 <b>살짝 아래</b>에 Stop-Market으로. 마음속 손절은 안 지켜집니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">2</div><div><p class="h">본절(브레이크이븐) 이동</p><p class="p">가격이 목표의 절반쯤 가면 손절을 <b>진입가로</b> 올려 \'잃지 않는 자리\'를 만듭니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">3</div><div><p class="h">추적 손절(트레일링)</p><p class="p">추세가 이어지면 손절을 <b>새로 생긴 스윙 저점 아래로</b> 따라 올려 수익을 지키며 끌고 갑니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">4</div><div><p class="h">분할 익절</p><p class="p">일부는 1차 목표에서 실현, 나머지는 추세에 태워 손익비를 극대화. 전부 한 곳에서 팔지 않기.</p></div></div></div>';
 }
 /* 엘리엇 파동 다이어그램 (독자 작성) */
 function waveImpulseSVG(){
