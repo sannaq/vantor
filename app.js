@@ -654,7 +654,7 @@ function liveRefresh(r){
     if(!SEL||SEL.c!==r.c||!j) return;
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
              foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r);
+    renderPressureFlow(r); renderWhy(r);
   });
 }
 /* 차트 아래 매수/매도세 + 투자자 순매수(개인·기관·외국인) 패널 */
@@ -860,7 +860,7 @@ async function enrichStock(r){
     // /flow가 체결강도·호가를 안 줄 때(장외 등) RADAR가 이미 가진 값을 유지
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
              foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r);
+    renderPressureFlow(r); renderWhy(r);
   });
 
   /* 4) 호가 10단 */
@@ -875,6 +875,40 @@ async function enrichStock(r){
          :'호가를 불러오지 못했습니다 — 시세 프록시가 응답하지 않습니다(키 미등록이거나 일시 오류).')+'</div>';
   });
 }
+/* 종목명 핵심어 추출 — 접미사 제거해 뉴스 매칭률 ↑ (삼성전자→삼성) */
+function newsCore(name){
+  return String(name||'').replace(/(우B?$|스팩\d*.*$|\d+호$|홀딩스$|그룹$|지주$)/,'')
+    .replace(/(전자|증권|화학|제약|바이오로직스|바이오|에너지솔루션|중공업|건설|생명|카드|금융|은행|해상|산업|엔지니어링|디스플레이|반도체|모비스|오션|에어로스페이스)$/,'').trim();
+}
+function relatedNews(name){
+  var news=_lastNews||[], core=newsCore(name), rel=[];
+  news.forEach(function(x){ var t=x.title||'';
+    if(t.indexOf(name)>-1) rel.push({n:x,s:2});
+    else if(core.length>=2 && t.indexOf(core)>-1) rel.push({n:x,s:1}); });
+  rel.sort(function(a,b){return b.s-a.s || b.n.t-a.n.t;});
+  return rel.map(function(x){return x.n;});
+}
+/* 규칙 기반 "왜 움직였나" — 등락·거래관심·수급·뉴스 감성 합성 */
+function whyMoved(r){
+  if(!hasNum(r.ch)) return '';
+  var ch=r.ch, dir=ch>=0?'상승':'하락', mag=Math.abs(ch);
+  var strength=mag>=5?'큰 폭으로 ':mag>=2?'뚜렷하게 ':'';
+  var parts=['<b>'+r.n+'</b>는 오늘 <b class="'+cls(ch)+'">'+pctTxt(ch)+'</b> '+strength+dir+'했어요.'];
+  var rk=(KBOARD||[]).find(function(x){return x.c===r.c;});
+  if(rk&&rk.rank<=15) parts.push('거래대금 상위 <b>'+rk.rank+'위</b>로 관심이 집중된 가운데,');
+  var f=r._flow||{};
+  if(hasNum(f.foreign)&&hasNum(f.inst)){
+    if(f.foreign>0&&f.inst>0) parts.push('외국인·기관이 <b class="up">동반 순매수</b>했습니다.');
+    else if(f.foreign<0&&f.inst<0) parts.push('외국인·기관이 <b class="down">동반 순매도</b>했습니다.');
+    else parts.push('외국인·기관 수급은 혼조였습니다.');
+  }
+  if(hasNum(f.strength)) parts.push('체결강도 '+Math.round(f.strength)+(f.strength>=100?'(매수 우위)':'(매도 우위)')+'.');
+  var rel=relatedNews(r.n).slice(0,8), pos=0,neg=0;
+  rel.forEach(function(x){var s=sentiment(x.title); if(s==='pos')pos++;else if(s==='neg')neg++;});
+  if(pos||neg) parts.push('관련 뉴스엔 '+(pos>neg?'<b class="up">긍정</b>':pos<neg?'<b class="down">부정</b>':'긍·부정 혼재')+' 신호가 보입니다'+((pos?' +'+pos:'')+(neg?' −'+neg:''))+'.');
+  return parts.join(' ');
+}
+function renderWhy(r){ var el=$('#whyBox'); if(el) el.innerHTML=whyMoved(r)||'등락 데이터를 불러오는 중…'; }
 function openStock(code){
   var r=scoredOf(code); SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
   var el=$('#stockPanel'); if(!el)return;
@@ -887,7 +921,8 @@ function openStock(code){
   if(!hasNum(r.rvol)) valueT='—';
   function met(k,v,s,c,id){ return '<div class="met"'+(id?' id="'+id+'"':'')+'><div class="k">'+k+'</div><div class="v '+(c||'')+'">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
   var peers=RADAR.filter(function(x){return x.c!==r.c&&x.mk===r.mk;}).slice(0,4);
-  var relNews=(_lastNews||[]).filter(function(x){return x.title.indexOf(r.n)>-1;}); if(relNews.length<3)relNews=(_lastNews||[]).slice(0,5);
+  var relHit=relatedNews(r.n); var relNews=relHit.slice(0,5); var relCount=relHit.length;
+  if(relNews.length<3){ var seen={}; relNews.forEach(function(x){seen[x.title]=1;}); (_lastNews||[]).forEach(function(x){if(relNews.length<5&&!seen[x.title])relNews.push(x);}); }
   var gaugeDeg=r.score*3.6;
   el.innerHTML=
     '<button class="more" onclick="backToBrowse()" style="background:none;border:none;font-family:inherit;margin-bottom:10px;padding:0;cursor:pointer">◀ 종목 목록</button>'
@@ -929,14 +964,16 @@ function openStock(code){
             +'<div><div style="font-size:18px;font-weight:800" class="'+grd[1]+'">'+grd[0]+'</div><div style="font-size:12px;color:var(--sub);margin-top:3px;line-height:1.4">'+(r.score>=80?'모멘텀·수급이 강하고 단기 추세가 살아있는 종목':'추세·수급을 함께 확인하며 접근')+'</div></div></div>'
           +'<div class="subs">'+Object.keys(subs).map(function(k){var v=subs[k];var g=gradeTxt(v);return '<div class="sub"><div class="sk">'+k+'</div><div class="sv">'+v+'</div><div class="sg '+g[1]+'">'+g[0]+'</div></div>';}).join('')+'</div>'
         +'</div></div>'
-        +'<div class="card" style="margin-top:16px"><div class="ch"><h2>📰 관련 뉴스</h2></div><div class="pad" style="padding-top:8px"><div class="nlist">'
-          +relNews.slice(0,5).map(function(x){return '<a href="'+x.link+'" target="_blank" rel="noopener"><span class="tm">'+relTime(x.t)+'</span><span class="tt">'+esc(x.title)+'</span></a>';}).join('')+'</div></div></div>'
+        +'<div class="card" style="margin-top:16px"><div class="ch"><h2>🧭 왜 움직였나</h2></div><div class="pad" style="padding-top:10px"><div id="whyBox" style="font-size:13px;line-height:1.75;color:var(--sub)"></div><div style="font-size:11px;color:var(--faint);margin-top:8px">※ 규칙 기반 자동 요약 — 참고용, 매매 신호 아님</div></div></div>'
+        +'<div class="card" style="margin-top:16px"><div class="ch"><h2>📰 관련 뉴스</h2><div class="r">'+(relCount?'<span style="color:var(--gold);font-weight:700">'+relCount+'건 연관</span>':'<span style="color:var(--faint)">시장 뉴스</span>')+'</div></div><div class="pad" style="padding-top:8px"><div class="nlist">'
+          +relNews.slice(0,5).map(function(x){var rel=(x.title.indexOf(r.n)>-1||(newsCore(r.n).length>=2&&x.title.indexOf(newsCore(r.n))>-1));return '<a href="'+x.link+'" target="_blank" rel="noopener">'+(rel?'<span style="color:var(--gold);font-weight:800;font-size:10px;margin-right:4px">●연관</span>':'')+'<span class="tm">'+relTime(x.t)+'</span><span class="tt">'+esc(x.title)+'</span></a>';}).join('')+'</div></div></div>'
         +'<div class="card" style="margin-top:16px"><div class="ch"><h2>🔎 비교 종목</h2></div><div class="pad" style="padding-top:8px">'
           +peers.map(function(p){return '<div class="cmprow"><span>'+p.n+'</span><span><span class="'+cls(p.ch)+'" style="font-weight:700">'+pctTxt(p.ch)+'</span> <span class="scorepill'+(p.score>=80?'':' s2')+'" style="margin-left:8px">'+p.score+'</span></span></div>';}).join('')+'</div></div>'
       +'</div>'
     +'</div>'
     +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
   drawStockChart($('#sChart'),r);
+  renderWhy(r);
   // 탭
   var flowHtml='<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">(억원·데모)</span></div>'
     +'<table><thead><tr><th class="l">구분</th><th>개인</th><th>외국인</th><th>기관</th><th>프로그램</th></tr></thead><tbody>'
