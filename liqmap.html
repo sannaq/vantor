@@ -278,19 +278,23 @@ function draw(){
   var HB=allBins();
   var maxV=0; HB.forEach(function(v){ var s=v.long+v.short; if(s>maxV)maxV=s; });
   if(maxV>0){
+    var hpx=Math.max(1.2,ch/((hi-lo)/st.binUsd));
     HB.forEach(function(v,b){
       var p=binPx(b); if(p<lo||p>hi)return;
       var sum=v.long+v.short; if(sum<=0)return;
-      var yy=y(p), hpx=Math.max(1.4,ch/((hi-lo)/st.binUsd));
-      var inten=Math.pow(sum/maxV,0.55);
-      var a=0.06+inten*0.72;
-      // 골드 글로우
-      ctx.fillStyle='rgba(230,179,74,'+a.toFixed(3)+')';
-      ctx.fillRect(cl,yy-hpx/2,cw,hpx);
-      // 롱/숏 우세 쪽 색 엣지(우측)
-      var edge=v.long>=v.short?'246,70,93':'46,189,133';
-      ctx.fillStyle='rgba('+edge+','+(0.25+inten*0.5).toFixed(3)+')';
-      ctx.fillRect(cr-Math.min(cw*0.5,cw*inten),yy-hpx/2,Math.min(cw*0.5,cw*inten),Math.max(1,hpx*0.5));
+      var ratio=sum/maxV; if(ratio<0.02)return;          // 약한 층은 생략 → 강한 벽이 또렷
+      var yy=y(p), inten=Math.pow(ratio,0.95);           // 대비↑
+      var a=Math.min(0.95,0.015+inten*1.05);             // 약한건 흐리게, 강한건 밝게
+      // 강도↑ → 골드에서 화이트핫으로
+      var R=Math.round(230+25*inten), G=Math.round(179+40*inten), B=Math.round(74+90*inten);
+      ctx.fillStyle='rgba('+R+','+G+','+B+','+a.toFixed(3)+')';
+      ctx.fillRect(cl,yy-hpx/2,cw,hpx*0.9);
+      // 롱/숏 우세 엣지(우측, 강한 벽만)
+      if(inten>0.16){
+        var edge=v.long>=v.short?'246,70,93':'46,189,133', ew=Math.min(cw*0.42,cw*inten*0.5);
+        ctx.fillStyle='rgba('+edge+','+(0.3+inten*0.55).toFixed(3)+')';
+        ctx.fillRect(cr-ew,yy-hpx/2,ew,Math.max(1,hpx*0.6));
+      }
     });
   }
 
