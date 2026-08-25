@@ -1636,64 +1636,107 @@ function renderSummary(){
     +'</div></div>';
 }
 /* ═══════════ 오늘의 브리핑 (토글: 밤사이·장전 / 장마감) ═══════════ */
-var briefMode='pre', BRIEF_US=null, BRIEF_BTC=null;
+var briefMode='pre', BRIEF_US=null, BRIEF_BTC=null, BRIEF_ETH=null;
+var TECHNM={NVDA:'엔비디아',TSLA:'테슬라',AAPL:'애플',MSFT:'MS',AMZN:'아마존',META:'메타',GOOGL:'구글',AMD:'AMD',AVGO:'브로드컴',NFLX:'넷플릭스'};
 function setBriefMode(m){ briefMode=m; renderBriefing(); }
 window.setBriefMode=setBriefMode;
 async function loadBriefData(){
-  try{ var q=await fetch(PROXY+'/quotes?mkt=US&codes=SPY,QQQ,DIA,SMH,VIXY,GLD,USO').then(function(r){return r.json();});
-    if(q&&q.quotes){ var m={}; q.quotes.forEach(function(x){m[x.code]=x;}); BRIEF_US=m; } }catch(e){}
-  try{ var b=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr?symbol=BTCUSDT').then(function(r){return r.json();});
-    if(b&&b.lastPrice)BRIEF_BTC={px:+b.lastPrice,c:+b.priceChangePercent}; }catch(e){}
+  var A='SPY,QQQ,DIA,SMH,IWM,VIXY,XLK,XLE,XLF,XLV,LIT,UUP,TLT,USO,GLD,SLV';
+  var B='NVDA,TSLA,AAPL,MSFT,AMZN,META,GOOGL,AMD,AVGO,NFLX';
+  try{ var res=await Promise.all([
+      fetch(PROXY+'/quotes?mkt=US&codes='+A).then(function(r){return r.json();}).catch(function(){return null;}),
+      fetch(PROXY+'/quotes?mkt=US&codes='+B).then(function(r){return r.json();}).catch(function(){return null;})]);
+    var m={}; res.forEach(function(q){ if(q&&q.quotes)q.quotes.forEach(function(x){ if(x&&x.c!=null)m[x.code]=x; }); });
+    if(Object.keys(m).length)BRIEF_US=m; }catch(e){}
+  try{ var bt=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22%5D').then(function(r){return r.json();});
+    if(Array.isArray(bt))bt.forEach(function(t){ if(t.symbol==='BTCUSDT')BRIEF_BTC={px:+t.lastPrice,c:+t.priceChangePercent}; if(t.symbol==='ETHUSDT')BRIEF_ETH={px:+t.lastPrice,c:+t.priceChangePercent}; }); }catch(e){}
   renderBriefing();
 }
 function _bp(label,val){ return '<div class="bpill"><span class="bl">'+label+'</span>'+val+'</div>'; }
 function _pc(c){ c=+c||0; return '<span class="'+cls(c)+'">'+arw(c)+' '+pctTxt(c)+'</span>'; }
-function _dec(s){ try{ var d=document.createElement('textarea'); d.innerHTML=s; s=d.value; d.innerHTML=s; return d.value; }catch(e){ return s; } } // 엔티티(이중) 디코드
+function _dec(s){ try{ var d=document.createElement('textarea'); d.innerHTML=s; s=d.value; d.innerHTML=s; return d.value; }catch(e){ return s; } }
 function _bnews(k){ return (_lastNews||[]).slice(0,k).map(function(n){return '<a class="bnews" href="'+n.link+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span>'+esc(_dec(n.title))+'</a>';}).join(''); }
+function _row(cap,inner){ return inner?('<div class="brow"><span class="bcap">'+cap+'</span>'+inner+'</div>'):''; }
+function _preComment(U){
+  var q=U['QQQ'], spy=U['SPY'], dia=U['DIA'], smh=U['SMH'], tlt=U['TLT'], uso=U['USO'], gld=U['GLD'];
+  if(!q||q.c==null)return '미국 지수 데이터를 불러오는 중…';
+  var mood=q.c>=0.3?'강세':(q.c<=-0.3?'약세':'혼조');
+  var s='📌 밤사이 미국 증시는 <b>'+mood+'</b> 마감했습니다(S&P '+pctTxt(spy?spy.c:0)+', 나스닥 '+pctTxt(q.c)+', 다우 '+pctTxt(dia?dia.c:0)+').';
+  var techs=Object.keys(TECHNM).map(function(k){return U[k]?{k:k,c:U[k].c}:null;}).filter(Boolean).sort(function(a,b){return b.c-a.c;});
+  if(techs.length){ var tp=techs[0], bt=techs[techs.length-1];
+    s+=' 특징주는 <b>'+TECHNM[tp.k]+'</b> '+pctTxt(tp.c)+(bt.c<-0.1?', '+TECHNM[bt.k]+' '+pctTxt(bt.c):'')+'.'; }
+  var mb=[]; if(uso&&uso.c!=null)mb.push('유가 '+pctTxt(uso.c)); if(gld&&gld.c!=null)mb.push('금 '+pctTxt(gld.c)); if(tlt&&tlt.c!=null)mb.push('미국채 '+pctTxt(tlt.c));
+  if(mb.length)s+=' '+mb.join(', ')+'.';
+  var imp;
+  if(smh&&smh.c>=1)imp='반도체 강세로 <b>삼성전자·SK하이닉스 등 반도체주</b>에 우호적. 외국인 수급 주목.';
+  else if(q.c>=0.5)imp='기술·성장주 우호적 흐름, 코스닥 개별 모멘텀주 관심.';
+  else if(q.c<=-0.5)imp='위험자산 약세, 방어주·현금 비중 확대 유효.';
+  else imp='방향성 제한적, 개별 실적·수급 이슈 종목 중심 대응.';
+  return s+'<br><b>→ 오늘 한국 증시:</b> '+imp;
+}
 function renderBriefing(){
   var el=$('#brief'); if(!el)return;
   if(CARDPREF&&CARDPREF.hidden&&CARDPREF.hidden['브리핑']){ el.innerHTML=''; return; }
   var U=BRIEF_US||{}, body='';
-  var seg='<div class="brief-seg"><button class="'+(briefMode==='pre'?'on':'')+'" onclick="setBriefMode(\'pre\')">🌙 밤사이·장전</button><button class="'+(briefMode==='close'?'on':'')+'" onclick="setBriefMode(\'close\')">🔔 장 마감</button></div>';
+  var seg='<div class="brief-seg"><button class="'+(briefMode==='pre'?'on':'')+'" onclick="setBriefMode(\'pre\')">🌏 해외 · 밤사이</button><button class="'+(briefMode==='close'?'on':'')+'" onclick="setBriefMode(\'close\')">🇰🇷 국내 · 마감</button></div>';
   if(briefMode==='pre'){
-    var us=''; [['S&P500','SPY'],['나스닥','QQQ'],['다우','DIA'],['반도체','SMH']].forEach(function(p){ var q=U[p[1]]; if(q&&q.c!=null)us+=_bp(p[0],_pc(q.c)); });
-    var vix=U['VIXY'], vixp=(vix&&vix.c!=null)?_bp('VIX',(vix.c>=0?'<span class="down">▲ 불안</span>':'<span class="up">▼ 안정</span>')):'';
-    var macro='';
-    var usd=(IDX||[]).find(function(x){return /USD/.test(x.nm);}); if(usd&&usd.c!=null)macro+=_bp('환율','<b>'+(usd.v?(+usd.v).toLocaleString():'')+'</b> '+_pc(usd.c));
-    if(U['USO']&&U['USO'].c!=null)macro+=_bp('WTI유가',_pc(U['USO'].c));
-    if(U['GLD']&&U['GLD'].c!=null)macro+=_bp('금',_pc(U['GLD'].c));
-    if(BRIEF_BTC)macro+=_bp('비트코인','<b>$'+Math.round(BRIEF_BTC.px).toLocaleString()+'</b> '+_pc(BRIEF_BTC.c));
-    var q=U['QQQ'], smh=U['SMH'], cmt;
-    if(q&&q.c!=null){ var mood=q.c>=0.3?'강세':(q.c<=-0.3?'약세':'혼조');
-      cmt='밤사이 미국 증시 <b>'+mood+' 마감</b>(나스닥 '+pctTxt(q.c)+(smh&&smh.c!=null?', 반도체 '+pctTxt(smh.c):'')+'). ';
-      cmt+=(smh&&smh.c>=1)?'반도체 강세 → <b>삼성전자·SK하이닉스</b> 등 반도체주 주목.':(q.c>=0.5?'기술주 강세 흐름, 성장주 우호적.':(q.c<=-0.5?'위험자산 약세, 방어적 접근 유효.':'방향성 제한, 개별 이슈 종목 중심.'));
-    } else cmt='미국 지수 데이터를 불러오는 중…';
-    body='<div class="brow"><span class="bcap">🌙 밤사이 미국</span>'+(us||'<span style="color:var(--faint);font-size:12px">불러오는 중…</span>')+vixp+'</div>'
-      +(macro?'<div class="brow"><span class="bcap">💱 매크로</span>'+macro+'</div>':'')
-      +'<div class="bcomment">'+cmt+'</div>'
-      +(_bnews(4)?'<div class="brow"><span class="bcap">📰 밤사이 뉴스</span></div>'+_bnews(4):'');
+    // 미국 지수
+    var us=''; [['S&P500','SPY'],['나스닥','QQQ'],['다우','DIA'],['반도체','SMH'],['러셀2000','IWM']].forEach(function(p){ var q=U[p[1]]; if(q&&q.c!=null)us+=_bp(p[0],_pc(q.c)); });
+    var vix=U['VIXY']; if(vix&&vix.c!=null)us+=_bp('VIX',(vix.c>=0?'<span class="down">▲불안</span>':'<span class="up">▼안정</span>'));
+    // 특징주(등락순)
+    var tech='', tl=Object.keys(TECHNM).map(function(k){return U[k]?{k:k,c:U[k].c}:null;}).filter(Boolean).sort(function(a,b){return b.c-a.c;});
+    tl.forEach(function(x){ tech+=_bp(TECHNM[x.k],_pc(x.c)); });
+    // 섹터
+    var sec=''; [['반도체','SMH'],['기술','XLK'],['에너지','XLE'],['금융','XLF'],['헬스케어','XLV'],['2차전지','LIT']].forEach(function(p){ var q=U[p[1]]; if(q&&q.c!=null)sec+=_bp(p[0],_pc(q.c)); });
+    // 금리·달러·원자재
+    var mac=''; [['달러','UUP'],['미국채','TLT'],['WTI유가','USO'],['금','GLD'],['은','SLV']].forEach(function(p){ var q=U[p[1]]; if(q&&q.c!=null)mac+=_bp(p[0],_pc(q.c)); });
+    var usd=(IDX||[]).find(function(x){return /USD/.test(x.nm);}); if(usd&&usd.c!=null)mac=_bp('환율','<b>'+(usd.v?(+usd.v).toLocaleString():'')+'</b> '+_pc(usd.c))+mac;
+    // 코인
+    var coin=''; if(BRIEF_BTC)coin+=_bp('비트코인','<b>$'+Math.round(BRIEF_BTC.px).toLocaleString()+'</b> '+_pc(BRIEF_BTC.c)); if(BRIEF_ETH)coin+=_bp('이더리움','<b>$'+Math.round(BRIEF_ETH.px).toLocaleString()+'</b> '+_pc(BRIEF_ETH.c));
+    body=_row('📈 미국 지수',us||'<span style="color:var(--faint);font-size:12px">불러오는 중…</span>')
+      +_row('💻 특징주',tech)
+      +_row('🏭 섹터',sec)
+      +_row('💵 금리·달러·원자재',mac)
+      +_row('₿ 코인',coin)
+      +'<div class="bcomment">'+_preComment(U)+'</div>'
+      +(_bnews(6)?_row('📰 밤사이 뉴스','')+_bnews(6):'');
   } else {
     var ks=(IDX||[]).find(function(x){return x.nm==='KOSPI';})||{}, kq=(IDX||[]).find(function(x){return x.nm==='KOSDAQ';})||{};
-    var idxrow=_bp('코스피','<b>'+(ks.v?(+ks.v).toLocaleString():'')+'</b> '+_pc(ks.c||0))+_bp('코스닥','<b>'+(kq.v?(+kq.v).toLocaleString():'')+'</b> '+_pc(kq.c||0));
-    var b=FLOW.breadth||{}, breadth=_bp('등락','<span class="up">▲'+(b.up||0)+'</span> / <span class="down">▼'+(b.down||0)+'</span>');
-    var cats=(getCats()||[]).slice().sort(function(a,b){return b.sc-a.sc;}), strong=cats[0], weak=cats[cats.length-1];
-    var sec=(strong?_bp('강한업종',strong.ic+' '+strong.nm+' '+_pc(strong.chg)):'')+(weak&&weak!==strong?_bp('약한업종',weak.ic+' '+weak.nm+' '+_pc(weak.chg)):'');
-    var kInv=(FLOW.inv||[]).find(function(x){return x[0]==='KOSPI';});
-    var supply=kInv?(_bp('외국인','<b class="'+cls(kInv[2])+'">'+(kInv[2]>=0?'+':'')+(+kInv[2]).toLocaleString()+'억</b>')+_bp('기관','<b class="'+cls(kInv[3])+'">'+(kInv[3]>=0?'+':'')+(+kInv[3]).toLocaleString()+'억</b>')):'';
-    var mv='';
-    if(KBOARD&&KBOARD.length){ var g=KBOARD.filter(function(x){return hasNum(x.ch);}).sort(function(a,b){return b.ch-a.ch;});
-      g.slice(0,3).forEach(function(x){ mv+=_bp('▲',' <b>'+x.n+'</b> '+_pc(x.ch)); });
-      g.slice(-2).reverse().forEach(function(x){ if(x.ch<0)mv+=_bp('▼',' <b>'+x.n+'</b> '+_pc(x.ch)); });
-    }
-    var kc=ks.c||0, frg=kInv?kInv[2]:null, cmt2='코스피 <b>'+pctTxt(kc)+'</b> '+(kc>=0.3?'상승':(kc<=-0.3?'하락':'보합'))+' 마감';
+    var b=FLOW.breadth||{};
+    var idxrow=_bp('코스피','<b>'+(ks.v?(+ks.v).toLocaleString():'')+'</b> '+_pc(ks.c||0))+_bp('코스닥','<b>'+(kq.v?(+kq.v).toLocaleString():'')+'</b> '+_pc(kq.c||0))
+      +_bp('등락','<span class="up">▲'+(b.up||0)+'</span>/<span class="down">▼'+(b.down||0)+'</span>')
+      +(b.upH!=null?_bp('상한/하한','<span class="up">'+(b.upH||0)+'</span>/<span class="down">'+(b.downH||0)+'</span>'):'')
+      +(b.h52u!=null?_bp('52주 신고/신저','<span class="up">'+(b.h52u||0)+'</span>/<span class="down">'+(b.h52d||0)+'</span>'):'');
+    // 수급 (KOSPI·KOSDAQ 외국인·기관)
+    function invPill(mkt){ var r=(FLOW.inv||[]).find(function(x){return x[0]===mkt;}); if(!r)return '';
+      return _bp(mkt+' 외인','<b class="'+cls(r[2])+'">'+(r[2]>=0?'+':'')+(+r[2]).toLocaleString()+'억</b>')+_bp(mkt+' 기관','<b class="'+cls(r[3])+'">'+(r[3]>=0?'+':'')+(+r[3]).toLocaleString()+'억</b>'); }
+    var supply=invPill('KOSPI')+invPill('KOSDAQ');
+    // 업종 강/약
+    var cats=(getCats()||[]).slice().sort(function(a,b){return b.sc-a.sc;});
+    var strongSec='',weakSec=''; cats.slice(0,3).forEach(function(c){strongSec+=_bp(c.ic||'🔥',' '+c.nm+' '+_pc(c.chg));}); cats.slice(-2).forEach(function(c){weakSec+=_bp(c.ic||'💧',' '+c.nm+' '+_pc(c.chg));});
+    // 급등락
+    var up='',dn=''; if(KBOARD&&KBOARD.length){ var g=KBOARD.filter(function(x){return hasNum(x.ch);}).sort(function(a,b){return b.ch-a.ch;});
+      g.slice(0,5).forEach(function(x){ if(x.ch>0)up+=_bp('▲',' <b>'+x.n+'</b> '+_pc(x.ch)); });
+      g.slice(-3).reverse().forEach(function(x){ if(x.ch<0)dn+=_bp('▼',' <b>'+x.n+'</b> '+_pc(x.ch)); }); }
+    // 외국인·기관 순매수 TOP
+    var frBuy=(SMART&&SMART.foreign||[]).slice(0,3).map(function(a){return _bp('외인',' <b>'+a[0]+'</b> +'+a[1].toLocaleString()+'억');}).join('');
+    var inBuy=(SMART&&SMART.inst||[]).slice(0,3).map(function(a){return _bp('기관',' <b>'+a[0]+'</b> +'+a[1].toLocaleString()+'억');}).join('');
+    // 코멘트
+    var kc=ks.c||0, kInv=(FLOW.inv||[]).find(function(x){return x[0]==='KOSPI';}), frg=kInv?kInv[2]:null, strong=cats[0];
+    var cmt2='📌 코스피 <b>'+pctTxt(kc)+'</b> '+(kc>=0.3?'상승':(kc<=-0.3?'하락':'보합'))+' 마감';
     if(frg!=null)cmt2+=', 외국인 '+(frg>=0?'순매수':'순매도')+'('+(frg>=0?'+':'')+(+frg).toLocaleString()+'억)'+(frg>=0?' 주도':'');
-    if(strong)cmt2+='. '+strong.nm+' 업종 강세.';
-    body='<div class="brow"><span class="bcap">📊 지수</span>'+idxrow+breadth+'</div>'
-      +(supply?'<div class="brow"><span class="bcap">🏦 수급</span>'+supply+'</div>':'')
-      +'<div class="brow"><span class="bcap">🔥 업종</span>'+sec+'</div>'
-      +(mv?'<div class="brow"><span class="bcap">⚡ 급등락</span>'+mv+'</div>':'')
+    cmt2+='. 상승 '+(b.up||0)+'·하락 '+(b.down||0)+'.';
+    if(strong)cmt2+=' <b>'+strong.nm+'</b> 업종이 '+pctTxt(strong.chg)+'로 강세.';
+    body=_row('📊 지수',idxrow)
+      +_row('🏦 수급',supply||'<span style="color:var(--faint);font-size:12px">집계 중</span>')
+      +_row('🔥 강세 업종',strongSec)
+      +_row('💧 약세 업종',weakSec)
+      +_row('⚡ 급등',up||'<span style="color:var(--faint);font-size:12px">—</span>')
+      +_row('⚡ 급락',dn||'<span style="color:var(--faint);font-size:12px">—</span>')
+      +_row('💰 외인 순매수',frBuy)
+      +_row('💰 기관 순매수',inBuy)
       +'<div class="bcomment">'+cmt2+'</div>'
-      +(_bnews(4)?'<div class="brow"><span class="bcap">📰 오늘 뉴스</span></div>'+_bnews(4):'');
+      +(_bnews(6)?_row('📰 오늘 뉴스','')+_bnews(6):'');
   }
   el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📋 오늘의 브리핑</h2><div class="r">'+seg+'</div></div><div class="pad">'+body+'</div></div>';
 }
