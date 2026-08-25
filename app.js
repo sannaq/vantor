@@ -976,18 +976,31 @@ function showView(v,noScroll){
 }
 let _stkScroll=0;
 let stkMkt='KR';
+var _stkFilter='all';
+var STK_FILTERS=[['all','전체'],['surge','급등 +5%↑'],['plunge','급락 -5%↓'],['up','상승'],['down','하락'],['kospi','코스피'],['kosdaq','코스닥']];
+function stkPass(s){ var ch=s.ch||0, mk=(s.mk||'').toUpperCase();
+  switch(_stkFilter){
+    case 'surge': return ch>=5; case 'plunge': return ch<=-5;
+    case 'up': return ch>0; case 'down': return ch<0;
+    case 'kospi': return mk.indexOf('KOSDAQ')<0; case 'kosdaq': return mk.indexOf('KOSDAQ')>=0;
+    default: return true; }
+}
 function renderStockBrowse(){
   var el=$('#stockPanel'); if(!el)return;
-  // 국내는 실제 RADAR 유니버스(있으면) 사용 → 실시간 가격. 없으면 데모.
-  var list=(stkMkt==='US')?USTK:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK);
-  var real=(stkMkt==='KR'&&useReal&&KISUNIV&&KISUNIV.length);
-  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 분석</div><p class="sec-sub">종목을 선택하면 밤톨이 SCORE·수급·차트 분석을 봅니다. 티커·코드로도 검색돼요 (예: AAPL, 005930).</p>'
-    +'<div style="display:flex;gap:6px;margin-bottom:14px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
-    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>밤톨이 SCORE</th></tr></thead><tbody>'
-    +list.map(function(s){var r=scoredOf(s.c);return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num" id="bpx-'+s.c+'">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" id="bch-'+s.c+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td><span class="scorepill'+(r.score>=80?'':' s2')+'">'+r.score+'</span></td></tr>';}).join('')+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+(real?'✅ 국내 실시간 시세 · 거래대금 상위 종목':(PROXY?'시세 불러오는 중…':'🧪 데모 데이터'))+'</div>';
+  // 국내 실데이터: board(거래대금 상위 30) 우선 → 스크리너. 없으면 RADAR/데모.
+  var base=(stkMkt==='US')?USTK:((KBOARD&&KBOARD.length)?KBOARD:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK));
+  var real=(stkMkt==='KR'&&((KBOARD&&KBOARD.length)||(useReal&&KISUNIV&&KISUNIV.length)));
+  var list=base.filter(stkPass);
+  var showFilters=(stkMkt==='KR'); // 스크리너는 국내 board 대상
+  el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 골라보기 (스크리너)</div><p class="sec-sub">거래대금 상위 종목을 조건으로 거릅니다. 티커·코드 검색도 됩니다 (예: AAPL, 005930).</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
+    +(showFilters?('<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="stkFilters">'+STK_FILTERS.map(function(f){return '<button class="scfil'+(f[0]===_stkFilter?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div>'):'')
+    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>거래대금</th></tr></thead><tbody>'
+    +(list.length?list.map(function(s){var amtT=hasNum(s.amount)?fmtEok(Math.round(s.amount/1e8)):'';return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num" id="bpx-'+s.c+'">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" id="bch-'+s.c+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td class="num" style="color:var(--sub)">'+amtT+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:24px">조건에 맞는 종목이 없습니다.</td></tr>')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+(real?('✅ 국내 실시간 · '+list.length+'종목 (거래대금 상위)'):(PROXY?'시세 불러오는 중…':'🧪 데모 데이터'))+'</div>';
   $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
   $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
+  $$('#stockPanel .scfil').forEach(function(b){b.onclick=function(){_stkFilter=b.dataset.f;renderStockBrowse();};});
   browseQuotes(list.map(function(s){return s.c;}),stkMkt);
 }
 /* 목록 시세를 /quotes 실데이터로 제자리 갱신 (클릭 전에도 실시간) */
