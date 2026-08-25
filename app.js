@@ -1250,9 +1250,23 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
 /* 코인 모드 = VANTOR 터미널 통째로(밤톨이 색, 자체 호스팅 coin.html) */
 function openCoinTerminal(){
   var v=$('#v-coin'); if(!v)return;
-  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급</span><a href="coin.html" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
+  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px;flex-wrap:wrap"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span>'
+    +'<div class="segmode" id="coinSeg" style="display:inline-flex;gap:4px">'
+      +'<button data-c="term" class="on">터미널</button>'
+      +'<button data-c="liq">🔥 청산맵</button>'
+    +'</div>'
+    +'<span style="color:var(--faint);font-size:12px" id="coinSub">실시간 · 차트·타점·수급</span>'
+    +'<a href="coin.html" target="_blank" rel="noopener" class="more" id="coinFull" style="margin-left:auto">↗ 전체화면</a></div>'
     +'<iframe id="coinFrame" src="coin.html" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>';
+  var seg=$('#coinSeg'); if(seg)$$('#coinSeg button').forEach(function(b){ b.onclick=function(){ switchCoinView(b.dataset.c); }; });
 }
+function switchCoinView(c){
+  var f=$('#coinFrame'), full=$('#coinFull'), sub=$('#coinSub');
+  $$('#coinSeg button').forEach(function(b){ b.classList.toggle('on',b.dataset.c===c); });
+  if(c==='liq'){ if(f)f.src='liqmap.html'; if(full)full.href='liqmap.html'; if(sub)sub.textContent='실시간 청산 히트맵 · 레버리지 청산대'; }
+  else { if(f)f.src='coin.html'; if(full)full.href='coin.html'; if(sub)sub.textContent='실시간 · 차트·타점·수급'; }
+}
+window.switchCoinView=switchCoinView;
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
 /* ═══════════════════════════════════════════════════════════
