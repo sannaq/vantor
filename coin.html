@@ -310,7 +310,7 @@
       <canvas id="chart"></canvas>
       <div class="legend">
         <div><b id="lgSym">BTC</b> · <span id="lgTf">15분</span> · Binance 무기한</div>
-        <div><span style="color:var(--gold)">▬</span> 청산 히트맵(추정 · 거래량·OI 모델 + 실시간)</div>
+        <div><span style="color:#4d9bff">▬</span> 청산 히트맵(추정 · 거래량·OI 모델 + 실시간)</div>
         <div><span style="color:var(--sub)">┈</span> 레버리지 청산대(10·25·50·100x)</div>
       </div>
     </div>
@@ -1474,7 +1474,7 @@ function draw(){
       var yy=y(p), inten=Math.pow(ratio,0.95);           // 대비↑
       var a=Math.min(0.95,0.015+inten*1.05);             // 약한건 흐리게, 강한건 밝게
       // 강도↑ → 골드에서 화이트핫으로
-      var R=Math.round(230+25*inten), G=Math.round(179+40*inten), B=Math.round(74+90*inten);
+      var R=Math.round(40+110*inten), G=Math.round(110+100*inten), B=Math.round(225+30*inten);
       ctx.fillStyle='rgba('+R+','+G+','+B+','+a.toFixed(3)+')';
       ctx.fillRect(cl,yy-hpx/2,cw,hpx*0.9);
       // 롱/숏 우세 엣지(우측, 강한 벽만)
