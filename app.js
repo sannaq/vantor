@@ -1115,7 +1115,12 @@ function learnBasic(){
     +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 (MA)</p><p class="bd">일정 기간 평균가를 이은 선. 주가가 MA <b>위=상승추세</b>, <b>아래=하락추세</b>. 5·20·60·120일을 많이 씀. 밤톨이 차트엔 MA5·20·60이 겹쳐 그려집니다.</p></div></div>'
     +'<div class="lrow"><div class="ic">📊</div><div><p class="tt">거래량 (Volume)</p><p class="bd">얼마나 많은 사람이 참여했나. 가격 움직임은 <b>반드시 거래량으로 검증</b> — 돌파 + 대량거래 = 신뢰.</p></div></div></div>'
     +'<div class="lcard"><h3>🎯 confluence — 신호 겹침이 핵심</h3><p class="lead">한 지표만 믿지 마세요. <b>여러 신호가 같은 방향</b>을 가리킬 때가 진짜 자리입니다.</p>'
-    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">예) <b style="color:var(--ink)">지지 구간 + RSI 과매도 + 반전 캔들 + 거래량 증가</b> → 네 가지가 겹치면 신뢰도가 높아집니다. 밤톨이 RADAR의 100점 점수도 같은 원리 — 여러 지표를 합산해 평가합니다.</p></div>';
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">예) <b style="color:var(--ink)">지지 구간 + RSI 과매도 + 반전 캔들 + 거래량 증가</b> → 네 가지가 겹치면 신뢰도가 높아집니다. 밤톨이 RADAR의 100점 점수도 같은 원리 — 여러 지표를 합산해 평가합니다.</p></div>'
+    +'<div class="lcard"><h3>🌰 밤톨이로 바로 실습</h3><p class="lead">배운 걸 실제 시장에서 확인해보세요.</p><div class="chips" style="display:flex;flex-wrap:wrap;gap:8px">'
+    +'<span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="showView(\'radar\')">🎯 지금 강한 종목 RADAR →</span>'
+    +'<span class="rulechip" style="cursor:pointer" onclick="showView(\'stock\')">🕯 종목 차트에서 이평·거래량 보기 →</span>'
+    +'<span class="rulechip" style="cursor:pointer" onclick="showView(\'market\')">🌊 오늘 시장 흐름 →</span>'
+    +'</div></div>';
 }
 function learnCandle(){
   var anat='<div class="ltile">'+lc({h0:10,bt:30,bb:74,l0:106,up:true,bw:36,w:88,h:120})+'<div class="nm" style="color:var(--up)">양봉 (상승)</div><div class="ds">종가 &gt; 시가 · 매수세 우위<br>위꼬리·몸통·아래꼬리</div></div>'
@@ -1133,7 +1138,8 @@ function learnCandle(){
   return '<div class="lcard"><h3>캔들 기본 구조</h3><p class="lead">몸통 = 시가~종가, 꼬리 = 밀렸다 되돌아온 흔적. 한국식(상승=빨강 / 하락=파랑).</p><div class="lgrid lg2">'+anat+'</div></div>'
     +'<div class="lcard"><h3>반전 신호 캔들 8종</h3><p class="lead">바닥/천장에서 나오면 추세 전환 힌트 — <b>거래량 급증과 함께</b> 나와야 신뢰도 ↑.</p>'
     +'<div class="lgrid lg4">'+REV.map(function(p){return ltile(lc(p.s),p.nm,p.ds,p.tone);}).join('')+'</div>'
-    +'<div class="llegend"><span><i class="lsw" style="background:var(--up)"></i> 상승 반전</span><span><i class="lsw" style="background:var(--down)"></i> 하락 반전</span><span><i class="lsw" style="background:var(--gold)"></i> 관망/전환</span></div></div>';
+    +'<div class="llegend"><span><i class="lsw" style="background:var(--up)"></i> 상승 반전</span><span><i class="lsw" style="background:var(--down)"></i> 하락 반전</span><span><i class="lsw" style="background:var(--gold)"></i> 관망/전환</span></div>'
+    +'<div style="margin-top:14px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="showView(\'stock\')">🕯 차트에서 캔들을 눌러 \'속 보기\' 실습 →</span></div></div>';
 }
 function learnPattern(){
   var CH=[
@@ -1203,12 +1209,18 @@ function learnWave(){
     +wtile(wsvg('12,120 40,90 30,105 62,35 50,60 100,15 90,40 118,25',null,[[62,35,'3']]),'3파 연장 (extension)','1·3·5 중 하나가 크게 늘어남. 보통 3파가 연장돼 가장 김.')
     +wtile(wsvg('16,116 44,74 34,96 66,50 54,72 86,34 78,52 104,22 96,38 116,14','var(--up)'),'다이아고날 (쐐기)','수렴하는 5파. 절대법칙 3번의 유일한 예외(4파가 1파 침범 허용).')
     +'</div></div>'
+    +'<div class="lcard"><h3>🧮 피보나치 실전 적용 예시</h3><p class="lead">숫자로 보면 쉽습니다. 1파가 10,000 → 12,000원 상승했다고 가정.</p>'
+    +'<div class="lrow"><div class="ic">②</div><div><p class="tt">2파 되돌림 목표</p><p class="bd">1파 상승폭(2,000)의 <b>0.5~0.618</b> 되돌림 → 10,760~11,000원 부근에서 <b>2파 저점</b>을 기대. 여기가 진입 후보.</p></div></div>'
+    +'<div class="lrow"><div class="ic">③</div><div><p class="tt">3파 목표</p><p class="bd">2파 저점에서 1파의 <b>1.618배</b> 확장 → 흔히 가장 강한 상승. 예: 저점 11,000 + (2,000×1.618) ≈ <b>14,240원</b>.</p></div></div>'
+    +'<div class="lrow"><div class="ic">⑤</div><div><p class="tt">5파 · 마무리</p><p class="bd">5파는 1파와 <b>비슷한 길이</b>거나 3파의 0.618배가 흔함. 5파에서 RSI가 3파보다 낮아지면(다이버전스) 상승 소진 경계.</p></div></div>'
+    +'<p class="bd" style="color:var(--faint);font-size:11.5px;margin-top:8px">※ 어디까지나 확률적 목표치. 실제론 되돌림이 얕거나 깊을 수 있으니 손절가와 함께 씁니다.</p></div>'
     +'<div class="lcard"><h3>💡 실전에서 조심할 점</h3>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• 파동은 <b style="color:var(--ink)">지나고 나서야 명확</b>합니다. 실시간 카운트는 여러 시나리오를 열어두세요.<br>'
     +'• <b style="color:var(--ink)">내 포지션에 유리하게 억지로 세지 말 것</b> — 절대법칙 위반이 대표적 실수.<br>'
     +'• 3파를 노리는 게 정석(가장 강함). 5파 끝·C파 끝은 추세 전환 경계.<br>'
     +'• RSI 다이버전스(3파·5파 사이 고점 낮아짐)가 5파 소진을 암시하기도 합니다.</p>'
-    +'<p class="bd" style="color:var(--faint);font-size:11.5px;margin-top:10px">※ 엘리엇 파동은 확률적 도구입니다. 확정 신호가 아니며, 손절·손익비 원칙과 함께 쓰세요.</p></div>';
+    +'<p class="bd" style="color:var(--faint);font-size:11.5px;margin-top:10px">※ 엘리엇 파동은 확률적 도구입니다. 확정 신호가 아니며, 손절·손익비 원칙과 함께 쓰세요.</p>'
+    +'<div style="margin-top:12px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="showView(\'stock\')">🌊 차트에서 파동·이평 직접 세어보기 →</span></div></div>';
 }
 function learnEcon(){
   return '<div class="lcard"><h3>📅 경제지표 읽는 법</h3><p class="lead"><b>실제 · 예상치 · 이전</b> 3개 숫자로 판단합니다.</p>'
