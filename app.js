@@ -453,6 +453,28 @@ function drawStockChart(cv,r){
   ctx.lineWidth=2.2;
   MA.forEach(function(m,mi){ if(n<3)return; var e=emas[mi]; ctx.strokeStyle=m[1]; ctx.beginPath();
     for(var i=0;i<n;i++){ var x=xAt(i), yy=y(e[i]); if(i===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);} ctx.stroke(); });
+  // 피보나치 되돌림 — 표시된 구간의 스윙 고/저를 자동 감지해 레벨 표시
+  if(_fibOn && n>3){
+    var hIdx=0,lIdx=0; for(var fi=0;fi<n;fi++){ if(data[fi][1]>data[hIdx][1])hIdx=fi; if(data[fi][2]<data[lIdx][2])lIdx=fi; }
+    var sHi=data[hIdx][1], sLo=data[lIdx][2], upSwing=lIdx<hIdx, diff=sHi-sLo;
+    var FIB=[[0,'0'],[0.236,'0.236'],[0.382,'0.382'],[0.5,'0.5'],[0.618,'0.618'],[0.786,'0.786'],[1,'1.0'],[1.618,'1.618 (확장)']];
+    ctx.font='600 15px system-ui,sans-serif';ctx.textBaseline='middle';
+    FIB.forEach(function(f){ var rt=f[0];
+      var pv=upSwing?(sHi-diff*rt):(sLo+diff*rt); var yy=y(pv);
+      if(yy<padT-2||yy>priceB+2) return;
+      var key=(rt===0.5||rt===0.618), ext=rt>1;
+      ctx.strokeStyle=ext?'#8b5cf6':(key?'var(--gold)':'var(--sub)');
+      ctx.globalAlpha=key?0.9:(ext?0.8:0.45); ctx.lineWidth=key?1.5:1; ctx.setLineDash(key?[]:[4,4]);
+      ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(plotR,yy);ctx.stroke();
+      ctx.globalAlpha=1;ctx.setLineDash([]);
+      ctx.fillStyle=ext?'#8b5cf6':(key?css('--gold')||'#c19a3e':sub);ctx.textAlign='left';
+      ctx.fillText(f[1]+'  '+(r.ccy==='USD'?('$'+pv.toFixed(2)):Math.round(pv).toLocaleString('en-US')), padL+4, yy-7);
+    });
+    ctx.globalAlpha=1;ctx.setLineDash([]);
+    // 스윙 방향 배지
+    ctx.fillStyle=sub;ctx.font='600 14px system-ui,sans-serif';ctx.textAlign='right';
+    ctx.fillText('피보나치 · '+(upSwing?'상승 스윙(저→고)':'하락 스윙(고→저)'), plotR-4, priceB-6);
+  }
   // 현재가 라인 + 우측 현재가 태그
   ctx.lineWidth=1.4;ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(padL,y(last));ctx.lineTo(plotR,y(last));ctx.stroke();ctx.setLineDash([]);
   var lyt=y(last), lt=(r.ccy==='USD'?('$'+last.toFixed(2)):Math.round(last).toLocaleString('en-US'));
@@ -606,7 +628,7 @@ function liveRefresh(r){
   if(!isUS) proxyJson('/flow?'+base).then(function(j){
     if(!SEL||SEL.c!==r.c||!j) return;
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
-             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox};
+             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
     renderPressureFlow(r);
   });
 }
@@ -632,7 +654,8 @@ function renderPressureFlow(r){
   var inv=[['개인',f.retail],['외국인',f.foreign],['기관',f.inst]].filter(function(x){return hasNum(x[1]);});
   if(inv.length){
     var mx=Math.max.apply(null,inv.map(function(x){return Math.abs(x[1]);}))||1;
-    parts.push('<div style="font-size:12px;font-weight:800;margin:14px 0 5px">🏦 투자자 순매수 <span style="color:var(--faint);font-weight:600">(당일 누적·주)</span></div>');
+    var idt=f.investDate&&/^\d{8}$/.test(f.investDate)?(f.investDate.slice(4,6)+'/'+f.investDate.slice(6,8)+' 기준'):'당일 누적';
+    parts.push('<div style="font-size:12px;font-weight:800;margin:14px 0 5px">🏦 투자자 순매수 <span style="color:var(--faint);font-weight:600">('+idt+'·주)</span></div>');
     inv.forEach(function(x){ var v=x[1], w=Math.round(Math.abs(v)/mx*49), pos=v>=0;
       parts.push('<div class="invbar"><span class="lbl">'+x[0]+'</span>'
         +'<div class="track"><div style="position:absolute;left:50%;top:0;width:1px;height:100%;background:var(--line)"></div>'
@@ -662,6 +685,10 @@ window.backToBrowse=backToBrowse;
    응답이 도착한 항목만 제자리에서 교체한다. 종목을 바꾸면 이전 응답은 버린다. */
 let _enrichSeq=0, _realParts={};
 var _chartTF='D';
+var _fibOn=false; try{ _fibOn=localStorage.getItem('aurFib')==='1'; }catch(e){}
+function toggleFib(){ _fibOn=!_fibOn; try{localStorage.setItem('aurFib',_fibOn?'1':'0');}catch(e){}
+  var b=$('#fibBtn'); if(b)b.classList.toggle('on',_fibOn);
+  if(CHART)drawStockChart(CHART.cv,CHART.r); }
 function tfLabel(tf){ return {'1':'1분봉','5':'5분봉','D':'일봉','W':'주봉','M':'월봉'}[tf]||tf; }
 /* 봉 전환 — /candles를 해당 tf로 재조회 후 다시 그림. 분봉은 KIS 특성상 장중 위주 */
 async function loadChartTF(r,tf){
@@ -807,7 +834,7 @@ async function enrichStock(r){
     if(got) markReal('flow');
     // /flow가 체결강도·호가를 안 줄 때(장외 등) RADAR가 이미 가진 값을 유지
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
-             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox};
+             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
     renderPressureFlow(r);
   });
 
@@ -860,6 +887,7 @@ function openStock(code){
             +'<div class="tfbar" id="tfBar">'
               +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
             +'</div>'
+            +'<button class="tfbtn2'+(_fibOn?' on':'')+'" id="fibBtn" title="피보나치 되돌림" onclick="toggleFib()" style="margin-left:8px">📐 피보</button>'
             +(PROXY?'<span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint);font-weight:700"><span id="liveDotChart" style="width:7px;height:7px;border-radius:50%;background:#16b364;box-shadow:0 0 5px #16b364;transition:opacity .4s"></span>LIVE 15초</span>':'')
           +'</div>'
           +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
