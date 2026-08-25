@@ -1421,7 +1421,22 @@ function learnInd(){
     +'<div class="lrow"><div class="ic">📊</div><div><p class="tt">거래량</p><p class="bd">돌파에 <b>거래량이 실려야</b> 진짜. 가격은 오르는데 거래량이 줄면 힘 빠지는 신호(다이버전스).</p></div></div>'
     +'<div class="lrow"><div class="ic">🧭</div><div><p class="tt">지지 / 저항</p><p class="bd">\'선\'이 아니라 <b>폭 있는 구간</b>으로. <b>뚫린 저항은 이후 지지로 전환</b>.</p></div></div>'
     +'<div class="lrow"><div class="ic">⚡</div><div><p class="tt">RSI (속도)</p><p class="bd">0~100. <b>70 위=과매수</b>, <b>30 아래=과매도</b>. 강한 추세장에선 과매수에서 더 갈 수 있으니 단독 사용 금지.</p></div></div>'
-    +'<div class="lrow"><div class="ic">〰️</div><div><p class="tt">MACD (모멘텀)</p><p class="bd">두 이평선 차이로 추세 힘·전환을 봄. 시그널선 상향 교차=상승 모멘텀.</p></div></div></div>';
+    +'<div class="lrow"><div class="ic">〰️</div><div><p class="tt">MACD (모멘텀)</p><p class="bd">두 이평선 차이로 추세 힘·전환을 봄. 시그널선 상향 교차=상승 모멘텀.</p></div></div></div>'
+    +'<div class="lcard"><h3>📦 매물대 · 거래량 프로파일</h3><p class="lead">가격축이 아니라 <b>거래량이 어느 가격대에 몰렸나</b>를 봅니다.</p>'
+    +'<div class="wavebox">'+volProfileSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">과거 <b style="color:var(--ink)">거래량이 두껍게 쌓인 가격대 = 매물대</b>. 그 가격에 물린 사람·익절 대기자가 많아 힘이 셉니다.<br>'
+    +'• 아래에서 올라와 만나면 → <b class="down">저항</b>(본전 오면 팔려는 매물)<br>'
+    +'• 위에서 내려와 만나면 → <b class="up">지지</b>(싸지면 다시 사려는 대기)<br>'
+    +'• <b style="color:var(--ink)">얇은 구간은 빠르게 통과</b>, 두꺼운 구간에서 싸움이 벌어집니다. 가장 두꺼운 지점을 POC(최대 거래가격)라 불러요.</p></div>';
+}
+/* 매물대(거래량 프로파일) 도해 — 가격대별 거래량 가로막대, 두꺼운 곳=매물대 */
+function volProfileSVG(){
+  var bars=[[30,18],[46,30],[62,52],[78,88],[94,72],[110,40],[126,24],[142,58],[158,34],[174,20]];
+  var mx=88;
+  return '<svg width="100%" height="150" viewBox="0 0 260 160" preserveAspectRatio="xMidYMid meet">'
+    +bars.map(function(b){ var w=b[1]/mx*150, poc=b[1]>=mx; return '<rect x="30" y="'+b[0]+'" width="'+w+'" height="12" rx="2" fill="'+(poc?'var(--gold)':'var(--sub)')+'" opacity="'+(poc?1:0.5)+'"/>'; }).join('')
+    +'<text x="188" y="98" font-size="10" font-weight="800" fill="var(--gold)">← POC (최대 매물대)</text>'
+    +'<text x="30" y="12" font-size="9" fill="var(--sub)">↑ 가격 · 막대 길이 = 그 가격대 거래량</text></svg>';
 }
 function learnTips(){
   var T=[['사기 전에 손절가부터 정한다','진입 근거가 깨지는 가격 = 손절가. 예: 지지 50,000 → "종가 49,000 아래면 축소".'],
@@ -1442,6 +1457,32 @@ function learnTips(){
     +'<div class="ltip"><div class="n">2</div><div><p class="h">본절(브레이크이븐) 이동</p><p class="p">가격이 목표의 절반쯤 가면 손절을 <b>진입가로</b> 올려 \'잃지 않는 자리\'를 만듭니다.</p></div></div>'
     +'<div class="ltip"><div class="n">3</div><div><p class="h">추적 손절(트레일링)</p><p class="p">추세가 이어지면 손절을 <b>새로 생긴 스윙 저점 아래로</b> 따라 올려 수익을 지키며 끌고 갑니다.</p></div></div>'
     +'<div class="ltip"><div class="n">4</div><div><p class="h">분할 익절</p><p class="p">일부는 1차 목표에서 실현, 나머지는 추세에 태워 손익비를 극대화. 전부 한 곳에서 팔지 않기.</p></div></div></div>';
+}
+function learnMind(){
+  var emo=[
+    ['😱','FOMO · 추격매수','급등을 보고 "지금 안 사면 늦는다"며 꼭대기에 진입. 남이 사는 게 아니라 <b>내 근거</b>로 산다.'],
+    ['🔥','뇌동 · 복수매매','잃고 흥분해 계획 없이 더 크게 베팅. <b>한 번의 감정 매매</b>가 수십 번의 수익을 지운다.'],
+    ['💧','물타기','지는 포지션에 계속 추가 — 손절 근거를 무시하는 것. 평단만 낮아지고 손실은 커진다.'],
+    ['🔁','오버트레이딩','안 해도 될 매매를 반복. 수수료·세금·펀딩이 계좌를 갉아먹는다.'],
+    ['🪞','확증편향','내 포지션에 유리한 뉴스·차트만 본다. <b>반대 근거를 일부러</b> 찾아봐야 한다.']
+  ];
+  var mdd=[['−10%','+11%'],['−25%','+33%'],['−50%','+100%'],['−80%','+400%']];
+  return '<div class="lcard"><h3>🧠 왜 \'아는데\' 못 지키나 — 손실회피</h3><p class="lead">매매의 승패는 대부분 분석이 아니라 <b>심리</b>에서 갈립니다. 트레이더의 74~89%가 잃고, 원인은 대체로 행동이에요.</p>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">사람은 <b style="color:var(--ink)">손실의 고통을 이익의 약 2배</b>로 느낍니다(손실회피). 그래서 무의식적으로:<br>'
+    +'• <b class="down">지는 포지션은 오래</b> 붙든다 — "곧 오르겠지" 하며 더 떨어지길 기다림<br>'
+    +'• <b class="up">이기는 포지션은 빨리</b> 던진다 — 작은 수익에 안도하며 도망<br>'
+    +'이게 바로 <b style="color:var(--ink)">손익비를 거꾸로</b> 만드는 범인입니다(손실 크게·수익 작게). 규칙을 세우는 이유가 이 본능을 이기기 위해서예요.</p></div>'
+    +'<div class="lcard"><h3>💥 계좌를 녹이는 감정 매매 5</h3><p class="lead">아래 5개만 피해도 생존율이 크게 오릅니다.</p>'
+    +emo.map(function(x){return '<div class="lrow"><div class="ic">'+x[0]+'</div><div><p class="tt">'+x[1]+'</p><p class="bd">'+x[2]+'</p></div></div>';}).join('')+'</div>'
+    +'<div class="lcard"><h3>💰 자금관리 — 실력보다 생존이 먼저</h3><p class="lead">고수와 하수를 가르는 건 기법이 아니라 <b>한 번에 얼마를 거느냐</b>입니다.</p>'
+    +'<div class="ltip"><div class="n">1</div><div><p class="h">1~2% 룰</p><p class="p">한 매매의 <b>손실</b>이 계좌의 1~2%를 넘지 않게. <b>수량 = 허용손실 ÷ (진입가−손절가)</b>. 이러면 10연패해도 계좌 대부분이 남아요.</p></div></div>'
+    +'<div class="ltip"><div class="n">2</div><div><p class="h">최대낙폭(MDD)의 함정</p><p class="p">크게 잃으면 복구가 기하급수로 어려워집니다:</p>'
+    +'<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+mdd.map(function(m){return '<span class="rulechip" style="background:var(--panel2);color:var(--sub)"><b class="down">'+m[0]+'</b> → <b class="up">'+m[1]+'</b> 필요</span>';}).join('')+'</div>'
+    +'<p class="p" style="margin-top:6px">−50% 나면 <b>+100%</b>를 벌어야 본전. 그래서 <b style="color:var(--ink)">크게 잃지 않는 것</b>이 복리의 핵심입니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">3</div><div><p class="h">분할 · 작게 시작</p><p class="p">한 번에 몰빵 대신 나눠 진입·청산. 배우는 단계엔 <b>아플 만큼 크지 않게</b> 베팅해 판단력을 지킵니다.</p></div></div></div>'
+    +'<div class="lcard"><h3>🏆 꾸준히 버는 1~3%의 공통점</h3>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">화려한 기법이 아니라 <b style="color:var(--ink)">지루한 습관</b>입니다 — 작게 시작 · <b>매매일지</b>로 복기 · 규칙 준수 · 손실 관리. 기법은 20%, 심리·자금관리가 80%예요.</p>'
+    +'<div style="margin-top:8px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="setMode&&setMode(\'coin\')">📓 밤톨이 매매일지로 복기 시작하기 →</span></div></div>';
 }
 /* 엘리엇 파동 다이어그램 (독자 작성) */
 function waveImpulseSVG(){
@@ -1508,7 +1549,7 @@ function learnEcon(){
 }
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
-  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
   el.innerHTML=fn();
 }
 window.renderLearn=renderLearn;
