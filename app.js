@@ -1345,12 +1345,34 @@ function structBreakSVG(){
     +'<text x="214" y="112" font-size="12" fill="var(--down)" font-weight="800">✗ 이탈</text>'
     +'<text x="105" y="78" font-size="9" fill="var(--sub)">이 아래로 종가 이탈 = 구조 훼손 · 손절</text></svg>';
 }
+function structCloseSVG(){
+  return '<svg width="100%" height="130" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet">'
+    +'<line x1="10" y1="52" x2="250" y2="52" stroke="var(--sub)" stroke-width="1.4" stroke-dasharray="5 4"/><text x="12" y="44" font-size="10" fill="var(--sub)">저항(스윙 고점)</text>'
+    // 거부: 위꼬리만 넘고 종가는 아래
+    +'<line x1="80" y1="30" x2="80" y2="96" stroke="var(--down)" stroke-width="3" stroke-linecap="round"/><rect x="70" y="62" width="20" height="30" rx="3" fill="var(--down)"/><text x="80" y="118" text-anchor="middle" font-size="10" fill="var(--down)">✗ 꼬리만 (거부)</text>'
+    // 점령: 종가가 위로
+    +'<line x1="180" y1="26" x2="180" y2="80" stroke="var(--up)" stroke-width="3" stroke-linecap="round"/><rect x="170" y="30" width="20" height="30" rx="3" fill="var(--up)"/><text x="180" y="118" text-anchor="middle" font-size="10" fill="var(--up)">✓ 종가 돌파 (점령)</text></svg>';
+}
+function structZoneSVG(){
+  return '<svg width="100%" height="150" viewBox="0 0 260 160" preserveAspectRatio="xMidYMid meet">'
+    +'<rect x="30" y="18" width="200" height="54" fill="var(--down)" opacity="0.12"/><rect x="30" y="72" width="200" height="54" fill="var(--up)" opacity="0.12"/>'
+    +'<line x1="30" y1="18" x2="230" y2="18" stroke="var(--down)" stroke-width="1.4" stroke-dasharray="5 4"/><text x="34" y="14" font-size="9" fill="var(--down)">스윙 고점</text>'
+    +'<line x1="30" y1="72" x2="230" y2="72" stroke="var(--gold)" stroke-width="1.6"/><text x="34" y="68" font-size="9" fill="var(--gold)">절반선(50%)</text>'
+    +'<line x1="30" y1="126" x2="230" y2="126" stroke="var(--up)" stroke-width="1.4" stroke-dasharray="5 4"/><text x="34" y="138" font-size="9" fill="var(--up)">스윙 저점</text>'
+    +'<text x="228" y="48" text-anchor="end" font-size="11" font-weight="800" fill="var(--down)">프리미엄 · 매도 자리</text>'
+    +'<text x="228" y="104" text-anchor="end" font-size="11" font-weight="800" fill="var(--up)">디스카운트 · 매수 자리</text></svg>';
+}
 function learnStruct(){
   return '<div class="lcard"><h3>🏗 봉우리와 골 — 모든 판단의 출발점</h3><p class="lead">차트 읽기는 두 점에서 시작합니다. <b>봉우리(스윙 고점)</b>와 <b>골(스윙 저점)</b>.</p>'
     +'<div class="wavebox">'+structSwingSVG()+'</div>'
     +'<div class="lrow"><div class="ic">🔺</div><div><p class="tt">봉우리 = 스윙 고점</p><p class="bd">그 봉의 <b>고가가 좌우 이웃 봉들의 고가보다 높은</b> 지점. 시장이 위에서 밀려 내려온 자리.</p></div></div>'
     +'<div class="lrow"><div class="ic">🔻</div><div><p class="tt">골 = 스윙 저점</p><p class="bd">그 봉의 <b>저가가 좌우보다 낮은</b> 지점. 매수세가 받쳐 되돌아온 자리.</p></div></div>'
-    +'<p class="bd" style="color:var(--sub);font-size:12.5px;margin-top:6px">추세 판단·지지저항·손절 위치가 전부 이 두 점에서 출발합니다.</p></div>'
+    +'<p class="bd" style="color:var(--sub);font-size:12.5px;margin-top:6px">추세 판단·지지저항·손절 위치가 전부 이 두 점에서 출발합니다. (스윙 고점은 <b style="color:var(--ink)">오른쪽 봉이 닫혀야</b> 확정 — 확인엔 약간의 지연이 따릅니다)</p></div>'
+    +'<div class="lcard"><h3>✅ \'넘었다\'의 기준 — 꼬리가 아니라 종가</h3><p class="lead">돌파를 꼬리로 판단하면 속고, 종가로 판단하면 속지 않습니다.</p>'
+    +'<div class="wavebox">'+structCloseSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• 위꼬리만 저항을 살짝 찌르고 <b style="color:var(--ink)">종가는 아래</b>로 마감 = <b class="down">거부(가짜 돌파)</b>. 시험만 한 것.<br>'
+    +'• <b style="color:var(--ink)">종가가 저항 위</b>에서 마감 = <b class="up">점령(진짜 돌파)</b>. 자리를 차지한 것.<br>'
+    +'크립토·단타일수록 꼬리 페이크가 잦아, <b style="color:var(--ink)">봉이 닫힌 종가</b>로 확인하는 습관이 손실을 크게 줄입니다.</p></div>'
     +'<div class="lcard"><h3>🎮 추세장 vs 박스장 — 먼저 "지금 어떤 게임인지" 묻기</h3><p class="lead">시장은 두 상태를 오갑니다. 상태에 맞지 않는 기법을 쓰면 양쪽에서 깎입니다.</p>'
     +'<div class="lgrid lg3">'
     +'<div class="ltile">'+structTrendSVG(true)+'<div class="nm" style="color:var(--up)">상승 추세</div><div class="ds">봉우리·골이 <b>계단식으로 높아짐</b></div></div>'
@@ -1358,6 +1380,18 @@ function learnStruct(){
     +'<div class="ltile">'+structTrendSVG(false)+'<div class="nm" style="color:var(--down)">하락 추세</div><div class="ds">봉우리·골이 <b>계단식으로 낮아짐</b></div></div>'
     +'</div>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7;margin-top:12px">시장은 생각보다 <b style="color:var(--ink)">오래 박스에 머뭅니다</b>. 추세용 기법(눌림목 매수 등)을 박스에서 휘두르면 위에서 사서 아래서 손절 — 양쪽에서 털립니다. <b style="color:var(--ink)">"추세냐 박스냐"</b>를 먼저 판단하고 기법을 골라야 합니다.</p></div>'
+    +'<div class="lcard"><h3>🔭 멀티 타임프레임 — 어느 화면이 진짜인가</h3><p class="lead">1분·5분·일봉 버튼은 캔들 하나가 담는 시간을 바꿉니다. 화면마다 그림이 달라 보여요.</p>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">같은 종목도 <b style="color:var(--ink)">15분봉은 상승, 5분봉은 하락</b>으로 보일 수 있습니다. 둘 다 진짜예요 — 보는 시간의 크기가 다를 뿐.<br>'
+    +'• <b style="color:var(--ink)">큰 타임프레임</b>(일·주)으로 <b>방향(추세·구조)</b>을 정하고<br>'
+    +'• <b style="color:var(--ink)">작은 타임프레임</b>(5·15분)으로 <b>진입 타이밍</b>을 잡습니다.<br>'
+    +'큰 그림과 <b style="color:var(--ink)">반대로</b> 들어가면 손절나기 쉽습니다. "숲(큰 봉)에서 방향, 나무(작은 봉)에서 진입".</p>'
+    +'<p class="bd" style="color:var(--sub);font-size:12.5px;margin-top:8px">🧩 <b style="color:var(--ink)">프랙탈</b>: 큰 봉 하나는 작은 봉 여러 개의 <b>요약</b>입니다(1시간봉 1개 = 15분봉 4개). 그래서 <b>같은 구조 문법</b>이 모든 봉에서 통합니다.</p>'
+    +'<div style="margin-top:10px"><span class="rulechip" style="cursor:pointer" onclick="showView(\'stock\')">🔭 차트 봉 선택(1분·일·주)으로 큰흐름→진입 순서 보기 →</span></div></div>'
+    +'<div class="lcard"><h3>💰 거래 범위 — 싼 절반에서 사고, 비싼 절반에서 판다</h3><p class="lead">스윙 고점~저점을 절반선으로 자르면, 지금 가격이 \'비싼 자리\'인지 \'싼 자리\'인지 보입니다.</p>'
+    +'<div class="wavebox">'+structZoneSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• 절반선 <b class="up">아래 = 디스카운트(싼 절반)</b> → 매수하기 유리한 자리<br>'
+    +'• 절반선 <b class="down">위 = 프리미엄(비싼 절반)</b> → 매도(숏)하기 유리한 자리<br>'
+    +'같은 목표가라도 <b style="color:var(--ink)">진입 자리에 따라 손익비가 뒤집힙니다</b>. 비싼 자리에서 매수하면 손절은 멀고 목표는 가까워요. 이건 반전 신호가 아니라 <b style="color:var(--ink)">\'자리 자격\' 필터</b>입니다.</p></div>'
     +'<div class="lcard"><h3>💥 구조가 깨지는 순간 = 손절 자리</h3><p class="lead">추세는 조건이 유지되는 동안만 살아있습니다. 그 조건이 깨지는 가격이 손절가.</p>'
     +'<div class="wavebox">'+structBreakSVG()+'</div>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• <b style="color:var(--ink)">상승추세</b>는 \'고점 higher + 저점 higher\'가 유지되는 동안 유효. <b>직전 골(스윙 저점)을 종가로 이탈</b>하면 구조 훼손 → 손절은 그 골 살짝 아래.<br>'
@@ -1500,6 +1534,19 @@ function openCardEditor(){
   $('#edDone',bg).onclick=close;
 }
 window.openCardEditor=openCardEditor;
+/* 앱을 별도 팝업 창으로 — 모니터링용. 현재 보는 화면(뷰)을 그대로 열어줌 */
+function openPopup(){
+  var v=(document.querySelector('.view.on')||{}).id||''; v=v.replace('v-','');
+  var url=location.href.split('#')[0]+(v?('#'+v):'');
+  var w=Math.min((screen.availWidth||1400)-40,1180), h=Math.min((screen.availHeight||900)-40,860);
+  var win=window.open(url,'bamtol_popup','width='+w+',height='+h+',menubar=no,toolbar=no,location=no,resizable=yes');
+  if(!win){ if(typeof toast==='function')toast('팝업이 차단됐어요 — 브라우저 팝업 허용을 켜주세요'); }
+  else { try{win.focus();}catch(e){} }
+}
+window.openPopup=openPopup;
+/* 팝업(또는 링크)로 열릴 때 #뷰 해시가 있으면 그 화면으로 */
+(function(){ var h=(location.hash||'').replace('#','');
+  if(h && $('#v-'+h)) setTimeout(function(){ try{showView(h);}catch(e){} },300); })();
 
 /* ═══════════ 오늘의 시장 한 줄 요약 (상단) ═══════════ */
 function renderSummary(){

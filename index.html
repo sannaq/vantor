@@ -239,6 +239,8 @@
   .ltabs::-webkit-scrollbar{display:none}
   .ltabs button{flex:0 0 auto;border:none;background:none;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--sub);padding:8px 13px;border-radius:8px;cursor:pointer;white-space:nowrap}
   .ltabs button.on{background:var(--panel);color:var(--gold);box-shadow:0 1px 3px rgba(0,0,0,.16)}
+  .ltabs .lgrp{flex:0 0 auto;align-self:center;font-size:10.5px;font-weight:800;color:var(--faint);padding:0 4px 0 8px;white-space:nowrap;border-left:1px solid var(--line);margin-left:4px}
+  .ltabs .lgrp:first-child{border-left:none}
   .lcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
   .lcard h3{font-size:18px;font-weight:800;margin:0 0 5px}
   .lcard .lead{color:var(--sub);font-size:13px;line-height:1.6;margin:0 0 14px}
@@ -325,7 +327,7 @@
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button></div>
 </nav>
 
 <div class="wrap">
@@ -431,13 +433,15 @@
     <p class="sec-sub">차트·캔들·패턴·지표·매매원칙·엘리엇 파동까지 — 교육용 정리. 매수·매도 신호가 아닙니다.</p>
     <div class="ltabs" id="ltabs">
       <button class="on" data-l="basic">🎯 기초</button>
+      <span class="lgrp">📊 차트 읽기</span>
       <button data-l="candle">🕯 캔들</button>
-      <button data-l="pattern">📈 차트패턴</button>
+      <button data-l="pattern">📈 패턴</button>
       <button data-l="struct">🏗 구조</button>
+      <button data-l="wave">🌊 파동</button>
+      <span class="lgrp">🛠 도구·실전</span>
       <button data-l="ind">📐 지표</button>
       <button data-l="tips">💡 매매팁</button>
-      <button data-l="wave">🌊 파동이론</button>
-      <button data-l="econ">📅 경제지표</button>
+      <button data-l="econ">📅 거시</button>
     </div>
     <div id="learnBody"></div>
   </div>
