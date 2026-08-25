@@ -134,7 +134,7 @@ function fixBin(){
 function addModel(p,side,w){ if(!(p>0))return; var b=binOf(p),c=st.model.get(b)||{long:0,short:0}; c[side]+=w; st.model.set(b,c); }
 function buildModelHeat(){
   st.model=new Map(); var cs=st.candles; if(!cs.length||!st.price)return;
-  var tiers=[[10,0.34],[25,0.30],[50,0.21],[100,0.15]]; // 레버리지·비중
+  var tiers=[[10,0.16],[25,0.26],[50,0.31],[100,0.27]]; // 레버리지·비중(고배율↑→현재가 근처 밀집)
   var n=cs.length;
   for(var i=0;i<n;i++){
     var c=cs[i], notion=(c.v||0)*c.c; if(notion<=0)continue;
