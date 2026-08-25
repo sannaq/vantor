@@ -327,11 +327,11 @@ function draw(){
   // --- 현재가 라인 ---
   if(st.price){
     var yp=y(st.price);
-    ctx.strokeStyle='rgba(230,179,74,0.9)'; ctx.setLineDash([2,3]); ctx.lineWidth=1;
+    ctx.strokeStyle='rgba(46,189,133,0.95)'; ctx.setLineDash([2,3]); ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(cl,yp); ctx.lineTo(cr,yp); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='#e6b34a';
+    ctx.fillStyle='#2ebd85';
     ctx.fillRect(cr,yp-9,PADR,18);
-    ctx.fillStyle='#0b0f16'; ctx.font='700 11px Pretendard,sans-serif'; ctx.textAlign='left';
+    ctx.fillStyle='#04120c'; ctx.font='700 11px Pretendard,sans-serif'; ctx.textAlign='left';
     ctx.fillText(fmtPx(st.price),cr+5,yp+4); ctx.textAlign='start';
   }
 
