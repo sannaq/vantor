@@ -1204,7 +1204,7 @@ async function loadCoins(){
     arr.sort(function(a,b){return b.score-a.score;});
     var top=arr.slice(0,12);
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
-      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → ONEXCORE 코인 터미널에서 상세"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → VANTOR 코인 터미널에서 상세"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
     $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openCoin(tr.dataset.sym); }; });
     if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
     // 코인 지표 카드(BTC/ETH/SOL/총시총)
@@ -1229,9 +1229,9 @@ async function loadCoinMarket(){
 }
 function openCoin(sym){
   var host=$('#coinHost'), body=$('#coinBody'); if(!host)return;
-  var src='https://sannaq.github.io/onexcore-dashboard/'+(sym?('?s='+encodeURIComponent(sym)):'?v=new');
-  host.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;font-size:13px">◀ 코인 목록</button><span style="color:var(--faint);font-size:12px">'+(sym?esc(sym)+' · ':'')+'ONEXCORE 코인 터미널</span><a href="'+src+'" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
-    +'<iframe src="'+src+'" style="width:100%;height:82vh;min-height:540px;border:1px solid var(--line);border-radius:14px;background:var(--panel)" loading="lazy" title="ONEXCORE"></iframe>';
+  var src='coin.html'+(sym?('?s='+encodeURIComponent(sym)):'?v=new');
+  host.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;font-size:13px">◀ 코인 목록</button><span style="color:var(--faint);font-size:12px">'+(sym?esc(sym)+' · ':'')+'VANTOR 코인 터미널</span><a href="'+src+'" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
+    +'<iframe src="'+src+'" style="width:100%;height:82vh;min-height:540px;border:1px solid var(--line);border-radius:14px;background:var(--panel)" loading="lazy" title="VANTOR"></iframe>';
   host.style.display='block'; if(body)body.style.display='none';
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1247,11 +1247,11 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/* 코인 모드 = onexcore 터미널 통째로(밤톨이 색) */
+/* 코인 모드 = VANTOR 터미널 통째로(밤톨이 색, 자체 호스팅 coin.html) */
 function openCoinTerminal(){
   var v=$('#v-coin'); if(!v)return;
-  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급</span><a href="https://sannaq.github.io/onexcore-dashboard/" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
-    +'<iframe id="coinFrame" src="https://sannaq.github.io/onexcore-dashboard/" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="밤톨이 코인 터미널" loading="eager"></iframe>';
+  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급</span><a href="coin.html" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
+    +'<iframe id="coinFrame" src="coin.html" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
