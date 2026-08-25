@@ -1319,6 +1319,52 @@ function learnPattern(){
       return '<div class="ltile">'+lpath(p.pts,col,p.neck)+'<div class="nm">'+p.nm+'</div><div class="ds">'+p.ds+'</div><span class="lbadge '+b+'">'+lbl+'</span></div>';}).join('')+'</div>'
     +'<div class="llegend"><span><i class="lsw" style="background:var(--up)"></i> 상승 반전</span><span><i class="lsw" style="background:var(--down)"></i> 하락 반전</span></div></div>';
 }
+function structSwingSVG(){
+  return '<svg width="100%" height="140" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet">'
+    +'<polyline points="14,120 60,40 100,86 150,22 195,70 246,14" fill="none" stroke="var(--sub)" stroke-width="3" stroke-linejoin="round"/>'
+    +[['60,40','H','var(--up)'],['150,22','H','var(--up)']].map(function(p){var xy=p[0].split(',');return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="11" fill="var(--panel)" stroke="'+p[2]+'" stroke-width="2"/><text x="'+xy[0]+'" y="'+(+xy[1]+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+p[2]+'">'+p[1]+'</text>';}).join('')
+    +[['100,86','L','var(--down)'],['195,70','L','var(--down)']].map(function(p){var xy=p[0].split(',');return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="11" fill="var(--panel)" stroke="'+p[2]+'" stroke-width="2"/><text x="'+xy[0]+'" y="'+(+xy[1]+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="'+p[2]+'">'+p[1]+'</text>';}).join('')
+    +'<text x="60" y="20" text-anchor="middle" font-size="10" fill="var(--sub)">봉우리</text><text x="100" y="108" text-anchor="middle" font-size="10" fill="var(--sub)">골</text></svg>';
+}
+function structTrendSVG(up){
+  var pts=up?'12,120 45,95 40,105 80,68 74,80 116,44 110,56 150,22':'12,22 45,48 40,38 80,72 74,60 116,96 110,84 150,120';
+  return '<svg width="100%" height="120" viewBox="0 0 160 140" preserveAspectRatio="xMidYMid meet"><polyline points="'+pts+'" fill="none" stroke="'+(up?'var(--up)':'var(--down)')+'" stroke-width="3.2" stroke-linejoin="round"/></svg>';
+}
+function structBoxSVG(){
+  return '<svg width="100%" height="120" viewBox="0 0 160 140" preserveAspectRatio="xMidYMid meet">'
+    +'<line x1="8" y1="34" x2="152" y2="34" stroke="var(--down)" stroke-width="1.5" stroke-dasharray="5 4"/><line x1="8" y1="104" x2="152" y2="104" stroke="var(--up)" stroke-width="1.5" stroke-dasharray="5 4"/>'
+    +'<polyline points="12,104 34,40 56,100 78,38 100,102 122,40 144,100" fill="none" stroke="var(--sub)" stroke-width="3" stroke-linejoin="round"/>'
+    +'<text x="150" y="30" text-anchor="end" font-size="9" fill="var(--down)">저항</text><text x="150" y="118" text-anchor="end" font-size="9" fill="var(--up)">지지</text></svg>';
+}
+function structBreakSVG(){
+  return '<svg width="100%" height="140" viewBox="0 0 260 150" preserveAspectRatio="xMidYMid meet">'
+    +'<line x1="100" y1="86" x2="252" y2="86" stroke="var(--down)" stroke-width="1.4" stroke-dasharray="5 4"/>'
+    +'<polyline points="14,120 60,50 100,86 150,34 200,96 246,120" fill="none" stroke="var(--up)" stroke-width="3" stroke-linejoin="round"/>'
+    +'<polyline points="200,96 246,120" fill="none" stroke="var(--down)" stroke-width="3"/>'
+    +'<circle cx="100" cy="86" r="10" fill="var(--panel)" stroke="var(--down)" stroke-width="2"/><text x="100" y="90" text-anchor="middle" font-size="10" font-weight="800" fill="var(--down)">직전 골</text>'
+    +'<text x="214" y="112" font-size="12" fill="var(--down)" font-weight="800">✗ 이탈</text>'
+    +'<text x="105" y="78" font-size="9" fill="var(--sub)">이 아래로 종가 이탈 = 구조 훼손 · 손절</text></svg>';
+}
+function learnStruct(){
+  return '<div class="lcard"><h3>🏗 봉우리와 골 — 모든 판단의 출발점</h3><p class="lead">차트 읽기는 두 점에서 시작합니다. <b>봉우리(스윙 고점)</b>와 <b>골(스윙 저점)</b>.</p>'
+    +'<div class="wavebox">'+structSwingSVG()+'</div>'
+    +'<div class="lrow"><div class="ic">🔺</div><div><p class="tt">봉우리 = 스윙 고점</p><p class="bd">그 봉의 <b>고가가 좌우 이웃 봉들의 고가보다 높은</b> 지점. 시장이 위에서 밀려 내려온 자리.</p></div></div>'
+    +'<div class="lrow"><div class="ic">🔻</div><div><p class="tt">골 = 스윙 저점</p><p class="bd">그 봉의 <b>저가가 좌우보다 낮은</b> 지점. 매수세가 받쳐 되돌아온 자리.</p></div></div>'
+    +'<p class="bd" style="color:var(--sub);font-size:12.5px;margin-top:6px">추세 판단·지지저항·손절 위치가 전부 이 두 점에서 출발합니다.</p></div>'
+    +'<div class="lcard"><h3>🎮 추세장 vs 박스장 — 먼저 "지금 어떤 게임인지" 묻기</h3><p class="lead">시장은 두 상태를 오갑니다. 상태에 맞지 않는 기법을 쓰면 양쪽에서 깎입니다.</p>'
+    +'<div class="lgrid lg3">'
+    +'<div class="ltile">'+structTrendSVG(true)+'<div class="nm" style="color:var(--up)">상승 추세</div><div class="ds">봉우리·골이 <b>계단식으로 높아짐</b></div></div>'
+    +'<div class="ltile">'+structBoxSVG()+'<div class="nm" style="color:var(--gold)">박스(횡보)</div><div class="ds">비슷한 저항·지지 사이 <b>왕복</b></div></div>'
+    +'<div class="ltile">'+structTrendSVG(false)+'<div class="nm" style="color:var(--down)">하락 추세</div><div class="ds">봉우리·골이 <b>계단식으로 낮아짐</b></div></div>'
+    +'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7;margin-top:12px">시장은 생각보다 <b style="color:var(--ink)">오래 박스에 머뭅니다</b>. 추세용 기법(눌림목 매수 등)을 박스에서 휘두르면 위에서 사서 아래서 손절 — 양쪽에서 털립니다. <b style="color:var(--ink)">"추세냐 박스냐"</b>를 먼저 판단하고 기법을 골라야 합니다.</p></div>'
+    +'<div class="lcard"><h3>💥 구조가 깨지는 순간 = 손절 자리</h3><p class="lead">추세는 조건이 유지되는 동안만 살아있습니다. 그 조건이 깨지는 가격이 손절가.</p>'
+    +'<div class="wavebox">'+structBreakSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• <b style="color:var(--ink)">상승추세</b>는 \'고점 higher + 저점 higher\'가 유지되는 동안 유효. <b>직전 골(스윙 저점)을 종가로 이탈</b>하면 구조 훼손 → 손절은 그 골 살짝 아래.<br>'
+    +'• <b style="color:var(--ink)">하락추세</b>는 반대 — 직전 봉우리를 종가로 <b>돌파</b>하면 훼손.<br>'
+    +'• 핵심: <b style="color:var(--ink)">"내 판단이 틀렸음이 증명되는 가격"</b>이 곧 손절가입니다. 감이 아니라 구조로 정합니다.</p>'
+    +'<div style="margin-top:12px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="showView(\'stock\')">🏗 차트에서 봉우리·골 직접 찾아보기 →</span></div></div>';
+}
 function learnInd(){
   return '<div class="lcard"><h3>핵심 지표 5</h3><p class="lead">지표는 많을수록 신호가 충돌합니다. 아래 중 <b>2~3개</b>만 골라 쓰세요.</p>'
     +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 · 골든/데드크로스</p><p class="bd">단기선이 장기선을 위로 뚫으면 <b style="color:var(--up)">골든크로스</b>, 아래로 뚫으면 <b style="color:var(--down)">데드크로스</b>. 팁: 골든크로스 <b>당일 추격 금지</b> → 며칠 뒤 20일선 되돌림 지지 확인 후.</p></div></div>'
@@ -1403,7 +1449,7 @@ function learnEcon(){
 }
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
-  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,ind:learnInd,tips:learnTips,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
   el.innerHTML=fn();
 }
 window.renderLearn=renderLearn;
