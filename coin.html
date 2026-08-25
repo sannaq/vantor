@@ -1486,8 +1486,8 @@ function draw(){
       var ratio=sum/maxV; if(ratio<0.02)return;          // 약한 층은 생략 → 강한 벽이 또렷
       var yy=y(p), inten=Math.pow(ratio,0.95);           // 대비↑
       var a=Math.min(0.95,0.015+inten*1.05);             // 약한건 흐리게, 강한건 밝게
-      // 강도↑ → 남색에서 화이트핫으로
-      var R=Math.round(42+90*inten), G=Math.round(58+108*inten), B=Math.round(158+97*inten);
+      // 강도↑ → 더 진한 남색(밝아도 하늘색으로 안 뜨게)
+      var R=Math.round(24+74*inten), G=Math.round(40+86*inten), B=Math.round(150+95*inten);
       ctx.fillStyle='rgba('+R+','+G+','+B+','+a.toFixed(3)+')';
       ctx.fillRect(cl,yy-hpx/2,cw,hpx*0.9);
       // 롱/숏 우세 엣지(우측, 강한 벽만)
@@ -1515,12 +1515,13 @@ function draw(){
     ctx.restore();
   }
 
-  // --- 거래대금(볼륨) 바: 하단 16% 반투명 오버레이 ---
-  var volH=ch*0.16, maxVol=0;
+  // --- 거래대금(볼륨) 바: 하단 22% 촘촘 오버레이 ---
+  var volH=ch*0.22, maxVol=0;
   for(var iv=0;iv<n;iv++){ var q=cs[iv].v*cs[iv].c; if(q>maxVol)maxVol=q; }
-  if(maxVol>0){ for(var iv=0;iv<n;iv++){ var c2=cs[iv], q2=c2.v*c2.c, bh=q2/maxVol*volH, x2=cl+iv*bw+bw/2, vw=Math.max(1,bw*0.62);
-    ctx.fillStyle=(c2.c>=c2.o)?'rgba(46,189,133,0.30)':'rgba(246,70,93,0.30)';
-    ctx.fillRect(x2-vw/2, cb-bh, vw, bh); } }
+  if(maxVol>0){ var vw=Math.max(1.5,bw*0.9);
+    for(var iv=0;iv<n;iv++){ var c2=cs[iv], q2=c2.v*c2.c, bh=Math.max(0.6,q2/maxVol*volH), x2=cl+iv*bw+bw/2;
+      ctx.fillStyle=(c2.c>=c2.o)?'rgba(46,189,133,0.42)':'rgba(246,70,93,0.42)';
+      ctx.fillRect(x2-vw/2, cb-bh, vw, bh); } }
 
   // --- 캔들 ---
   for(var i=0;i<n;i++){

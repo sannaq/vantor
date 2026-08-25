@@ -1242,16 +1242,17 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
   var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
+  document.body.style.overflow=coinMode?'hidden':'';   // 코인=전체화면 잠금(뒤 스크롤 제거)
   $$('.view').forEach(function(v){v.classList.remove('on');});
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); }
-  else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
+  else { var vc=$('#v-coin'); if(vc)vc.innerHTML=''; $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
-/* 코인 모드 = VANTOR 터미널 통째로(밤톨이 색, 자체 호스팅 coin.html) */
+/* 코인 모드 = VANTOR 터미널을 화면에 꽉 차게(full-bleed, 창 아닌 통째 임베드) */
 function openCoinTerminal(){
   var v=$('#v-coin'); if(!v)return;
-  v.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin:2px 0 12px"><span class="sec-title" style="font-size:20px;margin:0">🪙 코인 터미널</span><span style="color:var(--faint);font-size:12px">실시간 · 차트·타점·수급 · 🔥 청산맵</span><a href="coin.html" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
-    +'<iframe id="coinFrame" src="coin.html" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>';
+  v.innerHTML='<iframe id="coinFrame" src="coin.html" style="position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;margin:0;z-index:9998;background:#0b0f16;display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>'
+    +'<button id="coinExit" onclick="setMode(\'stock\')" title="주식 모드로" style="position:fixed;left:14px;bottom:14px;z-index:9999;background:rgba(19,25,36,.95);color:#e8edf4;border:1px solid #2a3646;border-radius:22px;padding:9px 15px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)">◀ 밤톨이 주식</button>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 
