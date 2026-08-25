@@ -1263,7 +1263,7 @@ function openCoinTerminal(){
 function switchCoinView(c){
   var f=$('#coinFrame'), full=$('#coinFull'), sub=$('#coinSub');
   $$('#coinSeg button').forEach(function(b){ b.classList.toggle('on',b.dataset.c===c); });
-  if(c==='liq'){ if(f)f.src='liqmap.html'; if(full)full.href='liqmap.html'; if(sub)sub.textContent='실시간 청산 히트맵 · 레버리지 청산대'; }
+  if(c==='liq'){ if(f)f.src='liqmap.html?v=1'; if(full)full.href='liqmap.html?v=1'; if(sub)sub.textContent='실시간 청산 히트맵 · 레버리지 청산대'; }
   else { if(f)f.src='coin.html'; if(full)full.href='coin.html'; if(sub)sub.textContent='실시간 · 차트·타점·수급'; }
 }
 window.switchCoinView=switchCoinView;
