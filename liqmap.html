@@ -80,7 +80,7 @@ a{color:inherit}
     <div class="stat"><div class="k"><span class="tag" style="background:var(--up)"></span>숏 청산 최대</div><div class="v" id="stShort">—</div><div class="s" id="stShortAmt">가격이 오르면 청산</div></div>
     <div class="stat"><div class="k"><span class="tag" style="background:var(--down)"></span>롱 청산 최대</div><div class="v" id="stLong">—</div><div class="s" id="stLongAmt">가격이 내리면 청산</div></div>
     <div class="stat"><div class="k">현재가</div><div class="v" id="stPx">—</div><div class="s" id="stChg">24h</div></div>
-    <div class="stat"><div class="k">세션 누적 청산</div><div class="v" id="stTot">$0</div><div class="s" id="stCnt">0건 · 누적 0분</div></div>
+    <div class="stat"><div class="k">미결제약정 OI</div><div class="v" id="stTot">—</div><div class="s" id="stCnt">실측 청산 0건 · $0</div></div>
   </div>
 
   <div class="grid">
@@ -88,8 +88,8 @@ a{color:inherit}
       <canvas id="chart"></canvas>
       <div class="legend">
         <div><b id="lgSym">BTC</b> · <span id="lgTf">15분</span> · Binance 무기한</div>
-        <div><span style="color:var(--gold)">▬</span> 청산 히트맵(실측 누적)</div>
-        <div><span style="color:var(--sub)">┈</span> 레버리지 청산대(모델 10·25·50·100x)</div>
+        <div><span style="color:var(--gold)">▬</span> 청산 히트맵(추정 · 거래량·OI 모델 + 실시간)</div>
+        <div><span style="color:var(--sub)">┈</span> 레버리지 청산대(10·25·50·100x)</div>
       </div>
     </div>
     <div class="card">
@@ -100,7 +100,7 @@ a{color:inherit}
 
   <div class="note">
     <b>읽는 법</b> — 밝은 가로 띠 = 청산 물량이 몰린 <b>자석 구간</b>. 현재가 <b>위쪽 띠</b>는 숏 청산대(뚫리면 상방 스퀴즈), <b>아래쪽 띠</b>는 롱 청산대(깨지면 하방 가속). 가격은 유동성이 두꺼운 청산대를 <b>사냥하러</b> 끌려가는 경향이 있어요.<br>
-    <b>데이터</b> — 히트맵은 Binance 선물 <b>실시간 청산 스트림을 이 페이지가 열려있는 동안 누적</b>한 실측값입니다(새로고침 시 리셋, 백엔드 없는 무료 구조). 점선 청산대는 현재가 기준 레버리지별 청산 예상 가격(모델). 교육·참고용이며 매매 신호가 아닙니다.
+    <b>데이터</b> — 히트맵은 Binance 선물 <b>가격·거래량·미결제약정(OI)으로 레버리지별 청산가를 역산한 추정 모델</b>에, 실시간 청산 스트림(WS)을 실측으로 덧입힌 값입니다(무백엔드 무료 구조). 실제 개별 포지션 레버리지는 어떤 거래소도 공개하지 않아 CoinYeon 등도 동일한 추정 방식입니다. 금액은 OI 기준 <b>추정치</b>이며, 교육·참고용 · 매매 신호가 아닙니다.
   </div>
 </div>
 
@@ -110,8 +110,8 @@ a{color:inherit}
 var $=function(s){return document.querySelector(s);};
 var SYMS=['BTC','ETH','SOL','BNB','XRP','DOGE'];
 var TFS=[['15m','15분'],['1h','1시간'],['4h','4시간']];
-var st={sym:'BTC',tf:'15m',candles:[],price:0,chg:0,bins:new Map(),binUsd:50,
-        tot:0,cnt:0,start:Date.now(),ws:null,feed:[]};
+var st={sym:'BTC',tf:'15m',candles:[],price:0,chg:0,bins:new Map(),model:new Map(),
+        binUsd:50,binFixed:false,oiUsd:0,tot:0,cnt:0,start:Date.now(),ws:null,feed:[]};
 
 // ---- 유틸 ----
 function fmtPx(v){ if(!v&&v!==0)return '—'; if(v>=1000)return v.toLocaleString('en-US',{maximumFractionDigits:1});
@@ -122,8 +122,43 @@ function fmtKrw(v){ var k=v*1380; if(k>=1e12)return (k/1e12).toFixed(1)+'조'; i
   if(k>=1e4)return Math.round(k/1e4)+'만'; return Math.round(k)+''; }
 function binOf(p){ return Math.round(p/st.binUsd); }
 function binPx(b){ return b*st.binUsd; }
-function pickBin(sym){ // 심볼별 적정 bin 크기
-  return {BTC:50,ETH:5,SOL:0.5,BNB:2,XRP:0.002,DOGE:0.0005}[sym]||50; }
+function niceStep(x){ if(!(x>0))return 1; var e=Math.pow(10,Math.floor(Math.log10(x))); var f=x/e;
+  var s=f<1.5?1:(f<3.5?2:(f<7.5?5:10)); return s*e; }
+// 캔들 범위로 bin 크기 자동 결정(약 150개 층). 심볼당 1회 고정(실측 누적 정합).
+function fixBin(){
+  var cs=st.candles; if(!cs.length)return; var lo=Infinity,hi=-Infinity;
+  for(var i=0;i<cs.length;i++){ if(cs[i].l<lo)lo=cs[i].l; if(cs[i].h>hi)hi=cs[i].h; }
+  st.binUsd=niceStep((hi-lo)*1.3/150)||st.binUsd; st.binFixed=true;
+}
+// ---- 추정 히트맵: 거래량×레버리지로 청산가 역산(즉시 채움) ----
+function addModel(p,side,w){ if(!(p>0))return; var b=binOf(p),c=st.model.get(b)||{long:0,short:0}; c[side]+=w; st.model.set(b,c); }
+function buildModelHeat(){
+  st.model=new Map(); var cs=st.candles; if(!cs.length||!st.price)return;
+  var tiers=[[10,0.34],[25,0.30],[50,0.21],[100,0.15]]; // 레버리지·비중
+  var n=cs.length;
+  for(var i=0;i<n;i++){
+    var c=cs[i], notion=(c.v||0)*c.c; if(notion<=0)continue;
+    var recency=0.30+0.70*(i/(n-1||1));               // 최근 진입 가중
+    var upBias=c.c>=c.o?0.55:0.45;                     // 캔들 방향 편향
+    var entry=(c.h+c.l+c.c)/3;
+    for(var t=0;t<tiers.length;t++){
+      var L=tiers[t][0], w=tiers[t][1]*recency*notion;
+      var lLiq=entry*(1-1/L), sLiq=entry*(1+1/L);
+      if(lLiq<st.price) addModel(lLiq,'long', w*upBias);      // 아직 안 깨진 롱 청산대(현재가 아래)
+      if(sLiq>st.price) addModel(sLiq,'short',w*(1-upBias));  // 아직 안 뚫린 숏 청산대(현재가 위)
+    }
+  }
+}
+// 모델(추정) + 실시간(실측) 합본. 실측은 눈에 띄게 가중.
+function allBins(){
+  var m=new Map(), liveMax=0;
+  st.bins.forEach(function(v){ var s=v.long+v.short; if(s>liveMax)liveMax=s; });
+  var modelMax=0; st.model.forEach(function(v){ var s=v.long+v.short; if(s>modelMax)modelMax=s; });
+  var boost=(liveMax>0&&modelMax>0)?(modelMax/liveMax*1.4):1; // 실측을 모델 스케일로 끌어올림
+  st.model.forEach(function(v,b){ m.set(b,{long:v.long,short:v.short}); });
+  st.bins.forEach(function(v,b){ var c=m.get(b)||{long:0,short:0}; c.long+=v.long*boost; c.short+=v.short*boost; m.set(b,c); });
+  return m;
+}
 
 // ---- 데이터 로드 ----
 function api(sym){ return sym+'USDT'; }
@@ -136,6 +171,8 @@ function loadKlines(){
     st.price=last.c;
     var first24=st.candles[Math.max(0,st.candles.length-Math.round((24*60)/tfMin()))];
     st.chg=first24?((last.c-first24.o)/first24.o*100):0;
+    if(!st.binFixed)fixBin();
+    buildModelHeat();
   });
 }
 function tfMin(){ return {'15m':15,'1h':60,'4h':240}[st.tf]||15; }
@@ -143,6 +180,11 @@ function loadTicker(){
   var u='https://fapi.binance.com/fapi/v1/ticker/24hr?symbol='+api(st.sym);
   return fetch(u).then(function(r){return r.json();}).then(function(t){
     if(t&&t.lastPrice){ st.price=+t.lastPrice; st.chg=+t.priceChangePercent; } }).catch(function(){});
+}
+function loadOI(){ // 미결제약정 → 추정 청산액 스케일 기준
+  var u='https://fapi.binance.com/fapi/v1/openInterest?symbol='+api(st.sym);
+  return fetch(u).then(function(r){return r.json();}).then(function(o){
+    if(o&&o.openInterest){ st.oiUsd=+o.openInterest*(st.price||1); } }).catch(function(){});
 }
 
 // ---- 청산 스트림 ----
@@ -181,24 +223,28 @@ function renderFeed(){
   }).join('')|| '<div style="color:var(--faint);font-size:12px;padding:10px 2px">청산 대기 중… 큰 청산이 발생하면 여기 표시됩니다.</div>';
 }
 function topLevels(){
-  var longs=[],shorts=[];
-  st.bins.forEach(function(v,b){ if(v.long>0)longs.push([b,v.long]); if(v.short>0)shorts.push([b,v.short]); });
+  var longs=[],shorts=[]; var HB=allBins();
+  HB.forEach(function(v,b){ if(v.long>0)longs.push([b,v.long]); if(v.short>0)shorts.push([b,v.short]); });
   longs.sort(function(a,b){return b[1]-a[1];}); shorts.sort(function(a,b){return b[1]-a[1];});
   return {longs:longs,shorts:shorts};
 }
+function usdScale(){ // 모델 가중 → 실제 미결제약정(OI) 기준 추정 달러
+  var tot=0; st.model.forEach(function(v){ tot+=v.long+v.short; });
+  return (st.oiUsd>0&&tot>0)?(st.oiUsd/tot):0;
+}
+function amtLabel(w){ var s=usdScale(); if(s>0){ var u=w*s; return '추정 '+fmtUsd(u)+' · 약 '+fmtKrw(u)+'원'; } return '유동성 집중'; }
 function renderStats(){
   var t=topLevels();
   var sT=t.shorts[0], lT=t.longs[0];
   $('#stShort').textContent=sT?fmtPx(binPx(sT[0])):'—';
-  $('#stShortAmt').textContent=sT?(fmtUsd(sT[1])+' · 약 '+fmtKrw(sT[1])+'원'):'가격이 오르면 청산';
+  $('#stShortAmt').textContent=sT?amtLabel(sT[1]):'가격이 오르면 청산';
   $('#stLong').textContent=lT?fmtPx(binPx(lT[0])):'—';
-  $('#stLongAmt').textContent=lT?(fmtUsd(lT[1])+' · 약 '+fmtKrw(lT[1])+'원'):'가격이 내리면 청산';
+  $('#stLongAmt').textContent=lT?amtLabel(lT[1]):'가격이 내리면 청산';
   $('#stPx').textContent=fmtPx(st.price);
   var chg=st.chg||0;
   $('#stChg').innerHTML='<span style="color:'+(chg>=0?'var(--up)':'var(--down)')+'">'+(chg>=0?'▲ +':'▼ ')+chg.toFixed(2)+'% 24h</span>';
-  $('#stTot').textContent=fmtUsd(st.tot);
-  var mins=Math.floor((Date.now()-st.start)/60000);
-  $('#stCnt').textContent=st.cnt.toLocaleString()+'건 · 누적 '+mins+'분';
+  $('#stTot').textContent=st.oiUsd>0?fmtUsd(st.oiUsd):'—';
+  $('#stCnt').textContent='실측 청산 '+st.cnt.toLocaleString()+'건 · '+fmtUsd(st.tot);
 }
 
 // ---- 렌더: 캔버스 차트 + 히트맵 ----
@@ -228,10 +274,11 @@ function draw(){
   function y(p){ return ct+(hi-p)/(hi-lo)*ch; }
   var n=cs.length, bw=cw/n;
 
-  // --- 히트맵(청산 누적) ---
-  var maxV=0; st.bins.forEach(function(v){ var s=v.long+v.short; if(s>maxV)maxV=s; });
+  // --- 히트맵(추정 모델 + 실측 누적) ---
+  var HB=allBins();
+  var maxV=0; HB.forEach(function(v){ var s=v.long+v.short; if(s>maxV)maxV=s; });
   if(maxV>0){
-    st.bins.forEach(function(v,b){
+    HB.forEach(function(v,b){
       var p=binPx(b); if(p<lo||p>hi)return;
       var sum=v.long+v.short; if(sum<=0)return;
       var yy=y(p), hpx=Math.max(1.4,ch/((hi-lo)/st.binUsd));
@@ -289,7 +336,7 @@ function draw(){
   [[t.shorts[0],'46,189,133','숏'],[t.longs[0],'246,70,93','롱']].forEach(function(d){
     if(!d[0])return; var p=binPx(d[0][0]); if(p<lo||p>hi)return; var yy=y(p);
     ctx.fillStyle='rgba('+d[1]+',0.95)'; ctx.font='700 10.5px Pretendard,sans-serif';
-    var label='◀ '+d[2]+' 청산벽 '+fmtUsd(d[0][1]);
+    var sc=usdScale(), label='◀ '+d[2]+' 청산벽'+(sc>0?(' 추정 '+fmtUsd(d[0][1]*sc)):'');
     ctx.textAlign='right'; ctx.fillText(label,cr-6,yy-3); ctx.textAlign='start';
   });
 
@@ -320,10 +367,11 @@ function buildPills(){
   $('#tfs').querySelectorAll('.pill').forEach(function(b){ b.onclick=function(){ switchTf(b.dataset.t); }; });
 }
 function switchSym(s){
-  if(s===st.sym)return; st.sym=s; st.binUsd=pickBin(s);
-  st.bins=new Map(); st.tot=0; st.cnt=0; st.start=Date.now(); st.feed=[];
+  if(s===st.sym)return; st.sym=s; st.binFixed=false;
+  st.bins=new Map(); st.model=new Map(); st.oiUsd=0; st.tot=0; st.cnt=0; st.start=Date.now(); st.feed=[];
   st.candles=[]; buildPills(); $('#lgSym').textContent=s; renderFeed();
-  loadKlines().then(renderStats).catch(function(){}); connectWS(); dirty=true;
+  loadKlines().then(function(){ return loadOI(); }).then(renderStats).catch(function(){});
+  connectWS(); dirty=true;
 }
 function switchTf(t){
   if(t===st.tf)return; st.tf=t; buildPills();
@@ -333,13 +381,13 @@ function switchTf(t){
 
 // ---- 시작 ----
 function init(){
-  st.binUsd=pickBin(st.sym); buildPills(); renderFeed(); resize();
-  loadKlines().then(function(){ dirty=true; renderStats(); }).catch(function(){
+  buildPills(); renderFeed(); resize();
+  loadKlines().then(function(){ dirty=true; return loadOI(); }).then(function(){ renderStats(); }).catch(function(){
     $('#liveTxt').textContent='캔들 로드 실패(잠시 후 재시도)'; });
   connectWS();
   requestAnimationFrame(draw);
   setInterval(function(){ loadTicker().then(function(){ dirty=true; }); },5000);
-  setInterval(function(){ loadKlines().then(function(){dirty=true;}).catch(function(){}); },30000);
+  setInterval(function(){ loadKlines().then(function(){ return loadOI(); }).then(function(){dirty=true;}).catch(function(){}); },30000);
   setInterval(renderStats,1000);
   // 렌더 검증용 훅(?test=1). 클라이언트 세션 표시 전용, 서버 영향 없음.
   if(/[?&]test=1/.test(location.search)){ window.__seedLiq=function(p,q,side){ ingest(p,q,side); renderStats(); }; }
