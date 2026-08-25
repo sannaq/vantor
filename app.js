@@ -525,9 +525,61 @@ function attachChartCrosshair(cv){
   if(!cv||cv._chAttached) return; cv._chAttached=true;
   cv.addEventListener('mousemove',function(e){ var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
   cv.addEventListener('mouseleave',hideCrosshair);
+  cv.addEventListener('click',function(e){ var i=crosshairIdx(e.clientX); if(i>=0)showCandleDetail(i); });
+  cv.style.cursor='pointer';
   cv.addEventListener('touchstart',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i);} } },{passive:true});
   cv.addEventListener('touchmove',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i); e.preventDefault();} } },{passive:false});
   cv.addEventListener('touchend',hideCrosshair);
+}
+/* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
+function bigCandleSVG(o,h,l,c,ccy){
+  var W=120,H=240,pad=20,cx=60,bw=44, rng=(h-l)||1;
+  function y(v){ return pad+(h-v)/rng*(H-2*pad); }
+  var up=c>=o, col=up?'var(--up)':'var(--down)';
+  var bt=y(Math.max(o,c)), bb=y(Math.min(o,c));
+  return '<svg width="120" height="240" viewBox="0 0 '+W+' '+H+'">'
+    +'<line x1="'+cx+'" y1="'+y(h)+'" x2="'+cx+'" y2="'+y(l)+'" stroke="'+col+'" stroke-width="4" stroke-linecap="round"/>'
+    +'<rect x="'+(cx-bw/2)+'" y="'+bt+'" width="'+bw+'" height="'+Math.max(bb-bt,3)+'" rx="4" fill="'+col+'"/>'
+    +'<line x1="'+(cx+bw/2+6)+'" y1="'+y(o)+'" x2="112" y2="'+y(o)+'" stroke="var(--sub)" stroke-width="1" stroke-dasharray="3 2"/><text x="114" y="'+(y(o)+3)+'" font-size="9" fill="var(--sub)">시</text>'
+    +'<line x1="'+(cx+bw/2+6)+'" y1="'+y(c)+'" x2="112" y2="'+y(c)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="3 2"/><text x="114" y="'+(y(c)+3)+'" font-size="9" fill="'+col+'">종</text>'
+    +'<text x="'+cx+'" y="14" text-anchor="middle" font-size="9" fill="var(--sub)">고 '+fmtP(h,ccy)+'</text>'
+    +'<text x="'+cx+'" y="236" text-anchor="middle" font-size="9" fill="var(--sub)">저 '+fmtP(l,ccy)+'</text></svg>';
+}
+function fmtP(v,ccy){ return ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):Math.round(v).toLocaleString('en-US'); }
+function showCandleDetail(idx){
+  if(!CHART||!CHART.data[idx]) return; var d=CHART.data[idx], r=CHART.r, ccy=r.ccy;
+  var o=d[0],h=d[1],l=d[2],c=d[3],v=d[4],ms=d[5];
+  var rng=(h-l)||1, body=Math.abs(c-o), up=c>=o;
+  var uw=h-Math.max(o,c), lw=Math.min(o,c)-l;
+  var chg=idx>0?((c-CHART.data[idx-1][3])/CHART.data[idx-1][3]*100):0;
+  var notes=[];
+  if(body/rng>=0.7) notes.push(['📏', (up?'장대양봉':'장대음봉')+' — 몸통이 길어 '+(up?'매수':'매도')+'세가 강했던 봉']);
+  else if(body/rng<0.15) notes.push(['⚖️','도지형 — 시가·종가가 붙어 매수·매도 힘이 팽팽했던 봉']);
+  if(uw>body*1.2&&uw>lw) notes.push(['🔺','윗꼬리 김 — 위로 올렸다 밀렸다(고점 매도 압력)']);
+  if(lw>body*1.2&&lw>uw) notes.push(['🔻','아랫꼬리 김 — 아래로 눌렀다 되산다(저점 매수 지지)']);
+  notes.push([up?'📈':'📉', up?'양봉 — 종가가 시가보다 위(그 기간 순매수 우위)':'음봉 — 종가가 시가보다 아래(순매도 우위)']);
+  var dt=ms?new Date(ms):null;
+  var dlabel=dt?((CHART.tf==='1'||CHART.tf==='5')?(dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')):(dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate())):'';
+  var recent=(CHART.data.length-1-idx)<=1 && (CHART.tf==='D'); // 최근 일봉만 분봉 드릴 지원
+  var bg=document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML='<div class="modal" style="max-width:380px"><h3>🕯 캔들 속 보기</h3><div class="msub">'+dlabel+' · '+tfLabel(CHART.tf)+'</div>'
+    +'<div style="display:flex;gap:16px;padding:6px 20px 12px">'
+    +'<div style="flex:0 0 auto">'+bigCandleSVG(o,h,l,c,ccy)+'</div>'
+    +'<div style="flex:1;font-size:12.5px;line-height:1.9;align-self:center">'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">시가</span><b>'+fmtP(o,ccy)+'</b></div>'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">고가</span><b class="up">'+fmtP(h,ccy)+'</b></div>'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">저가</span><b class="down">'+fmtP(l,ccy)+'</b></div>'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">종가</span><b class="'+cls(chg)+'">'+fmtP(c,ccy)+' ('+(chg>=0?'+':'')+chg.toFixed(2)+'%)</b></div>'
+      +'<div style="display:flex;justify-content:space-between"><span style="color:var(--sub)">거래량</span><b>'+(+v).toLocaleString('en-US')+'</b></div>'
+    +'</div></div>'
+    +'<div style="padding:0 20px 8px">'+notes.map(function(n){return '<div style="display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line2);font-size:12.5px"><span>'+n[0]+'</span><span style="color:var(--sub);line-height:1.5">'+n[1]+'</span></div>';}).join('')+'</div>'
+    +'<div style="padding:2px 20px 10px;font-size:11px;color:var(--faint)">💡 하나의 봉은 그 기간 내내 위·아래로 오간 <b>줄다리기의 결과</b>예요. 몸통=최종 승부, 꼬리=밀렸다 돌아온 흔적. 속을 실제 캔들로 보려면 봉 단위를 낮춰보세요(1분·5분).</div>'
+    +'<div class="mfoot">'+(recent?'<button class="mbtn" id="cdMin">📉 5분봉으로 속 보기</button>':'')+'<button class="mbtn pri" id="cdClose">닫기</button></div></div>';
+  document.body.appendChild(bg);
+  function close(){ bg.remove(); }
+  bg.addEventListener('click',function(e){ if(e.target===bg)close(); });
+  $('#cdClose',bg).onclick=close;
+  var mn=$('#cdMin',bg); if(mn) mn.onclick=function(){ close(); var b=$$('#tfBar button').find(function(x){return x.dataset.tf==='5';}); if(b){$$('#tfBar button').forEach(function(x){x.classList.toggle('on',x===b);}); loadChartTF(r,'5');} };
 }
 /* ── 상세 화면 라이브 자동 갱신 (열어둔 동안 15초마다 가격·매수/매도세·투자자 갱신) ── */
 var _detailTimer=null, _LIVE_MS=15000;
@@ -1125,6 +1177,11 @@ function waveImpulseSVG(){
     +[['450,80','A'],['470,95','C']].map(function(p){var xy=p[0].split(',');return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="11" fill="var(--panel)" stroke="var(--down)" stroke-width="2"/><text x="'+xy[0]+'" y="'+(+xy[1]+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="var(--down)">'+p[1]+'</text>';}).join('')
     +'<text x="200" y="195" font-size="12" fill="var(--sub)">상승 5파(동인) → 하락 3파(조정 A·B·C)</text></svg>';
 }
+/* 작은 파동 패턴 도해 — pts, 라벨(옵션) */
+function wsvg(pts,col,labels){ col=col||'var(--gold)';
+  var lb=(labels||[]).map(function(l){return '<circle cx="'+l[0]+'" cy="'+l[1]+'" r="9" fill="var(--panel)" stroke="'+col+'" stroke-width="1.8"/><text x="'+l[0]+'" y="'+(+l[1]+3.5)+'" text-anchor="middle" font-size="9.5" font-weight="800" fill="'+col+'">'+l[2]+'</text>';}).join('');
+  return '<svg width="100%" height="110" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid meet"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>'+lb+'</svg>'; }
+function wtile(svg,nm,ds){ return '<div class="ltile">'+svg+'<div class="nm">'+nm+'</div><div class="ds">'+ds+'</div></div>'; }
 function learnWave(){
   return '<div class="lcard"><h3>🌊 엘리엇 파동이론이란</h3><p class="lead">1930년대 랠프 넬슨 엘리엇이 정리한 이론. <b>시장은 군중 심리에 따라 같은 모양이 반복</b>된다고 봅니다. 큰 파동 안에 같은 모양의 작은 파동이 들어있는 <b>프랙탈(자기닮음) 구조</b>가 핵심.</p>'
     +'<div class="wavebox">'+waveImpulseSVG()+'</div>'
@@ -1137,6 +1194,15 @@ function learnWave(){
     +'<div class="lrow"><div class="ic">🚀</div><div><p class="tt">임펄스(충격) 파동 — 1·3·5</p><p class="bd">추세 방향으로 5개 파동. <b>3파가 보통 가장 강하고 길다</b>. 1·3·5 중 하나는 다른 것보다 길게 늘어나는 <b>연장(extension)</b>이 자주 나옵니다.</p></div></div>'
     +'<div class="lrow"><div class="ic">🔄</div><div><p class="tt">조정 파동 — 2·4, A·B·C</p><p class="bd">추세를 되돌리는 구간. 대표 형태 <b>지그재그(5-3-5)</b>, <b>플랫(3-3-5)</b>, <b>삼각수렴(3-3-3-3-3)</b>. 2파와 4파는 서로 다른 형태로 나오는 경향(교대 규칙).</p></div></div>'
     +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">피보나치와의 관계</p><p class="bd">되돌림은 <b>0.382·0.5·0.618</b>, 확장은 <b>1.618·2.618</b>을 자주 씁니다. 예) 2파는 1파의 0.5~0.618 되돌림, 3파는 1파의 1.618배 확장이 흔함.</p></div></div></div>'
+    +'<div class="lcard"><h3>조정파동 3대 형태</h3><p class="lead">되돌림(2·4·A·B·C)이 그려지는 대표 모양. 하락 조정 예시.</p><div class="lgrid lg3">'
+    +wtile(wsvg('12,20 78,105 45,58 108,120',null,[[78,105,'A'],[45,58,'B'],[108,120,'C']]),'지그재그 (5-3-5)','급격한 조정. A·C가 길고 B는 얕게 되돌림.')
+    +wtile(wsvg('12,30 72,100 55,34 112,108',null,[[72,100,'A'],[55,34,'B'],[112,108,'C']]),'플랫 (3-3-5)','옆으로 횡보. B가 A 시작점 부근까지 되돌림.')
+    +wtile(wsvg('10,32 40,96 62,44 84,86 104,56 120,72',null,[[40,96,'a'],[62,44,'b'],[84,86,'c'],[104,56,'d'],[120,72,'e']]),'삼각수렴 (3-3-3-3-3)','수렴하며 힘 응축. 주로 4파·B파에 등장.')
+    +'</div></div>'
+    +'<div class="lcard"><h3>동인파동 심화 — 연장 · 다이아고날</h3><p class="lead">임펄스가 변형되는 두 경우.</p><div class="lgrid lg2">'
+    +wtile(wsvg('12,120 40,90 30,105 62,35 50,60 100,15 90,40 118,25',null,[[62,35,'3']]),'3파 연장 (extension)','1·3·5 중 하나가 크게 늘어남. 보통 3파가 연장돼 가장 김.')
+    +wtile(wsvg('16,116 44,74 34,96 66,50 54,72 86,34 78,52 104,22 96,38 116,14','var(--up)'),'다이아고날 (쐐기)','수렴하는 5파. 절대법칙 3번의 유일한 예외(4파가 1파 침범 허용).')
+    +'</div></div>'
     +'<div class="lcard"><h3>💡 실전에서 조심할 점</h3>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• 파동은 <b style="color:var(--ink)">지나고 나서야 명확</b>합니다. 실시간 카운트는 여러 시나리오를 열어두세요.<br>'
     +'• <b style="color:var(--ink)">내 포지션에 유리하게 억지로 세지 말 것</b> — 절대법칙 위반이 대표적 실수.<br>'
