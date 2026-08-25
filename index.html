@@ -6,14 +6,6 @@
 <title>밤톨이 · 실시간 주식·코인 분석</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4.5C13.5 10 8.5 19 9 26.5 9.4 31.5 14 34 20 34s10.6-2.5 11-7.5C31.5 19 26.5 10 20 4.5Z' fill='%236b3d21'/%3E%3Cpath d='M10.2 27.8c2.8 4.6 16.8 4.6 19.6 0 .4 3-3.8 6.2-9.8 6.2s-10.2-3.2-9.8-6.2Z' fill='%23d9b483'/%3E%3Ccircle cx='16.2' cy='21.5' r='1.9' fill='%23241611'/%3E%3Ccircle cx='23.8' cy='21.5' r='1.9' fill='%23241611'/%3E%3Cpath d='M17.6 24.4Q20 26.2 22.4 24.4' fill='none' stroke='%23241611' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E"/>
 <meta name="description" content="밤톨이 — 시장 자금 흐름·업종 강도·DAY TRADE RADAR로 지금 돈이 들어오는 주식과 코인을 실시간으로 포착하는 분석 터미널."/>
-<!-- PWA(앱 설치·APK) -->
-<link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#0b0f16"/>
-<link rel="apple-touch-icon" href="apple-touch-icon.png"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="밤톨이"/>
-<meta name="mobile-web-app-capable" content="yes"/>
 <style>
   /* ===== 밤톨이 Pro — 디자인 토큰 ===== */
   :root{
@@ -488,6 +480,6 @@
 </div>
 
 <script src="app.js?v=5"></script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
