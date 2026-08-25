@@ -865,6 +865,7 @@ function showView(v,noScroll){
   if(v==='news')fetchNews();
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();
+  if(v==='learn')renderLearn();
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
 }
 let _stkScroll=0;
@@ -1037,6 +1038,134 @@ function openCoinTerminal(){
     +'<iframe id="coinFrame" src="https://sannaq.github.io/onexcore-dashboard/" style="width:100%;height:calc(100vh - 96px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:var(--panel);display:block" title="밤톨이 코인 터미널" loading="eager"></iframe>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
+
+/* ═══════════════════════════════════════════════════════════
+   LEARN 탭 — 교육용 학습 콘텐츠 (캔들·패턴·지표·매매원칙·엘리엇 파동)
+   ※ 전부 공개된 표준 기술적 분석 개념을 밤톨이가 독자 서술. 매매 신호 아님.
+   ═══════════════════════════════════════════════════════════ */
+var _learnTab='basic';
+/* 캔들 SVG — vals 0..118(위=0). up:true=상승(빨강)/false=하락(파랑)/null=중립(골드) */
+function lc(o){ var W=64,H=118,cx=32,bw=o.bw||22;
+  var col=o.up===true?'var(--up)':o.up===false?'var(--down)':'var(--gold)';
+  var bt=Math.min(o.bt,o.bb),bb=Math.max(o.bt,o.bb),bh=Math.max(bb-bt,2.4);
+  return '<svg width="'+(o.w||62)+'" height="'+(o.h||116)+'" viewBox="0 0 '+W+' '+H+'">'
+    +'<line x1="'+cx+'" y1="'+o.h0+'" x2="'+cx+'" y2="'+o.l0+'" stroke="'+col+'" stroke-width="5" stroke-linecap="round"/>'
+    +'<rect x="'+(cx-bw/2)+'" y="'+bt+'" width="'+bw+'" height="'+bh+'" rx="3.5" fill="'+col+'"/></svg>'; }
+function ltile(svg,nm,ds,tone){ var b=tone==='up'?'lb-up':tone==='down'?'lb-down':'lb-neu';
+  var lbl=tone==='up'?'상승 반전':tone==='down'?'하락 반전':'관망/전환';
+  return '<div class="ltile">'+svg+'<div class="nm">'+nm+'</div><div class="ds">'+ds+'</div><span class="lbadge '+b+'">'+lbl+'</span></div>'; }
+function lpath(pts,col,neck){ var nl=neck?'<line x1="'+neck[0]+'" y1="'+neck[1]+'" x2="'+neck[2]+'" y2="'+neck[1]+'" stroke="var(--sub)" stroke-width="2" stroke-dasharray="5 4"/>':'';
+  return '<svg width="100%" height="120" viewBox="0 0 240 130" preserveAspectRatio="xMidYMid meet"><polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/>'+nl+'</svg>'; }
+
+function learnBasic(){
+  return '<div class="lcard"><h3>차트의 3대 기본</h3><p class="lead">보조지표 다 끄고 이 3개만 제대로 봐도 절반은 먹고 들어갑니다.</p>'
+    +'<div class="lrow"><div class="ic">🕯</div><div><p class="tt">캔들 (Candlestick)</p><p class="bd">한 봉의 <b>시가·고가·저가·종가</b>. 종가&gt;시가면 <b>양봉(빨강)</b>, 종가&lt;시가면 <b>음봉(파랑)</b>. 캔들 하나만 보지 말고 <b>위치·거래량·추세</b>를 함께.</p></div></div>'
+    +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 (MA)</p><p class="bd">일정 기간 평균가를 이은 선. 주가가 MA <b>위=상승추세</b>, <b>아래=하락추세</b>. 5·20·60·120일을 많이 씀. 밤톨이 차트엔 MA5·20·60이 겹쳐 그려집니다.</p></div></div>'
+    +'<div class="lrow"><div class="ic">📊</div><div><p class="tt">거래량 (Volume)</p><p class="bd">얼마나 많은 사람이 참여했나. 가격 움직임은 <b>반드시 거래량으로 검증</b> — 돌파 + 대량거래 = 신뢰.</p></div></div></div>'
+    +'<div class="lcard"><h3>🎯 confluence — 신호 겹침이 핵심</h3><p class="lead">한 지표만 믿지 마세요. <b>여러 신호가 같은 방향</b>을 가리킬 때가 진짜 자리입니다.</p>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">예) <b style="color:var(--ink)">지지 구간 + RSI 과매도 + 반전 캔들 + 거래량 증가</b> → 네 가지가 겹치면 신뢰도가 높아집니다. 밤톨이 RADAR의 100점 점수도 같은 원리 — 여러 지표를 합산해 평가합니다.</p></div>';
+}
+function learnCandle(){
+  var anat='<div class="ltile">'+lc({h0:10,bt:30,bb:74,l0:106,up:true,bw:36,w:88,h:120})+'<div class="nm" style="color:var(--up)">양봉 (상승)</div><div class="ds">종가 &gt; 시가 · 매수세 우위<br>위꼬리·몸통·아래꼬리</div></div>'
+    +'<div class="ltile">'+lc({h0:10,bt:30,bb:74,l0:106,up:false,bw:36,w:88,h:120})+'<div class="nm" style="color:var(--down)">음봉 (하락)</div><div class="ds">종가 &lt; 시가 · 매도세 우위<br>몸통이 길수록 힘이 강함</div></div>';
+  var REV=[
+    {nm:'망치형',ds:'바닥에서 긴 아래꼬리',tone:'up',s:{h0:18,bt:22,bb:46,l0:108,up:true,bw:26}},
+    {nm:'역망치형',ds:'바닥에서 긴 위꼬리',tone:'up',s:{h0:10,bt:70,bb:94,l0:100,up:true,bw:26}},
+    {nm:'교수형',ds:'천장의 망치 모양',tone:'down',s:{h0:18,bt:22,bb:46,l0:108,up:false,bw:26}},
+    {nm:'유성형',ds:'천장의 역망치',tone:'down',s:{h0:10,bt:70,bb:94,l0:100,up:false,bw:26}},
+    {nm:'도지',ds:'몸통 거의 없음·힘의 균형',tone:'neu',s:{h0:16,bt:57,bb:60,l0:104,up:null,bw:34}},
+    {nm:'잠자리도지',ds:'바닥 반전 유력',tone:'up',s:{h0:20,bt:20,bb:23,l0:108,up:true,bw:34}},
+    {nm:'장대양봉',ds:'강한 매수 유입',tone:'up',s:{h0:12,bt:16,bb:104,l0:110,up:true,bw:30}},
+    {nm:'장대음봉',ds:'강한 매도 출회',tone:'down',s:{h0:12,bt:16,bb:104,l0:110,up:false,bw:30}}
+  ];
+  return '<div class="lcard"><h3>캔들 기본 구조</h3><p class="lead">몸통 = 시가~종가, 꼬리 = 밀렸다 되돌아온 흔적. 한국식(상승=빨강 / 하락=파랑).</p><div class="lgrid lg2">'+anat+'</div></div>'
+    +'<div class="lcard"><h3>반전 신호 캔들 8종</h3><p class="lead">바닥/천장에서 나오면 추세 전환 힌트 — <b>거래량 급증과 함께</b> 나와야 신뢰도 ↑.</p>'
+    +'<div class="lgrid lg4">'+REV.map(function(p){return ltile(lc(p.s),p.nm,p.ds,p.tone);}).join('')+'</div>'
+    +'<div class="llegend"><span><i class="lsw" style="background:var(--up)"></i> 상승 반전</span><span><i class="lsw" style="background:var(--down)"></i> 하락 반전</span><span><i class="lsw" style="background:var(--gold)"></i> 관망/전환</span></div></div>';
+}
+function learnPattern(){
+  var CH=[
+    {nm:'헤드앤숄더',ds:'천장 3봉, 가운데 최고 → 하락 전환',tone:'down',pts:'0,120 40,66 70,92 118,26 168,92 200,66 240,120',neck:[40,92,200]},
+    {nm:'역헤드앤숄더',ds:'바닥 3저점, 가운데 최저 → 상승 전환',tone:'up',pts:'0,10 40,74 70,48 118,104 168,48 200,74 240,10',neck:[40,48,200]},
+    {nm:'쌍봉 (M)',ds:'같은 높이 두 번 못 뚫음 → 하락',tone:'down',pts:'0,120 48,36 96,92 148,36 200,92 240,120',neck:[48,92,200]},
+    {nm:'쌍바닥 (W)',ds:'같은 바닥 두 번 지지 → 상승',tone:'up',pts:'0,12 48,104 96,52 148,104 200,52 240,12',neck:[48,52,200]},
+    {nm:'상승 삼각수렴',ds:'고점 수평 + 저점 상승 → 위로 돌파 우세',tone:'up',pts:'0,110 40,40 80,40 118,74 158,40 198,54 240,40'},
+    {nm:'하락 쐐기',ds:'고점·저점 하락하나 수렴 → 반등 가능',tone:'up',pts:'0,20 44,70 78,40 128,86 168,64 210,100 240,84'}
+  ];
+  return '<div class="lcard"><h3>차트 패턴 (여러 봉의 그림)</h3><p class="lead">며칠~몇 주에 걸쳐 그려지는 모양. <b>목선(넥라인) 돌파</b>가 확정 신호, 되돌림 지지 확인 후 진입이 안전.</p>'
+    +'<div class="lgrid lg3">'+CH.map(function(p){var col=p.tone==='up'?'var(--up)':'var(--down)';var b=p.tone==='up'?'lb-up':'lb-down';var lbl=p.tone==='up'?'상승 반전':'하락 반전';
+      return '<div class="ltile">'+lpath(p.pts,col,p.neck)+'<div class="nm">'+p.nm+'</div><div class="ds">'+p.ds+'</div><span class="lbadge '+b+'">'+lbl+'</span></div>';}).join('')+'</div>'
+    +'<div class="llegend"><span><i class="lsw" style="background:var(--up)"></i> 상승 반전</span><span><i class="lsw" style="background:var(--down)"></i> 하락 반전</span></div></div>';
+}
+function learnInd(){
+  return '<div class="lcard"><h3>핵심 지표 5</h3><p class="lead">지표는 많을수록 신호가 충돌합니다. 아래 중 <b>2~3개</b>만 골라 쓰세요.</p>'
+    +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 · 골든/데드크로스</p><p class="bd">단기선이 장기선을 위로 뚫으면 <b style="color:var(--up)">골든크로스</b>, 아래로 뚫으면 <b style="color:var(--down)">데드크로스</b>. 팁: 골든크로스 <b>당일 추격 금지</b> → 며칠 뒤 20일선 되돌림 지지 확인 후.</p></div></div>'
+    +'<div class="lrow"><div class="ic">📊</div><div><p class="tt">거래량</p><p class="bd">돌파에 <b>거래량이 실려야</b> 진짜. 가격은 오르는데 거래량이 줄면 힘 빠지는 신호(다이버전스).</p></div></div>'
+    +'<div class="lrow"><div class="ic">🧭</div><div><p class="tt">지지 / 저항</p><p class="bd">\'선\'이 아니라 <b>폭 있는 구간</b>으로. <b>뚫린 저항은 이후 지지로 전환</b>.</p></div></div>'
+    +'<div class="lrow"><div class="ic">⚡</div><div><p class="tt">RSI (속도)</p><p class="bd">0~100. <b>70 위=과매수</b>, <b>30 아래=과매도</b>. 강한 추세장에선 과매수에서 더 갈 수 있으니 단독 사용 금지.</p></div></div>'
+    +'<div class="lrow"><div class="ic">〰️</div><div><p class="tt">MACD (모멘텀)</p><p class="bd">두 이평선 차이로 추세 힘·전환을 봄. 시그널선 상향 교차=상승 모멘텀.</p></div></div></div>';
+}
+function learnTips(){
+  var T=[['사기 전에 손절가부터 정한다','진입 근거가 깨지는 가격 = 손절가. 예: 지지 50,000 → "종가 49,000 아래면 축소".'],
+    ['손실은 짧게, 수익은 길게','손익비 2:1 이상만. -2%에서 끊고 +12%까지 끌고 가는 식.'],
+    ['추격보다 되돌림 지지','돌파 직후 추격보다 20/60일선 눌림 지지 확인 후 진입 — 손절 기준이 명확해짐.'],
+    ['지표는 2~3개만','5~6개 겹치면 신호 충돌 → 오히려 독. 명확히 해석 가능한 것만.'],
+    ['스윙은 60일선이 마지노선','중기 추세 최종 방어선. 종가로 이탈하면 추세 훼손 의심.']];
+  return '<div class="lcard"><h3>매매 실전 원칙</h3><p class="lead">기법보다 중요한 건 잃지 않는 습관. 초보 생존율을 올리는 순서.</p>'
+    +T.map(function(t,i){return '<div class="ltip"><div class="n">'+(i+1)+'</div><div><p class="h">'+t[0]+'</p><p class="p">'+t[1]+'</p></div></div>';}).join('')+'</div>'
+    +'<div class="lcard"><h3>진입 전 체크리스트</h3><div class="chips" style="display:flex;flex-wrap:wrap;gap:6px">'
+    +['추세 방향은?','지지/저항 위치?','거래량 실렸나?','손절가 정했나?','손익비 2:1↑?','오늘 지표 발표 있나?'].map(function(c){return '<span class="rulechip" style="background:var(--panel2);color:var(--sub)">□ '+c+'</span>';}).join('')+'</div></div>';
+}
+/* 엘리엇 파동 다이어그램 (독자 작성) */
+function waveImpulseSVG(){
+  return '<svg width="100%" height="180" viewBox="0 0 480 200" preserveAspectRatio="xMidYMid meet">'
+    +'<polyline points="20,180 90,90 60,120 180,40 150,80 300,20 260,70 360,45 340,60 420,25" fill="none" stroke="var(--up)" stroke-width="3.5" stroke-linejoin="round"/>'
+    +'<polyline points="420,25 450,80 435,55 470,95" fill="none" stroke="var(--down)" stroke-width="3.5" stroke-linejoin="round"/>'
+    +[['90,90','1'],['180,40','3'],['300,20','5'],['60,120','2'],['150,80','4']].map(function(p){var xy=p[0].split(',');return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="12" fill="var(--panel)" stroke="var(--up)" stroke-width="2"/><text x="'+xy[0]+'" y="'+(+xy[1]+4)+'" text-anchor="middle" font-size="12" font-weight="800" fill="var(--up)">'+p[1]+'</text>';}).join('')
+    +[['450,80','A'],['470,95','C']].map(function(p){var xy=p[0].split(',');return '<circle cx="'+xy[0]+'" cy="'+xy[1]+'" r="11" fill="var(--panel)" stroke="var(--down)" stroke-width="2"/><text x="'+xy[0]+'" y="'+(+xy[1]+4)+'" text-anchor="middle" font-size="11" font-weight="800" fill="var(--down)">'+p[1]+'</text>';}).join('')
+    +'<text x="200" y="195" font-size="12" fill="var(--sub)">상승 5파(동인) → 하락 3파(조정 A·B·C)</text></svg>';
+}
+function learnWave(){
+  return '<div class="lcard"><h3>🌊 엘리엇 파동이론이란</h3><p class="lead">1930년대 랠프 넬슨 엘리엇이 정리한 이론. <b>시장은 군중 심리에 따라 같은 모양이 반복</b>된다고 봅니다. 큰 파동 안에 같은 모양의 작은 파동이 들어있는 <b>프랙탈(자기닮음) 구조</b>가 핵심.</p>'
+    +'<div class="wavebox">'+waveImpulseSVG()+'</div>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">한 사이클 = <b style="color:var(--up)">상승 5파(1·2·3·4·5)</b> + <b style="color:var(--down)">하락 3파(A·B·C)</b>. 추세 방향으로 가는 <b>동인파동(1·3·5)</b>과 되돌리는 <b>조정파동(2·4)</b>이 번갈아 나옵니다.</p></div>'
+    +'<div class="lcard"><h3>절대 법칙 3가지 (깨지면 카운트가 틀린 것)</h3><p class="lead">이 3개는 예외 없이 지켜져야 합니다. 어기면 파동 번호를 잘못 센 겁니다.</p>'
+    +'<div class="ltip"><div class="n">1</div><div><p class="h">2파는 1파의 시작점을 깨지 않는다</p><p class="p">2파 되돌림이 1파 출발점 아래로 내려가면, 그건 2파가 아닙니다.</p></div></div>'
+    +'<div class="ltip"><div class="n">2</div><div><p class="h">3파는 가장 짧은 파동이 될 수 없다</p><p class="p">1·3·5 중 3파가 제일 짧으면 안 됨. 보통 <b>3파가 가장 길고 강력</b>합니다(주도 상승).</p></div></div>'
+    +'<div class="ltip"><div class="n">3</div><div><p class="h">4파는 1파의 영역을 침범하지 않는다</p><p class="p">4파 저점이 1파 고점 아래로 내려오면 안 됨. (예외: 다이아고날 패턴)</p></div></div></div>'
+    +'<div class="lcard"><h3>동인파동 · 조정파동</h3>'
+    +'<div class="lrow"><div class="ic">🚀</div><div><p class="tt">임펄스(충격) 파동 — 1·3·5</p><p class="bd">추세 방향으로 5개 파동. <b>3파가 보통 가장 강하고 길다</b>. 1·3·5 중 하나는 다른 것보다 길게 늘어나는 <b>연장(extension)</b>이 자주 나옵니다.</p></div></div>'
+    +'<div class="lrow"><div class="ic">🔄</div><div><p class="tt">조정 파동 — 2·4, A·B·C</p><p class="bd">추세를 되돌리는 구간. 대표 형태 <b>지그재그(5-3-5)</b>, <b>플랫(3-3-5)</b>, <b>삼각수렴(3-3-3-3-3)</b>. 2파와 4파는 서로 다른 형태로 나오는 경향(교대 규칙).</p></div></div>'
+    +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">피보나치와의 관계</p><p class="bd">되돌림은 <b>0.382·0.5·0.618</b>, 확장은 <b>1.618·2.618</b>을 자주 씁니다. 예) 2파는 1파의 0.5~0.618 되돌림, 3파는 1파의 1.618배 확장이 흔함.</p></div></div></div>'
+    +'<div class="lcard"><h3>💡 실전에서 조심할 점</h3>'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">• 파동은 <b style="color:var(--ink)">지나고 나서야 명확</b>합니다. 실시간 카운트는 여러 시나리오를 열어두세요.<br>'
+    +'• <b style="color:var(--ink)">내 포지션에 유리하게 억지로 세지 말 것</b> — 절대법칙 위반이 대표적 실수.<br>'
+    +'• 3파를 노리는 게 정석(가장 강함). 5파 끝·C파 끝은 추세 전환 경계.<br>'
+    +'• RSI 다이버전스(3파·5파 사이 고점 낮아짐)가 5파 소진을 암시하기도 합니다.</p>'
+    +'<p class="bd" style="color:var(--faint);font-size:11.5px;margin-top:10px">※ 엘리엇 파동은 확률적 도구입니다. 확정 신호가 아니며, 손절·손익비 원칙과 함께 쓰세요.</p></div>';
+}
+function learnEcon(){
+  return '<div class="lcard"><h3>📅 경제지표 읽는 법</h3><p class="lead"><b>실제 · 예상치 · 이전</b> 3개 숫자로 판단합니다.</p>'
+    +'<div class="lrow"><div class="ic">🎯</div><div><p class="tt">실제 vs 예상치</p><p class="bd">발표 <b>실제값이 예상치와 얼마나 다른가</b>(서프라이즈)가 핵심. 예상과 같으면 이미 반영돼 반응 작음.</p></div></div>'
+    +'<div class="lrow"><div class="ic">💵</div><div><p class="tt">물가 지표 (CPI·PPI·PCE)</p><p class="bd">예상보다 <b>높으면 인플레 → 금리 인상 압력 → 증시 부담</b>(대체로 악재). 낮으면 반대.</p></div></div>'
+    +'<div class="lrow"><div class="ic">🐂</div><div><p class="tt">중요도(별·황소)</p><p class="bd">3개짜리(CPI·FOMC·고용)는 발표 순간 변동성 큼 — 초보는 발표 전후 관망 권장.</p></div></div></div>'
+    +'<div class="lcard"><h3>꼭 아는 핵심 지표</h3><div class="lgrid lg2">'
+    +[['🇺🇸','CPI · 소비자물가','인플레 1순위. 증시·금리 최대 변수. 매월.'],
+      ['🏦','FOMC · 기준금리','연준 금리 결정 + 파월 발언. 연 8회, 변동성 최대.'],
+      ['👷','비농업고용(NFP)','매월 첫 금요일. 고용 강도 → 금리 경로.'],
+      ['🛒','소매판매·PCE','경기 체력. PCE=연준 선호 물가지표.'],
+      ['🏭','ISM/PMI','50 위=경기 확장, 아래=수축.'],
+      ['🇰🇷','한국 금리·수출입','한은 금통위, 월초 수출 동향이 코스피에 직결.']].map(function(x){
+      return '<div class="lrow" style="border:none;padding:8px 0"><div class="ic">'+x[0]+'</div><div><p class="tt">'+x[1]+'</p><p class="bd">'+x[2]+'</p></div></div>';}).join('')+'</div>'
+    +'<div style="margin-top:12px"><a class="rulechip" style="cursor:pointer" onclick="showView(\'news\')">📰 밤톨이 뉴스 탭에서 실시간 헤드라인 보기 →</a></div></div>';
+}
+function renderLearn(){
+  var el=$('#learnBody'); if(!el) return;
+  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,ind:learnInd,tips:learnTips,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  el.innerHTML=fn();
+}
+window.renderLearn=renderLearn;
+$$('#ltabs button').forEach(function(b){ b.onclick=function(){ _learnTab=b.dataset.l; $$('#ltabs button').forEach(function(x){x.classList.toggle('on',x===b);}); renderLearn(); }; });
 
 /* ═══════════ 카드 접기/숨김 상태 (렌더보다 먼저 정의 — renderSummary가 참조) ═══════════ */
 var CARDPREF={collapsed:{},hidden:{}};
