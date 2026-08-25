@@ -648,7 +648,7 @@ function showCandleDetail(idx){
   var mn=$('#cdMin',bg); if(mn) mn.onclick=function(){ close(); var b=$$('#tfBar button').find(function(x){return x.dataset.tf==='5';}); if(b){$$('#tfBar button').forEach(function(x){x.classList.toggle('on',x===b);}); loadChartTF(r,'5');} };
 }
 /* ── 상세 화면 라이브 자동 갱신 (열어둔 동안 15초마다 가격·매수/매도세·투자자 갱신) ── */
-var _detailTimer=null, _LIVE_MS=15000;
+var _detailTimer=null, _LIVE_MS=7000;
 function stopDetailLive(){ if(_detailTimer){clearInterval(_detailTimer);_detailTimer=null;} }
 function startDetailLive(r){
   stopDetailLive(); if(!PROXY) return;
@@ -686,7 +686,7 @@ function renderPressureFlow(r){
   var hasStr=hasNum(f.strength), hasBp=hasNum(f.bp);
   if(hasStr||hasBp){
     parts.push('<div style="font-size:12px;font-weight:800;margin:12px 0 4px;display:flex;align-items:center;gap:6px">⚡ 매수/매도세'
-      +(PROXY?'<span id="liveDot" style="width:7px;height:7px;border-radius:50%;background:#16b364;opacity:1;transition:opacity .4s;box-shadow:0 0 5px #16b364"></span><span style="font-size:10px;color:var(--faint);font-weight:600">LIVE · 15초 갱신</span>':'')+'</div>');
+      +(PROXY?'<span id="liveDot" style="width:7px;height:7px;border-radius:50%;background:#16b364;opacity:1;transition:opacity .4s;box-shadow:0 0 5px #16b364"></span><span style="font-size:10px;color:var(--faint);font-weight:600">LIVE · 7초 갱신</span>':'')+'</div>');
     if(hasStr){ var st=f.strength, buyPct=Math.max(6,Math.min(94,Math.round(st/(st+100)*100)));
       parts.push('<div class="pfrow"><span style="width:60px;font-size:11px;color:var(--sub);font-weight:700">체결강도</span>'
         +'<div class="pfbar"><div style="width:'+buyPct+'%;background:var(--up)"></div><div style="flex:1;background:var(--down)"></div></div>'
@@ -967,7 +967,7 @@ function openStock(code){
               +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
             +'</div>'
             +'<button class="tfbtn2'+(_fibOn?' on':'')+'" id="fibBtn" title="피보나치 되돌림" onclick="toggleFib()" style="margin-left:8px">📐 피보</button>'
-            +(PROXY?'<span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint);font-weight:700"><span id="liveDotChart" style="width:7px;height:7px;border-radius:50%;background:#16b364;box-shadow:0 0 5px #16b364;transition:opacity .4s"></span>LIVE 15초</span>':'')
+            +(PROXY?'<span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint);font-weight:700"><span id="liveDotChart" style="width:7px;height:7px;border-radius:50%;background:#16b364;box-shadow:0 0 5px #16b364;transition:opacity .4s"></span>LIVE 7초</span>':'')
           +'</div>'
           +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
           +'<div id="chartCap" style="font-size:11px;color:var(--faint);margin-top:6px">불러오는 중…</div>'
