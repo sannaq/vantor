@@ -307,6 +307,8 @@
     <div class="stat"><div class="k">미결제약정 OI</div><div class="v" id="stTot">—</div><div class="s" id="stCnt">실측 청산 0건 · $0</div></div>
   </div>
 
+  <div id="lqDeriv" class="lqderiv"></div>
+
   <div class="grid">
     <div class="card chartwrap">
       <canvas id="chart"></canvas>
@@ -1302,7 +1304,7 @@ var $=function(s){return document.querySelector(s);};
 var SYMS=['BTC','ETH','SOL','BNB','XRP','DOGE'];
 var TFS=[['1m','1분'],['5m','5분'],['15m','15분'],['1h','1시간'],['4h','4시간'],['12h','12시간'],['1d','24시간'],['3d','3일']];
 var st={sym:'BTC',tf:'15m',candles:[],price:0,chg:0,bins:new Map(),model:new Map(),
-        binUsd:50,binFixed:false,oiUsd:0,tot:0,cnt:0,start:Date.now(),ws:null,feed:[],hover:null};
+        binUsd:50,binFixed:false,oiUsd:0,tot:0,cnt:0,start:Date.now(),ws:null,feed:[],hover:null,deriv:null};
 
 // ---- 유틸 ----
 function fmtPx(v){ if(!v&&v!==0)return '—'; if(v>=1000)return v.toLocaleString('en-US',{maximumFractionDigits:1});
@@ -1376,6 +1378,47 @@ function loadOI(){ // 미결제약정 → 추정 청산액 스케일 기준
   var u='https://fapi.binance.com/fapi/v1/openInterest?symbol='+api(st.sym);
   return fetch(u).then(function(r){return r.json();}).then(function(o){
     if(o&&o.openInterest){ st.oiUsd=+o.openInterest*(st.price||1); } }).catch(function(){});
+}
+// ---- 파생 지표: 롱숏비율·상위트레이더·펀딩비·OI변화 ----
+function loadDeriv(){
+  var s=api(st.sym), F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
+  Promise.all([
+    fetch(F+'premiumIndex?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(D+'globalLongShortAccountRatio?symbol='+s+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(D+'topLongShortPositionRatio?symbol='+s+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(D+'openInterestHist?symbol='+s+'&period=5m&limit=2').then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(r){
+    st.deriv={ fund:r[0], ls:(r[1]&&r[1][0]), top:(r[2]&&r[2][0]), oih:r[3] };
+    renderDeriv();
+  });
+}
+function renderDeriv(){
+  var el=$('#lqDeriv'); if(!el)return; var d=st.deriv; if(!d){ el.innerHTML=''; return; }
+  function chip(inner){ return '<div style="flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 12px">'+inner+'</div>'; }
+  function k(t){ return '<div style="color:var(--sub);font-size:11px;font-weight:600;margin-bottom:5px">'+t+'</div>'; }
+  var html='';
+  // 롱/숏 계정 비율 (게이지)
+  if(d.ls){ var la=+d.ls.longAccount*100, sa=+d.ls.shortAccount*100;
+    html+=chip(k('롱/숏 계정 비율')
+      +'<div style="height:8px;border-radius:5px;overflow:hidden;display:flex;background:var(--down)"><span style="width:'+la.toFixed(1)+'%;background:var(--up)"></span></div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-top:5px"><span style="color:var(--up)">롱 '+la.toFixed(1)+'%</span><span style="color:var(--down)">숏 '+sa.toFixed(1)+'%</span></div>'); }
+  // 상위 트레이더 포지션
+  if(d.top){ var tl=+d.top.longAccount*100, dom=tl>=50?'롱':'숏', domc=tl>=50?'var(--up)':'var(--down)', domv=tl>=50?tl:100-tl;
+    html+=chip(k('상위 트레이더 (스마트머니)')
+      +'<div style="font-size:17px;font-weight:800;color:'+domc+'">'+dom+' '+domv.toFixed(1)+'% 우위</div>'
+      +'<div style="font-size:11px;color:var(--faint);margin-top:2px">롱 '+tl.toFixed(1)+'% · 숏 '+(100-tl).toFixed(1)+'%</div>'); }
+  // 펀딩비
+  if(d.fund&&d.fund.lastFundingRate!=null){ var fr=+d.fund.lastFundingRate*100, fc=fr>=0?'var(--up)':'var(--down)';
+    var nt=d.fund.nextFundingTime?Math.max(0,d.fund.nextFundingTime-Date.now()):0, hh=Math.floor(nt/3600000), mm=Math.floor(nt%3600000/60000);
+    html+=chip(k('펀딩비 (8시간)')
+      +'<div style="font-size:17px;font-weight:800;color:'+fc+'">'+(fr>=0?'+':'')+fr.toFixed(4)+'%</div>'
+      +'<div style="font-size:11px;color:var(--faint);margin-top:2px">'+(fr>=0?'롱→숏 지불':'숏→롱 지불')+' · 다음 '+hh+'h'+mm+'m</div>'); }
+  // OI 변화
+  if(d.oih&&d.oih.length>=2){ var a=+d.oih[0].sumOpenInterestValue, b=+d.oih[1].sumOpenInterestValue, ch=a>0?((b-a)/a*100):0, oc=ch>=0?'var(--up)':'var(--down)';
+    html+=chip(k('미결제약정 OI 추이')
+      +'<div style="font-size:17px;font-weight:800">'+fmtUsd(b)+'</div>'
+      +'<div style="font-size:11px;font-weight:700;color:'+oc+';margin-top:2px">'+(ch>=0?'▲ +':'▼ ')+ch.toFixed(2)+'% (5m)</div>'); }
+  el.innerHTML=html?('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'+html+'</div>'):'';
 }
 
 // ---- 청산 스트림 ----
@@ -1600,9 +1643,9 @@ function buildPills(){
 function switchSym(s){
   if(s===st.sym)return; st.sym=s; st.binFixed=false;
   st.bins=new Map(); st.model=new Map(); st.oiUsd=0; st.tot=0; st.cnt=0; st.start=Date.now(); st.feed=[];
-  st.candles=[]; buildPills(); $('#lgSym').textContent=s; renderFeed();
+  st.candles=[]; st.deriv=null; buildPills(); $('#lgSym').textContent=s; renderFeed(); renderDeriv();
   loadKlines().then(function(){ return loadOI(); }).then(renderStats).catch(function(){});
-  connectWS(); dirty=true;
+  connectWS(); loadDeriv(); dirty=true;
 }
 function switchTf(t){
   if(t===st.tf)return; st.tf=t; st.binFixed=false; st.bins=new Map(); buildPills();
@@ -1628,9 +1671,11 @@ function init(){
   loadKlines().then(function(){ dirty=true; return loadOI(); }).then(function(){ renderStats(); }).catch(function(){
     $('#liveTxt').textContent='캔들 로드 실패(잠시 후 재시도)'; });
   connectWS();
+  loadDeriv();
   requestAnimationFrame(draw);
   setInterval(function(){ loadTicker().then(function(){ dirty=true; }); },5000);
   setInterval(function(){ loadKlines().then(function(){ return loadOI(); }).then(function(){dirty=true;}).catch(function(){}); },30000);
+  setInterval(loadDeriv,30000);
   setInterval(renderStats,1000);
   // 렌더 검증용 훅(?test=1). 클라이언트 세션 표시 전용, 서버 영향 없음.
   if(/[?&]test=1/.test(location.search)){ window.__seedLiq=function(p,q,side){ ingest(p,q,side); renderStats(); }; }
