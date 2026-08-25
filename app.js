@@ -278,7 +278,7 @@ async function loadKisRadar(){
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
       j.stocks.forEach(function(s){ s.ccy='KRW'; });
       KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
-      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); renderCatch(); }
+      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); renderCatch(); renderStrongSectors(); }
       var db=$('#demoban'); if(db)db.style.display='none';
       renderRadar(); renderCats();
     }
@@ -321,9 +321,49 @@ function renderEtfToggle(){
     renderRadar(); renderQuickView();
   };
 }
+/* ═══════════ 업종(테마) 실데이터 — 거래대금 상위 종목을 섹터로 분류 ═══════════
+   추측 API 대신 종목→섹터 매핑 + board의 실제 등락률로 업종 강도 계산(신뢰성). */
+var SECTOR_ICON={'반도체':'🔲','2차전지':'🔋','자동차':'🚗','조선':'🚢','방산':'🛡️','바이오·제약':'🧬',
+  '인터넷·플랫폼':'🌐','금융':'🏦','화학·정유':'⚗️','철강·소재':'🏗️','엔터·미디어':'🎬','로봇·AI':'🤖',
+  '원자력·전력':'⚡','게임':'🎮','건설':'🏢','유통·소비재':'🛒','통신':'📡'};
+var SECTOR_MAP={
+  '005930':'반도체','000660':'반도체','042700':'반도체','000990':'반도체','240810':'반도체','357780':'반도체','403870':'반도체','058470':'반도체',
+  '373220':'2차전지','006400':'2차전지','247540':'2차전지','086520':'2차전지','066970':'2차전지','003670':'2차전지','137400':'2차전지',
+  '005380':'자동차','000270':'자동차','012330':'자동차','161390':'자동차','204320':'자동차','011210':'자동차',
+  '329180':'조선','042660':'조선','010140':'조선','009540':'조선','075580':'조선',
+  '012450':'방산','079550':'방산','064350':'방산','272210':'방산','047810':'방산',
+  '207940':'바이오·제약','068270':'바이오·제약','196170':'바이오·제약','000100':'바이오·제약','128940':'바이오·제약','302440':'바이오·제약','091990':'바이오·제약','326030':'바이오·제약','145020':'바이오·제약',
+  '035420':'인터넷·플랫폼','035720':'인터넷·플랫폼','323410':'인터넷·플랫폼','259960':'인터넷·플랫폼','376300':'인터넷·플랫폼',
+  '105560':'금융','055550':'금융','086790':'금융','316140':'금융','138040':'금융','032830':'금융','000810':'금융','024110':'금융','029780':'금융',
+  '051910':'화학·정유','096770':'화학·정유','010950':'화학·정유','011170':'화학·정유','009830':'화학·정유','285130':'화학·정유',
+  '005490':'철강·소재','004020':'철강·소재','103140':'철강·소재','014820':'철강·소재',
+  '352820':'엔터·미디어','041510':'엔터·미디어','035900':'엔터·미디어','122870':'엔터·미디어','253450':'엔터·미디어',
+  '277810':'로봇·AI','454910':'로봇·AI','108860':'로봇·AI','056080':'로봇·AI',
+  '034020':'원자력·전력','052690':'원자력·전력','015760':'원자력·전력','267260':'원자력·전력','112610':'원자력·전력',
+  '036570':'게임','251270':'게임','225570':'게임','263750':'게임','078340':'게임','293490':'게임','095660':'게임',
+  '000720':'건설','028050':'건설','047040':'건설','375500':'건설','006360':'건설',
+  '139480':'유통·소비재','023530':'유통·소비재','097950':'유통·소비재','280360':'유통·소비재','004370':'유통·소비재',
+  '017670':'통신','030200':'통신','032640':'통신'};
+function realCats(){
+  if(!KBOARD||!KBOARD.length) return null;
+  var byS={};
+  KBOARD.forEach(function(x){ if(isETF(x))return; var sec=SECTOR_MAP[x.c]; if(!sec)return; (byS[sec]=byS[sec]||[]).push(x); });
+  var keys=Object.keys(byS); if(keys.length<3) return null; // 매핑이 너무 적으면 데모 유지
+  var cats=keys.map(function(sec){ var mem=byS[sec];
+    var totAmt=mem.reduce(function(a,m){return a+(m.amount||0);},0)||1;
+    var wch=mem.reduce(function(a,m){return a+((m.ch||0)*(m.amount||0));},0)/totAmt; // 거래대금 가중 등락률
+    mem.sort(function(a,b){return (b.amount||0)-(a.amount||0);});
+    var sc=Math.max(0,Math.min(100,Math.round(50+wch*6)));
+    var top=mem.slice(0,3).map(function(m){return [m.n, Math.max(0,Math.min(100,Math.round(50+(m.ch||0)*6)))];});
+    return { ic:SECTOR_ICON[sec]||'📊', nm:sec, sc:sc, d:0, chg:+wch.toFixed(2), val:Math.round(totAmt/1e8), top:top, members:mem.length, _real:true };
+  });
+  cats.sort(function(a,b){return b.sc-a.sc;});
+  return cats;
+}
+function getCats(){ return realCats()||CATS; }
 function renderStrongSectors(){
   var el=$('#strongSectors'); if(!el)return;
-  var arr=CATS.slice().sort(function(a,b){return b.sc-a.sc;});
+  var arr=getCats().slice().sort(function(a,b){return b.sc-a.sc;});
   el.innerHTML='<table><thead><tr><th class="l">업종</th><th>업종 SCORE</th><th>등락률</th></tr></thead><tbody>'
     +arr.map(function(x,i){ var medal=i<3?'<span class="scorepill" style="min-width:20px;padding:2px 6px;border-radius:50%;margin-right:7px">'+(i+1)+'</span>':'<span class="rank" style="margin-right:9px;display:inline-block;width:20px;text-align:center">'+(i+1)+'</span>';
       var barw=Math.round((x.sc-40)/55*100);
@@ -416,11 +456,12 @@ function catCard(x){ var gc=x.sc>=80?'strong':x.sc>=70?'rise':x.sc>=60?'steady':
     +'<div class="catfoot"><span>거래대금 <b class="up">+'+x.val+'%</b></span><span>대장주 유지</span></div></div>';
 }
 function renderCats(){
-  var h=$('#homeCats'); if(h)h.innerHTML=CATS.slice(0,4).map(catCard).join('');
-  var a=$('#allCats'); if(a)a.innerHTML=CATS.map(catCard).join('');
-  var heat=$('#catHeat'); if(heat){ heat.innerHTML='<div class="heat">'+CATS.map(function(x){ var t=(x.sc-40)/55; var col='hsl('+(t*18)+','+(55+t*35)+'%,'+(58-t*16)+'%)'; return '<div class="h" style="background:'+col+'">'+x.sc+'<div class="hs">'+x.nm+'</div></div>'; }).join('')+'</div>'; }
+  var C=getCats();
+  var h=$('#homeCats'); if(h)h.innerHTML=C.slice(0,4).map(catCard).join('');
+  var a=$('#allCats'); if(a)a.innerHTML=C.map(catCard).join('');
+  var heat=$('#catHeat'); if(heat){ heat.innerHTML='<div class="heat">'+C.map(function(x){ var t=(x.sc-40)/55; var col='hsl('+(t*18)+','+(55+t*35)+'%,'+(58-t*16)+'%)'; return '<div class="h" style="background:'+col+'">'+x.sc+'<div class="hs">'+x.nm+'</div></div>'; }).join('')+'</div>'; }
   var cr=$('#catRank'); if(cr){ cr.innerHTML='<table><thead><tr><th class="l">순위</th><th class="l">업종</th><th>SCORE</th><th>1분 변화</th></tr></thead><tbody>'
-    +CATS.map(function(x,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l">'+x.ic+' '+x.nm+'</td><td>'+x.sc+'</td><td>'+mvHtml(x.d)+'</td></tr>';}).join('')+'</tbody></table>'; }
+    +getCats().map(function(x,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l">'+x.ic+' '+x.nm+'</td><td>'+x.sc+'</td><td>'+(x._real?'<span class="mv flat" style="color:var(--gold)">실시간</span>':mvHtml(x.d))+'</td></tr>';}).join('')+'</tbody></table>'; }
   var rs=$('#radarStats'); if(rs){
     /* 값이 없는 종목은 순위에서 빼고, 하나도 없으면 카드에 사유를 적는다(0으로 채우지 않는다) */
     function statCard(title,key,fmt){
@@ -1421,7 +1462,7 @@ function renderSummary(){
   var ks=IDX.find(function(x){return x.nm==='KOSPI';})||{}, kq=IDX.find(function(x){return x.nm==='KOSDAQ';})||{};
   var b=FLOW.breadth||{}, up=b.up||0, dn=b.down||0;
   var mood=(ks.c||0)>=0.3?['강세','up','📈']:(ks.c||0)<=-0.3?['약세','down','📉']:['혼조','flat','➖'];
-  var topCat=(CATS||[]).slice().sort(function(a,b){return b.sc-a.sc;})[0];
+  var topCat=(getCats()||[]).slice().sort(function(a,b){return b.sc-a.sc;})[0];
   var topStk=(RADAR||[])[0];
   var breadthTxt=(up+dn)>0?('상승 '+up+' · 하락 '+dn):'';
   var line='오늘 시장은 '+mood[2]+' <span class="'+mood[1]+'">'+mood[0]+'</span>';
