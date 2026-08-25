@@ -225,7 +225,26 @@ function radarUniverse(){
   return hideETF ? base.filter(function(s){return !isETF(s);}) : base;
 }
 /* 프록시 /radar → 실시간 스코어링 유니버스(계약: STK와 동일 필드). 실패 시 데모 유지 */
-var KBOARD=null;
+var KBOARD=null, _catchSeen={};
+function toast(msg){ var t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t);
+  setTimeout(function(){t.classList.add('show');},10);
+  setTimeout(function(){t.classList.remove('show'); setTimeout(function(){t.remove();},300);},3500); }
+/* 실시간 포착 — board에서 급등/급락 종목. 새 급등(≥5%)은 토스트 */
+function renderCatch(){
+  var el=$('#catchFeed'); if(!el) return;
+  var board=(KBOARD&&KBOARD.length)?KBOARD:null;
+  if(!board){ el.innerHTML='<div style="color:var(--faint);font-size:12px;padding:6px 0">'+(PROXY?'포착 대기 중…':'프록시 연결 시 실시간 포착')+'</div>'; return; }
+  var surge=board.filter(function(x){return hasNum(x.ch)&&x.ch>=3;}).sort(function(a,b){return b.ch-a.ch;}).slice(0,6);
+  var plunge=board.filter(function(x){return hasNum(x.ch)&&x.ch<=-3;}).sort(function(a,b){return a.ch-b.ch;}).slice(0,6);
+  function row(title,arr,c){ if(!arr.length) return '';
+    return '<div style="margin-bottom:9px"><div style="font-size:11px;font-weight:800;color:var(--faint);margin-bottom:6px">'+title+'</div><div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +arr.map(function(x){return '<span class="catchchip" data-c="'+x.c+'"><b>'+x.n+'</b> <span class="'+c+'">'+(x.ch>=0?'+':'')+(+x.ch).toFixed(1)+'%</span></span>';}).join('')+'</div></div>'; }
+  el.innerHTML=(surge.length||plunge.length)?(row('🔥 급등 (+3%↑)',surge,'up')+row('💧 급락 (−3%↓)',plunge,'down'))
+    :'<div style="color:var(--faint);font-size:12px;padding:6px 0">±3% 이상 급등락 종목이 아직 없어요 (장중에 채워집니다).</div>';
+  $$('#catchFeed .catchchip').forEach(function(t){t.onclick=function(){openStock(t.dataset.c);};});
+  if($('#catchupd'))$('#catchupd').textContent='· '+nowHM();
+  surge.forEach(function(x){ if(x.ch>=5&&!_catchSeen[x.c]){ _catchSeen[x.c]=1; toast('🔥 '+x.n+' 급등 +'+(+x.ch).toFixed(1)+'%'); } });
+}
 /* 히트맵 색 — 등락률(%) → 빨강(상승)/회색(보합)/파랑(하락), 강도는 |%| */
 function heatColor(ch){
   var t=Math.max(-1,Math.min(1,(ch||0)/6)); // ±6%에서 최대
@@ -259,7 +278,7 @@ async function loadKisRadar(){
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
       j.stocks.forEach(function(s){ s.ccy='KRW'; });
       KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
-      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); }
+      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); renderCatch(); }
       var db=$('#demoban'); if(db)db.style.display='none';
       renderRadar(); renderCats();
     }

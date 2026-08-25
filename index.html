@@ -219,6 +219,11 @@
   .modal .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
   .modal .mbtn{font-family:inherit;font-weight:700;font-size:13px;padding:8px 16px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);cursor:pointer}
   .modal .mbtn.pri{background:var(--gold);border-color:var(--gold);color:#3a2c07}
+  /* 실시간 포착 + 토스트 */
+  .catchchip{font-size:12.5px;font-weight:700;padding:5px 11px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;transition:transform .1s,border-color .12s}
+  .catchchip:hover{transform:translateY(-1px);border-color:var(--gold)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--panel);border:1px solid var(--gold);box-shadow:var(--shadow2);border-radius:12px;padding:11px 18px;font-size:13px;font-weight:800;z-index:200;opacity:0;transition:all .3s;pointer-events:none}
+  .toast.show{transform:translate(-50%,0);opacity:1}
   /* 스크리너 필터 */
   .scfil{border:1px solid var(--line);background:var(--panel2);font-family:inherit;font-size:12.5px;font-weight:700;color:var(--sub);padding:6px 13px;border-radius:20px;cursor:pointer;transition:all .12s}
   .scfil:hover{border-color:var(--gold)}
@@ -341,6 +346,11 @@
         <div class="ch"><h2>👑 오늘 강한 업종</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
         <div class="pad" style="padding-top:8px" id="strongSectors"></div>
       </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="ch"><h2>🚨 실시간 포착 <span style="font-weight:600;color:var(--faint);font-size:12px">급등·급락·거래폭발</span></h2><div class="r"><span id="catchupd">–</span></div></div>
+      <div class="pad" style="padding-top:10px" id="catchFeed"></div>
     </div>
 
     <div class="row b">
