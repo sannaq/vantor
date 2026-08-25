@@ -1324,7 +1324,7 @@ function fixBin(){
   st.binUsd=niceStep((hi-lo)*1.3/150)||st.binUsd; st.binFixed=true;
 }
 // ---- 추정 히트맵: 거래량×레버리지로 청산가 역산(즉시 채움) ----
-function addModel(p,side,w){ if(!(p>0))return; var b=binOf(p),c=st.model.get(b)||{long:0,short:0}; c[side]+=w; st.model.set(b,c); }
+function addModel(p,side,w,idx){ if(!(p>0))return; var b=binOf(p),c=st.model.get(b)||{long:0,short:0,tw:0,wsum:0}; c[side]+=w; c.tw+=w*(idx||0); c.wsum+=w; st.model.set(b,c); }
 function buildModelHeat(){
   st.model=new Map(); var cs=st.candles; if(!cs.length||!st.price)return;
   var tiers=[[10,0.16],[25,0.26],[50,0.31],[100,0.27]]; // 레버리지·비중(고배율↑→현재가 근처 밀집)
@@ -1337,8 +1337,8 @@ function buildModelHeat(){
     for(var t=0;t<tiers.length;t++){
       var L=tiers[t][0], w=tiers[t][1]*recency*notion;
       var lLiq=entry*(1-1/L), sLiq=entry*(1+1/L);
-      if(lLiq<st.price) addModel(lLiq,'long', w*upBias);      // 아직 안 깨진 롱 청산대(현재가 아래)
-      if(sLiq>st.price) addModel(sLiq,'short',w*(1-upBias));  // 아직 안 뚫린 숏 청산대(현재가 위)
+      if(lLiq<st.price) addModel(lLiq,'long', w*upBias, i);      // 아직 안 깨진 롱 청산대(현재가 아래)
+      if(sLiq>st.price) addModel(sLiq,'short',w*(1-upBias), i);  // 아직 안 뚫린 숏 청산대(현재가 위)
     }
   }
 }
@@ -1348,8 +1348,9 @@ function allBins(){
   st.bins.forEach(function(v){ var s=v.long+v.short; if(s>liveMax)liveMax=s; });
   var modelMax=0; st.model.forEach(function(v){ var s=v.long+v.short; if(s>modelMax)modelMax=s; });
   var boost=(liveMax>0&&modelMax>0)?(modelMax/liveMax*1.4):1; // 실측을 모델 스케일로 끌어올림
-  st.model.forEach(function(v,b){ m.set(b,{long:v.long,short:v.short}); });
-  st.bins.forEach(function(v,b){ var c=m.get(b)||{long:0,short:0}; c.long+=v.long*boost; c.short+=v.short*boost; m.set(b,c); });
+  var last=(st.candles.length-1)||0;
+  st.model.forEach(function(v,b){ m.set(b,{long:v.long,short:v.short,col:v.wsum>0?(v.tw/v.wsum):last}); });
+  st.bins.forEach(function(v,b){ var c=m.get(b)||{long:0,short:0,col:last}; c.long+=v.long*boost; c.short+=v.short*boost; m.set(b,c); }); // 실측 청산은 '지금'(우측)에 형성
   return m;
 }
 
@@ -1531,8 +1532,11 @@ function draw(){
       var a=Math.min(0.95,0.015+inten*1.05);             // 약한건 흐리게, 강한건 밝게
       // 강도↑ → 더 진한 남색(밝아도 하늘색으로 안 뜨게)
       var R=Math.round(24+74*inten), G=Math.round(40+86*inten), B=Math.round(150+95*inten);
+      // 시간축: 형성 시점(col)부터 우측(현재)까지 밴드
+      var col=(v.col!=null)?v.col:(n-1), xStart=cl+(col/((n-1)||1))*cw;
+      if(xStart<cl)xStart=cl; if(xStart>cr-3)xStart=cr-3;
       ctx.fillStyle='rgba('+R+','+G+','+B+','+a.toFixed(3)+')';
-      ctx.fillRect(cl,yy-hpx/2,cw,hpx*0.9);
+      ctx.fillRect(xStart,yy-hpx/2,cr-xStart,hpx*0.9);
       // 롱/숏 우세 엣지(우측, 강한 벽만)
       if(inten>0.16){
         var edge=v.long>=v.short?'246,70,93':'46,189,133', ew=Math.min(cw*0.42,cw*inten*0.5);
@@ -1587,14 +1591,19 @@ function draw(){
     ctx.fillText(fmtPx(st.price),cr+5,yp+4); ctx.textAlign='start';
   }
 
-  // --- 상위 청산 레벨 라벨 ---
-  var t=topLevels();
+  // --- 상위 청산 레벨 라벨 + 근접 알림 ---
+  var t=topLevels(), NEAR=0.015, nearHit=false, pulse=0.4+0.6*Math.abs(Math.sin(Date.now()/350));
   [[t.shorts[0],'46,189,133','숏'],[t.longs[0],'246,70,93','롱']].forEach(function(d){
     if(!d[0])return; var p=binPx(d[0][0]); if(p<lo||p>hi)return; var yy=y(p);
-    ctx.fillStyle='rgba('+d[1]+',0.95)'; ctx.font='700 10.5px Pretendard,sans-serif';
-    var sc=usdScale(), label='◀ '+d[2]+' 청산벽'+(sc>0?(' 추정 '+fmtUsd(d[0][1]*sc)):'');
+    var dist=st.price?Math.abs(p-st.price)/st.price:9, near=dist<=NEAR;
+    if(near){ nearHit=true;
+      ctx.strokeStyle='rgba('+d[1]+','+(0.35+pulse*0.6).toFixed(2)+')'; ctx.lineWidth=2; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(cl,yy); ctx.lineTo(cr,yy); ctx.stroke(); }
+    ctx.fillStyle='rgba('+d[1]+',0.98)'; ctx.font='700 10.5px Pretendard,sans-serif';
+    var sc=usdScale(), label=(near?'⚠ ':'◀ ')+d[2]+' 청산벽'+(sc>0?(' 추정 '+fmtUsd(d[0][1]*sc)):'')+(near?' 근접 '+(dist*100).toFixed(2)+'%':'');
     ctx.textAlign='right'; ctx.fillText(label,cr-6,yy-3); ctx.textAlign='start';
   });
+  if(nearHit)dirty=true; // 근접 시 펄스 애니메이션 유지
 
   // --- 가격 축 ---
   ctx.fillStyle='#5a6576'; ctx.font='10px Pretendard,sans-serif'; ctx.textAlign='left';
