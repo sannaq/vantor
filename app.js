@@ -1657,6 +1657,12 @@ function _pc(c){ c=+c||0; return '<span class="'+cls(c)+'">'+arw(c)+' '+pctTxt(c
 function _dec(s){ try{ var d=document.createElement('textarea'); d.innerHTML=s; s=d.value; d.innerHTML=s; return d.value; }catch(e){ return s; } }
 function _bnews(k){ return (_lastNews||[]).slice(0,k).map(function(n){return '<a class="bnews" href="'+n.link+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span>'+esc(_dec(n.title))+'</a>';}).join(''); }
 function _row(cap,inner){ return inner?('<div class="brow"><span class="bcap">'+cap+'</span>'+inner+'</div>'):''; }
+var briefCollapsed={os:false,kr:false};
+try{ var _bc=JSON.parse(localStorage.getItem('aurBrief')||'null'); if(_bc)briefCollapsed=_bc; }catch(e){}
+function toggleBriefSec(k){ briefCollapsed[k]=!briefCollapsed[k]; try{localStorage.setItem('aurBrief',JSON.stringify(briefCollapsed));}catch(e){} renderBriefing(); }
+window.toggleBriefSec=toggleBriefSec;
+function _sec(key,title,inner){ var col=briefCollapsed[key]?' collapsed':'';
+  return '<div class="bsec'+col+'"><div class="bsec-h" onclick="toggleBriefSec(\''+key+'\')"><span class="tw">▾</span> '+title+'</div><div class="bsec-b">'+(inner||'')+'</div></div>'; }
 function _preComment(U){
   var q=U['QQQ'], spy=U['SPY'], dia=U['DIA'], smh=U['SMH'], tlt=U['TLT'], uso=U['USO'], gld=U['GLD'];
   if(!q||q.c==null)return '미국 지수 데이터를 불러오는 중…';
@@ -1676,10 +1682,10 @@ function _preComment(U){
 }
 function renderBriefing(){
   var el=$('#brief'); if(!el)return;
+  if(typeof TECHNM==='undefined'||typeof briefCollapsed==='undefined')return; // 초기화 전 조기 호출 방지
   if(CARDPREF&&CARDPREF.hidden&&CARDPREF.hidden['브리핑']){ el.innerHTML=''; return; }
-  var U=BRIEF_US||{}, body='';
-  var seg='<div class="brief-seg"><button class="'+(briefMode==='pre'?'on':'')+'" onclick="setBriefMode(\'pre\')">🌏 해외 · 밤사이</button><button class="'+(briefMode==='close'?'on':'')+'" onclick="setBriefMode(\'close\')">🇰🇷 국내 · 마감</button></div>';
-  if(briefMode==='pre'){
+  var U=BRIEF_US||{}, osBody, krBody;
+  { // ── 🌏 해외(밤사이) ──
     // 미국 지수
     var us=''; [['S&P500','SPY'],['나스닥','QQQ'],['다우','DIA'],['반도체','SMH'],['러셀2000','IWM']].forEach(function(p){ var q=U[p[1]]; if(q&&q.c!=null)us+=_bp(p[0],_pc(q.c)); });
     var vix=U['VIXY']; if(vix&&vix.c!=null)us+=_bp('VIX',(vix.c>=0?'<span class="down">▲불안</span>':'<span class="up">▼안정</span>'));
@@ -1693,14 +1699,15 @@ function renderBriefing(){
     var usd=(IDX||[]).find(function(x){return /USD/.test(x.nm);}); if(usd&&usd.c!=null)mac=_bp('환율','<b>'+(usd.v?(+usd.v).toLocaleString():'')+'</b> '+_pc(usd.c))+mac;
     // 코인
     var coin=''; if(BRIEF_BTC)coin+=_bp('비트코인','<b>$'+Math.round(BRIEF_BTC.px).toLocaleString()+'</b> '+_pc(BRIEF_BTC.c)); if(BRIEF_ETH)coin+=_bp('이더리움','<b>$'+Math.round(BRIEF_ETH.px).toLocaleString()+'</b> '+_pc(BRIEF_ETH.c));
-    body=_row('📈 미국 지수',us||'<span style="color:var(--faint);font-size:12px">불러오는 중…</span>')
+    osBody=_row('📈 미국 지수',us||'<span style="color:var(--faint);font-size:12px">불러오는 중…</span>')
       +_row('💻 특징주',tech)
       +_row('🏭 섹터',sec)
       +_row('💵 금리·달러·원자재',mac)
       +_row('₿ 코인',coin)
       +'<div class="bcomment">'+_preComment(U)+'</div>'
       +(_bnews(6)?_row('📰 밤사이 뉴스','')+_bnews(6):'');
-  } else {
+  }
+  { // ── 🇰🇷 국내(마감) ──
     var ks=(IDX||[]).find(function(x){return x.nm==='KOSPI';})||{}, kq=(IDX||[]).find(function(x){return x.nm==='KOSDAQ';})||{};
     var b=FLOW.breadth||{};
     var idxrow=_bp('코스피','<b>'+(ks.v?(+ks.v).toLocaleString():'')+'</b> '+_pc(ks.c||0))+_bp('코스닥','<b>'+(kq.v?(+kq.v).toLocaleString():'')+'</b> '+_pc(kq.c||0))
@@ -1727,7 +1734,7 @@ function renderBriefing(){
     if(frg!=null)cmt2+=', 외국인 '+(frg>=0?'순매수':'순매도')+'('+(frg>=0?'+':'')+(+frg).toLocaleString()+'억)'+(frg>=0?' 주도':'');
     cmt2+='. 상승 '+(b.up||0)+'·하락 '+(b.down||0)+'.';
     if(strong)cmt2+=' <b>'+strong.nm+'</b> 업종이 '+pctTxt(strong.chg)+'로 강세.';
-    body=_row('📊 지수',idxrow)
+    krBody=_row('📊 지수',idxrow)
       +_row('🏦 수급',supply||'<span style="color:var(--faint);font-size:12px">집계 중</span>')
       +_row('🔥 강세 업종',strongSec)
       +_row('💧 약세 업종',weakSec)
@@ -1738,7 +1745,8 @@ function renderBriefing(){
       +'<div class="bcomment">'+cmt2+'</div>'
       +(_bnews(6)?_row('📰 오늘 뉴스','')+_bnews(6):'');
   }
-  el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📋 오늘의 브리핑</h2><div class="r">'+seg+'</div></div><div class="pad">'+body+'</div></div>';
+  el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📋 오늘의 브리핑</h2><div class="r"><span style="color:var(--faint);font-size:11px">▾ 눌러 접기/펼치기</span></div></div><div class="pad" style="padding-top:2px">'
+    +_sec('os','🌏 해외 · 밤사이',osBody)+_sec('kr','🇰🇷 국내 · 마감',krBody)+'</div></div>';
 }
 
 initCards(); renderSummary(); renderBriefing();

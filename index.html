@@ -323,6 +323,14 @@
 .bnews{display:block;font-size:12.5px;color:var(--ink);text-decoration:none;padding:4px 0 4px 78px}
 .bnews .tm{color:var(--faint);font-size:11px;margin-right:7px}
 .bnews:hover{color:#c9881f}
+.bsec{border-top:1px solid var(--line)}
+.bsec:first-child{border-top:0}
+.bsec-h{display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:800;font-size:13.5px;padding:11px 2px;user-select:none}
+.bsec-h:hover{color:#c9881f}
+.bsec-h .tw{color:var(--faint);font-size:11px;transition:transform .15s;display:inline-block}
+.bsec.collapsed .bsec-h .tw{transform:rotate(-90deg)}
+.bsec.collapsed .bsec-b{display:none}
+.bsec-b{padding-bottom:6px}
 @media(max-width:640px){.bcap{min-width:100%}.bnews{padding-left:0}}
 </style>
 </head>
@@ -496,7 +504,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=7"></script>
+<script src="app.js?v=9"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
