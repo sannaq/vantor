@@ -1287,7 +1287,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
 function openCoinTerminal(){
   var v=$('#v-coin'); if(!v)return;
   v.innerHTML='<iframe id="coinFrame" src="coin.html" style="position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;margin:0;z-index:9998;background:#0b0f16;display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>'
-    +'<button id="coinExit" onclick="setMode(\'stock\')" title="주식 모드로" style="position:fixed;left:14px;bottom:14px;z-index:9999;background:rgba(19,25,36,.95);color:#e8edf4;border:1px solid #2a3646;border-radius:22px;padding:9px 15px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.45);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)">◀ 밤톨이 주식</button>';
+    +'<button id="coinExit" onclick="setMode(\'stock\')" title="주식 모드로 돌아가기" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483000;pointer-events:auto;background:linear-gradient(135deg,#f0cf78,#e0b552);color:#231a05;border:none;border-radius:24px;padding:11px 22px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 0 3px rgba(224,181,82,.25)">◀ 밤톨이 주식 모드로 돌아가기</button>';
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 

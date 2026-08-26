@@ -278,6 +278,9 @@
 #v-liq .note{color:var(--faint);font-size:11px;line-height:1.7;margin-top:12px}
 #v-liq .note b{color:var(--sub)}
 #v-liq .big{color:var(--gold)!important}
+.usticker{display:flex;align-items:center;gap:12px;font-size:12px;font-weight:700;color:var(--sub);white-space:nowrap;overflow-x:auto;max-width:46vw}
+.usticker .usi{display:inline-flex;gap:5px}.usticker .usi b{color:var(--txt,#e8edf4);font-weight:800}
+@media(max-width:720px){.usticker{max-width:40vw;font-size:11px;gap:8px}}
 </style>
 </head>
 <body>
@@ -285,6 +288,7 @@
   <div class="brand"><span style="color:var(--accent)">◆</span> VANTOR <span class="muted" style="font-weight:600;font-size:12px">선물 분석 터미널</span>
     <small><span id="live"><span class="dot off"></span>연결 중…</span> · 크립토 실시간 · <span id="clock">--:--:--</span></small></div>
   <div style="display:flex;gap:8px;align-items:center">
+    <div id="usTicker" class="usticker" title="미국 증시(ETF 실시간) · 코인과 상관"></div>
     <button class="loginbtn" id="login">🔓 로그인</button>
     <button class="tbtn" id="theme" title="라이트/다크">🌙</button>
   </div>
@@ -621,6 +625,15 @@ function showDetail(s){
   if(x.bn)fetchFlow(x);
 }
 const FAPI='https://fapi.binance.com/fapi/v1/';
+const KISPROXY='https://aureum-kis.wlsghman1.workers.dev';
+/* 코인 모드 상단 US 티커(나스닥·S&P·다우 ETF 실시간 · 코인↔나스닥 상관) */
+function loadUsTicker(){ var el=document.getElementById('usTicker'); if(!el)return;
+  fetch(KISPROXY+'/quotes?mkt=US&codes=QQQ,SPY,DIA').then(function(r){return r.json();}).then(function(q){
+    if(!q||!q.quotes)return; var m={}; q.quotes.forEach(function(x){m[x.code]=x;});
+    var items=[['나스닥','QQQ'],['S&P','SPY'],['다우','DIA']].map(function(p){ var d=m[p[1]]; if(!d||d.c==null)return '';
+      var up=d.c>=0, col=up?'#2ebd85':'#f6465d'; return '<span class="usi"><b>'+p[0]+'</b> <span style="color:'+col+'">'+(up?'▲':'▼')+(up?'+':'')+d.c.toFixed(2)+'%</span></span>'; }).filter(Boolean).join('');
+    el.innerHTML=items?('🇺🇸 '+items):''; }).catch(function(){});
+}
 let chartObj=null, curInterval='15m', chartTimer=null, chartOn=true, chartWS=null;
 var _savedView={}; // 줌/팬 보존(심볼|봉 → 보이는 범위). live() 45초 재빌드 시 줌 유지
 try{chartOn=localStorage.getItem('oxchart')!=='0';}catch(e){}
@@ -1114,6 +1127,7 @@ startTickerWS();
 if(typeof renderJournal==='function')renderJournal();
 setInterval(checkAlerts,4000);
 live();setInterval(live,45000);setInterval(stamp,1000);
+loadUsTicker();setInterval(loadUsTicker,60000);
 function relTime(d){var s=(Date.now()-d)/1000; if(s<60)return '방금 전'; if(s<3600)return Math.floor(s/60)+'분 전'; if(s<86400)return Math.floor(s/3600)+'시간 전'; return Math.floor(s/86400)+'일 전';}
 function sentiment(t){var neg=['하락','급락','규제','금지','관세','해킹','청산','폭락','우려','경고','소송','제재','유출','하향','파산','연기','거부','약세','손실','벌금','압류','위기','충격','매도','부진','논란'];var pos=['상승','급등','호재','승인','채택','도입','유입','신고가','돌파','완화','호조','성장','상향','상장','파트너','투자','반등','회복','매수','기대','최고','호실적','흥행'];for(var i=0;i<neg.length;i++)if(t.indexOf(neg[i])>-1)return 'neg';for(var j=0;j<pos.length;j++)if(t.indexOf(pos[j])>-1)return 'pos';return 'neu';}
 async function fetchNews(){var box=document.getElementById('newsbox'); if(!box)return;
