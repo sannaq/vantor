@@ -326,6 +326,7 @@
         <div><span style="color:var(--sub)">▮</span> 거래대금(하단 바) · 마우스 올리면 상세</div>
         <div><span style="color:var(--sub)">┈</span> 레버리지 청산대(10·25·50·100x)</div>
         <div><span style="color:#becde1">▏</span> 매물대(좌측, 거래대금 프로파일) · POC=최대매물</div>
+        <div><span style="color:#2ebd85">▢</span> 오더블럭(임펄스 직전 반대캔들) · 되돌림 자리(지지/저항)</div>
       </div>
     </div>
     <div class="card">
@@ -810,6 +811,14 @@ function refreshChart(){ if(typeof live==='function')live(); if(sel)showDetail(s
 /* live() 45초 주기에 상세를 통째로 재빌드하지 않고 시세(가격·등락·시그널)만 제자리 갱신 → 차트 재빌드/줌리셋 방지 */
 function refreshDetailQuote(){ var x=C.find(function(v){return v.s===sel;}); if(!x)return; var q=det&&det.querySelector('#detQuote'); if(!q)return; if(!x._st)recalc(x); var t=TAG[x._st]||TAG.base; q.innerHTML='<span class="price num">'+x._disp+'</span>'+chgHtml(x.c)+'<span class="pill '+t[1]+'">'+t[0]+'</span>'; }
 function toBars(raw){return raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));}
+/* 오더블럭: 강한 임펄스 직전의 반대 캔들(미체결만) → 되돌림 지지/저항 */
+function findOrderBlocks(cs,cur){ var n=cs.length; if(n<8)return []; var s=0; for(var i=0;i<n;i++)s+=(cs[i].h-cs[i].l); var avg=s/n; if(!(avg>0))return [];
+  var bl=[],br=[]; for(var i=2;i<n-2;i++){ var a=cs[i],b=cs[i+1],bb=Math.abs(b.c-b.o);
+    if(a.c<a.o&&b.c>b.o&&bb>avg*1.1&&b.c>a.h)bl.push({type:'bull',top:a.h,bottom:a.l,idx:i});
+    if(a.c>a.o&&b.c<b.o&&bb>avg*1.1&&b.c<a.l)br.push({type:'bear',top:a.h,bottom:a.l,idx:i}); }
+  function fresh(o){ for(var j=o.idx+2;j<n;j++){ if(o.type==='bull'&&cs[j].l<o.bottom)return false; if(o.type==='bear'&&cs[j].h>o.top)return false; } return true; }
+  var out=[]; bl.filter(fresh).filter(function(o){return o.top<=cur;}).slice(-2).forEach(function(o){out.push(o);});
+  br.filter(fresh).filter(function(o){return o.bottom>=cur;}).slice(-2).forEach(function(o){out.push(o);}); return out; }
 function setTf(iv){autoTf=false; try{localStorage.setItem('oxauto','0');}catch(e){} curInterval=iv; if(sel) showDetail(sel);}
 function toggleChart(){chartOn=!chartOn;try{localStorage.setItem('oxchart',chartOn?'1':'0');}catch(e){} if(sel)showDetail(sel);}
 var liqOn=false; try{liqOn=localStorage.getItem('oxliq')==='1';}catch(e){}
@@ -880,6 +889,7 @@ async function drawChart(x){
     });
     var poc=volProfile(raw); if(poc&&lineOn.poc)cs.createPriceLine({price:(poc.low+poc.high)/2,color:'#ff9800',lineWidth:2,lineStyle:0,axisLabelVisible:true,title:'매물대'});
     if(liqOn){var tiers=(x.bn?[25,50,75]:[5,10,20]); if(tiers.indexOf(curLev)<0)tiers.push(curLev); tiers.sort(function(a,b){return a-b;}); tiers.forEach(function(L){var frac=Math.max(0.0005,1/L-0.005), cur=(L===curLev), a=cur?0.95:0.4, w=cur?2:1; cs.createPriceLine({price:x.px*(1-frac),color:'rgba(246,70,93,'+a+')',lineWidth:w,lineStyle:0,axisLabelVisible:true,title:(cur?'▶':'')+'롱'+L+'x청산'});cs.createPriceLine({price:x.px*(1+frac),color:'rgba(46,189,133,'+a+')',lineWidth:w,lineStyle:0,axisLabelVisible:true,title:(cur?'▶':'')+'숏'+L+'x청산'});});}
+    if(lineOn.ob!==false){ findOrderBlocks(data.map(function(d){return {o:d.open,h:d.high,l:d.low,c:d.close};}), x.px).forEach(function(ob){ var col=ob.type==='bull'?'#2ebd85':'#f6465d'; cs.createPriceLine({price:(ob.type==='bull'?ob.top:ob.bottom),color:col,lineWidth:1,lineStyle:2,axisLabelVisible:true,title:(ob.type==='bull'?'🟩OB지지':'🟥OB저항')}); }); }
     // 회귀 채널 · 골드 스윙 추세선 — 함수화(팬으로 과거 로딩 시 재계산·연장)
     var chanRefs=[], trendRef=null;
     function drawChannel(dd){
@@ -1369,6 +1379,19 @@ function allBins(){
   st.bins.forEach(function(v,b){ var c=m.get(b)||{long:0,short:0,col:last}; c.long+=v.long*boost; c.short+=v.short*boost; m.set(b,c); }); // 실측 청산은 '지금'(우측)에 형성
   return m;
 }
+// ---- 오더블럭: 강한 임펄스 직전의 반대 캔들(미체결만). 가격이 되돌아오는 자리 ----
+function findOrderBlocks(cs,cur){
+  var n=cs.length; if(n<8)return []; var s=0; for(var i=0;i<n;i++)s+=(cs[i].h-cs[i].l); var avg=s/n; if(!(avg>0))return [];
+  var bulls=[],bears=[];
+  for(var i=2;i<n-2;i++){ var a=cs[i],b=cs[i+1],bb=Math.abs(b.c-b.o);
+    if(a.c<a.o&&b.c>b.o&&bb>avg*1.1&&b.c>a.h) bulls.push({type:'bull',top:a.h,bottom:a.l,idx:i});
+    if(a.c>a.o&&b.c<b.o&&bb>avg*1.1&&b.c<a.l) bears.push({type:'bear',top:a.h,bottom:a.l,idx:i}); }
+  function fresh(ob){ for(var j=ob.idx+2;j<n;j++){ if(ob.type==='bull'&&cs[j].l<ob.bottom)return false; if(ob.type==='bear'&&cs[j].h>ob.top)return false; } return true; }
+  var out=[];
+  bulls.filter(fresh).filter(function(o){return o.top<=cur;}).slice(-2).forEach(function(o){out.push(o);});
+  bears.filter(fresh).filter(function(o){return o.bottom>=cur;}).slice(-2).forEach(function(o){out.push(o);});
+  return out;
+}
 
 // ---- 데이터 로드 ----
 function api(sym){ return sym+'USDT'; }
@@ -1599,6 +1622,16 @@ function draw(){
     for(var iv=0;iv<n;iv++){ var c2=cs[iv], q2=c2.v*c2.c, bh=Math.max(0.6,q2/maxVol*volH), x2=cl+iv*bw+bw/2;
       ctx.fillStyle=(c2.c>=c2.o)?'rgba(46,189,133,0.42)':'rgba(246,70,93,0.42)';
       ctx.fillRect(x2-vw/2, cb-bh, vw, bh); } }
+
+  // --- 오더블럭 존(형성 시점→우측, 되돌림 자리) ---
+  var obs=findOrderBlocks(cs, st.price);
+  obs.forEach(function(ob){ var yt=y(ob.top), ybt=y(ob.bottom); if(ob.top<lo||ob.bottom>hi)return;
+    var ox=cl+ob.idx*bw, rgb=ob.type==='bull'?'46,189,133':'246,70,93';
+    ctx.fillStyle='rgba('+rgb+',0.10)'; ctx.fillRect(ox,yt,cr-ox,ybt-yt);
+    ctx.strokeStyle='rgba('+rgb+',0.5)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    ctx.strokeRect(ox,yt,cr-ox,ybt-yt); ctx.setLineDash([]);
+    ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.font='700 9.5px Pretendard,sans-serif'; ctx.textAlign='left';
+    ctx.fillText((ob.type==='bull'?'🟩 OB 지지':'🟥 OB 저항'),ox+3,yt+11); ctx.textAlign='start'; });
 
   // --- 캔들 ---
   for(var i=0;i<n;i++){

@@ -509,6 +509,14 @@ function gradeTxt(v){ return v>=85?['매우 양호','up']:v>=70?['양호','up']:
 /* 지수이동평균 — 종가 배열 → EMA 배열. 초기값은 첫 종가로 시드(관례) */
 function emaSeries(closes,p){ var k=2/(p+1), out=[], e=closes[0];
   for(var i=0;i<closes.length;i++){ e=(i===0)?closes[0]:closes[i]*k+e*(1-k); out.push(e); } return out; }
+/* 오더블럭: 강한 임펄스 직전의 반대 캔들(미체결만) → 되돌림 지지/저항 자리 */
+function findOrderBlocks(cs,cur){ var n=cs.length; if(n<8)return []; var s=0; for(var i=0;i<n;i++)s+=(cs[i].h-cs[i].l); var avg=s/n; if(!(avg>0))return [];
+  var bl=[],br=[]; for(var i=2;i<n-2;i++){ var a=cs[i],b=cs[i+1],bb=Math.abs(b.c-b.o);
+    if(a.c<a.o&&b.c>b.o&&bb>avg*1.1&&b.c>a.h)bl.push({type:'bull',top:a.h,bottom:a.l,idx:i});
+    if(a.c>a.o&&b.c<b.o&&bb>avg*1.1&&b.c<a.l)br.push({type:'bear',top:a.h,bottom:a.l,idx:i}); }
+  function fresh(o){ for(var j=o.idx+2;j<n;j++){ if(o.type==='bull'&&cs[j].l<o.bottom)return false; if(o.type==='bear'&&cs[j].h>o.top)return false; } return true; }
+  var out=[]; bl.filter(fresh).filter(function(o){return o.top<=cur;}).slice(-2).forEach(function(o){out.push(o);});
+  br.filter(fresh).filter(function(o){return o.bottom>=cur;}).slice(-2).forEach(function(o){out.push(o);}); return out; }
 function drawStockChart(cv,r){
   if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect();
   cv.width=Math.round(rect.width*2); cv.height=520;
@@ -547,6 +555,13 @@ function drawStockChart(cv,r){
     ctx.fillStyle=sub;ctx.textAlign='left';
     ctx.fillText(r.ccy==='USD'?('$'+pv.toFixed(2)):Math.round(pv).toLocaleString('en-US'),plotR+6,yy); }
   var cw=(plotR-padL)/n, bw=Math.max(2,cw*0.62);
+  // 오더블럭 존(임펄스 직전 반대 캔들 → 되돌림 지지/저항)
+  findOrderBlocks(data.map(function(d){return {o:d[0],h:d[1],l:d[2],c:d[3]};}), last).forEach(function(ob){
+    var yt=y(ob.top), yb=y(ob.bottom), ox=xAt(ob.idx)-cw/2, rgb=ob.type==='bull'?'22,163,116':'229,56,77';
+    ctx.fillStyle='rgba('+rgb+',0.10)'; ctx.fillRect(ox,yt,plotR-ox,yb-yt);
+    ctx.strokeStyle='rgba('+rgb+',0.55)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.strokeRect(ox,yt,plotR-ox,yb-yt); ctx.setLineDash([]);
+    ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.font='700 14px system-ui,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
+    ctx.fillText(ob.type==='bull'?'OB 지지':'OB 저항', ox+4, yt+3); ctx.textBaseline='middle'; });
   // 캔들
   for(var j=0;j<n;j++){var d=data[j],x=xAt(j),rise=d[3]>=d[0],col=rise?up:dn;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x,y(d[1]));ctx.lineTo(x,y(d[2]));ctx.stroke();
