@@ -889,7 +889,9 @@ async function drawChart(x){
     });
     var poc=volProfile(raw); if(poc&&lineOn.poc)cs.createPriceLine({price:(poc.low+poc.high)/2,color:'#ff9800',lineWidth:2,lineStyle:0,axisLabelVisible:true,title:'매물대'});
     if(liqOn){var tiers=(x.bn?[25,50,75]:[5,10,20]); if(tiers.indexOf(curLev)<0)tiers.push(curLev); tiers.sort(function(a,b){return a-b;}); tiers.forEach(function(L){var frac=Math.max(0.0005,1/L-0.005), cur=(L===curLev), a=cur?0.95:0.4, w=cur?2:1; cs.createPriceLine({price:x.px*(1-frac),color:'rgba(246,70,93,'+a+')',lineWidth:w,lineStyle:0,axisLabelVisible:true,title:(cur?'▶':'')+'롱'+L+'x청산'});cs.createPriceLine({price:x.px*(1+frac),color:'rgba(46,189,133,'+a+')',lineWidth:w,lineStyle:0,axisLabelVisible:true,title:(cur?'▶':'')+'숏'+L+'x청산'});});}
-    if(lineOn.ob!==false){ findOrderBlocks(data.map(function(d){return {o:d.open,h:d.high,l:d.low,c:d.close};}), x.px).forEach(function(ob){ var col=ob.type==='bull'?'#2ebd85':'#f6465d'; cs.createPriceLine({price:(ob.type==='bull'?ob.top:ob.bottom),color:col,lineWidth:1,lineStyle:2,axisLabelVisible:true,title:(ob.type==='bull'?'🟩OB지지':'🟥OB저항')}); }); }
+    if(lineOn.ob!==false){ findOrderBlocks(data.map(function(d){return {o:d.open,h:d.high,l:d.low,c:d.close};}), x.px).forEach(function(ob){ var col=ob.type==='bull'?'#2ebd85':'#f6465d';
+      cs.createPriceLine({price:ob.top,color:col,lineWidth:2,lineStyle:2,axisLabelVisible:true,title:(ob.type==='bull'?'🟩OB지지 상단':'🟥OB저항 상단')});
+      cs.createPriceLine({price:ob.bottom,color:col,lineWidth:2,lineStyle:2,axisLabelVisible:false,title:(ob.type==='bull'?'OB하단':'OB하단')}); }); }
     // 회귀 채널 · 골드 스윙 추세선 — 함수화(팬으로 과거 로딩 시 재계산·연장)
     var chanRefs=[], trendRef=null;
     function drawChannel(dd){
@@ -1626,12 +1628,13 @@ function draw(){
   // --- 오더블럭 존(형성 시점→우측, 되돌림 자리) ---
   var obs=findOrderBlocks(cs, st.price);
   obs.forEach(function(ob){ var yt=y(ob.top), ybt=y(ob.bottom); if(ob.top<lo||ob.bottom>hi)return;
-    var ox=cl+ob.idx*bw, rgb=ob.type==='bull'?'46,189,133':'246,70,93';
-    ctx.fillStyle='rgba('+rgb+',0.10)'; ctx.fillRect(ox,yt,cr-ox,ybt-yt);
-    ctx.strokeStyle='rgba('+rgb+',0.5)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+    var ox=cl+ob.idx*bw, rgb=ob.type==='bull'?'46,189,133':'246,70,93', hpx2=Math.max(14,ybt-yt);
+    ctx.fillStyle='rgba('+rgb+',0.20)'; ctx.fillRect(ox,yt,cr-ox,ybt-yt);              // 더 진하게
+    ctx.strokeStyle='rgba('+rgb+',0.95)'; ctx.lineWidth=1.8; ctx.setLineDash([5,3]);   // 굵고 또렷한 테두리
     ctx.strokeRect(ox,yt,cr-ox,ybt-yt); ctx.setLineDash([]);
-    ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.font='700 9.5px Pretendard,sans-serif'; ctx.textAlign='left';
-    ctx.fillText((ob.type==='bull'?'🟩 OB 지지':'🟥 OB 저항'),ox+3,yt+11); ctx.textAlign='start'; });
+    var lb=(ob.type==='bull'?'🟩 OB 지지':'🟥 OB 저항'); ctx.font='800 11px Pretendard,sans-serif';
+    var lw=ctx.measureText(lb).width+8; ctx.fillStyle='rgba('+rgb+',0.92)'; ctx.fillRect(ox,yt,lw,15); // 라벨 배경칩
+    ctx.fillStyle='#0b0f16'; ctx.textAlign='left'; ctx.fillText(lb,ox+4,yt+11); ctx.textAlign='start'; });
 
   // --- 캔들 ---
   for(var i=0;i<n;i++){

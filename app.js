@@ -558,10 +558,11 @@ function drawStockChart(cv,r){
   // 오더블럭 존(임펄스 직전 반대 캔들 → 되돌림 지지/저항)
   findOrderBlocks(data.map(function(d){return {o:d[0],h:d[1],l:d[2],c:d[3]};}), last).forEach(function(ob){
     var yt=y(ob.top), yb=y(ob.bottom), ox=xAt(ob.idx)-cw/2, rgb=ob.type==='bull'?'22,163,116':'229,56,77';
-    ctx.fillStyle='rgba('+rgb+',0.10)'; ctx.fillRect(ox,yt,plotR-ox,yb-yt);
-    ctx.strokeStyle='rgba('+rgb+',0.55)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.strokeRect(ox,yt,plotR-ox,yb-yt); ctx.setLineDash([]);
-    ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.font='700 14px system-ui,sans-serif'; ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText(ob.type==='bull'?'OB 지지':'OB 저항', ox+4, yt+3); ctx.textBaseline='middle'; });
+    ctx.fillStyle='rgba('+rgb+',0.20)'; ctx.fillRect(ox,yt,plotR-ox,yb-yt);
+    ctx.strokeStyle='rgba('+rgb+',0.95)'; ctx.lineWidth=2.4; ctx.setLineDash([6,4]); ctx.strokeRect(ox,yt,plotR-ox,yb-yt); ctx.setLineDash([]);
+    var lb=(ob.type==='bull'?'OB 지지':'OB 저항'); ctx.font='800 15px system-ui,sans-serif'; ctx.textBaseline='top'; ctx.textAlign='left';
+    var lw=ctx.measureText(lb).width+10; ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.fillRect(ox,yt,lw,20);
+    ctx.fillStyle='#fff'; ctx.fillText(lb, ox+5, yt+3); ctx.textBaseline='middle'; });
   // 캔들
   for(var j=0;j<n;j++){var d=data[j],x=xAt(j),rise=d[3]>=d[0],col=rise?up:dn;ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x,y(d[1]));ctx.lineTo(x,y(d[2]));ctx.stroke();
