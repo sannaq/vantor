@@ -575,7 +575,7 @@ function showDetail(s){
   if(chartTimer){clearInterval(chartTimer);chartTimer=null;} if(chartWS){try{chartWS.close()}catch(e){} chartWS=null;}
   const chart='<a class="cbtn" href="https://www.onexcore.com/trading/'+x.s.toLowerCase()+'usdt" target="_blank" rel="noopener">📈 VANTOR 차트 열기</a>';
   let h='<button class="backbtn" onclick="document.body.classList.remove(\'detail-open\');window.scrollTo({top:0})">◀ 목록으로</button><h2>상세 — '+x.s+(x.bn?' <span class="live-b">●LIVE</span>':' <span class="muted" style="font-weight:500;text-transform:none">(스냅샷)</span>')+' <span class="muted" style="text-transform:none;font-weight:500">'+esc(x.k)+'</span> <span id="detailStar" class="star'+(favs.has(x.s)?' on':'')+'" title="즐겨찾기" onclick="toggleFav(\''+x.s+'\')">★</span></h2>';
-  h+='<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="price num">'+x._disp+'</span>'+chgHtml(x.c)+'<span class="pill '+t[1]+'">'+t[0]+'</span></div>';
+  h+='<div id="detQuote" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="price num">'+x._disp+'</span>'+chgHtml(x.c)+'<span class="pill '+t[1]+'">'+t[0]+'</span></div>';
   if(x.bn)h+='<div id="topsig" class="sigcard" style="display:none"></div>';
   if(x.bn){
     h+='<div id="alertbox" class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div>'
@@ -807,6 +807,8 @@ const LIM={'1m':300,'5m':300,'30m':300,'1h':300,'4h':300,'1d':300};
 function ema(v,p){var k=2/(p+1),e=v[0],o=[e],i;for(i=1;i<v.length;i++){e=v[i]*k+e*(1-k);o.push(e);}return o;}
 const IVMS={'1m':60000,'5m':300000,'30m':1800000,'1h':3600000,'4h':14400000,'1d':86400000};
 function refreshChart(){ if(typeof live==='function')live(); if(sel)showDetail(sel); }
+/* live() 45초 주기에 상세를 통째로 재빌드하지 않고 시세(가격·등락·시그널)만 제자리 갱신 → 차트 재빌드/줌리셋 방지 */
+function refreshDetailQuote(){ var x=C.find(function(v){return v.s===sel;}); if(!x)return; var q=det&&det.querySelector('#detQuote'); if(!q)return; if(!x._st)recalc(x); var t=TAG[x._st]||TAG.base; q.innerHTML='<span class="price num">'+x._disp+'</span>'+chgHtml(x.c)+'<span class="pill '+t[1]+'">'+t[0]+'</span>'; }
 function toBars(raw){return raw.map(k=>({time:Math.floor(k[0]/1000),open:+k[1],high:+k[2],low:+k[3],close:+k[4]}));}
 function setTf(iv){autoTf=false; try{localStorage.setItem('oxauto','0');}catch(e){} curInterval=iv; if(sel) showDetail(sel);}
 function toggleChart(){chartOn=!chartOn;try{localStorage.setItem('oxchart',chartOn?'1':'0');}catch(e){} if(sel)showDetail(sel);}
@@ -1066,7 +1068,8 @@ async function live(){
     C.forEach(x=>{if(x.bn&&tm[x.bn]){const o=tm[x.bn];x.px=+o.lastPrice;x.hi=+o.highPrice;x.lo=+o.lowPrice;x.c=+o.priceChangePercent;x.dec=decOf(x.px);const f=pm[x.bn]?+pm[x.bn].lastFundingRate:null;x.fund=(f==null)?'—':((f>=0?'+':'')+(f*100).toFixed(4)+'%');recalc(x);}});
     liveOK=true;
   }catch(e){liveOK=false;}
-  stamp();render(q.value);if(sel)showDetail(sel);
+  stamp();render(q.value);
+  if(sel){ if(det&&det.querySelector('#detQuote'))refreshDetailQuote(); else showDetail(sel); } // 이미 상세 열려있으면 시세만 갱신(차트 유지)
 }
 q.oninput=()=>render(q.value);
 [...document.querySelectorAll('.chip')].forEach(c=>{const go=()=>{q.value=c.dataset.s;render(q.value);sel=c.dataset.s;showDetail(sel);if(window.innerWidth<=780){document.body.classList.add('detail-open');window.scrollTo({top:0,behavior:'smooth'});}};c.onclick=go;c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};});
