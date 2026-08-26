@@ -89,7 +89,9 @@ const IDX=[
   {nm:'KOSPI',v:2609.42,c:-0.42,d:-10.97,tr:[2612,2605,2600,2598,2604,2611,2607,2603,2609],val:'11.2조',vol:'5.14억주'},
   {nm:'KOSDAQ',v:853.91,c:0.68,d:5.77,tr:[848,850,849,852,851,854,853,855,853.91],val:'7.6조',vol:'8.62억주'},
   {nm:'KOSPI200',v:344.38,c:-0.47,d:-1.63,tr:[345.8,345.2,344.6,344.1,344.5,344.9,344.4,344.2,344.38],val:'6.2조',vol:'2.17억주'},
-  {nm:'USD/KRW',v:1359.80,c:0.21,d:2.90,tr:[1357,1358,1357.5,1359,1360,1361,1360.4,1359.5,1359.8],val:'—',vol:'—',fx:true}
+  {nm:'USD/KRW',v:1359.80,c:0.21,d:2.90,tr:[1357,1358,1357.5,1359,1360,1361,1360.4,1359.5,1359.8],val:'—',vol:'—',fx:true},
+  {nm:'나스닥',v:0,c:0,d:0,tr:[],val:'—',vol:'QQQ',_us:true,etf:'QQQ',_real:false},
+  {nm:'S&P500',v:0,c:0,d:0,tr:[],val:'—',vol:'SPY',_us:true,etf:'SPY',_real:false}
 ];
 // 종목 데모 (점수 입력값 포함)
 const STK=[
@@ -423,13 +425,27 @@ window.setTune=setTune; window.resetTune=resetTune;
 function renderIdx(){
   var el=$('#idxstrip'); if(!el)return;
   el.innerHTML=IDX.map(function(x){ var pc=cls(x.c), col=x.c>0?'var(--up)':x.c<0?'var(--down)':'var(--flat)';
-    return '<div class="idx"><div class="nm">'+x.nm+(x._real?'':' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span>')+'</div>'+sparkline(x.tr,96,44,col)
-      +'<div class="v num '+pc+'">'+x.v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
-      +'<div class="d num '+pc+'">'+arw(x.c)+' '+Math.abs(x.d).toFixed(2)+' ('+pctTxt(x.c)+')</div>'
-      +'<div class="foot"><span>거래대금 '+x.val+'</span><span>'+(x.fx?'고가 1,363':'거래량 '+x.vol)+'</span></div></div>';
+    var badge=(!x._real&&!x._us)?' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span>':(x._us?' <span style="font-size:9px;font-weight:800;color:var(--sub);border:1px solid var(--line);border-radius:4px;padding:0 4px;vertical-align:middle">ETF</span>':'');
+    var valTxt=(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    var foot=x._us?('<span>미국 ETF</span><span>'+x.etf+' · 코인 상관</span>'):('<span>거래대금 '+x.val+'</span><span>'+(x.fx?'고가 1,363':'거래량 '+x.vol)+'</span>');
+    return '<div class="idx"><div class="nm">'+x.nm+badge+'</div>'+(x.tr&&x.tr.length?sparkline(x.tr,96,44,col):'')
+      +'<div class="v num '+pc+'">'+(x._us&&!x._real?'—':valTxt)+'</div>'
+      +'<div class="d num '+pc+'">'+arw(x.c)+' '+Math.abs(x.d||0).toFixed(2)+' ('+pctTxt(x.c)+')</div>'
+      +'<div class="foot">'+foot+'</div></div>';
   }).join('');
   // footer ticker
   var ft=$('#footTicker'); if(ft)ft.innerHTML=IDX.slice(0,2).map(function(x){return x.nm+' <span class="'+cls(x.c)+'">'+x.v.toLocaleString()+' '+arw(x.c)+pctTxt(x.c).replace('+','')+'</span>';}).join('');
+}
+/* 미국 지수(나스닥·S&P) — ETF(QQQ/SPY) 실데이터로 지수 스트립 채움. 코인↔나스닥 상관 참고용 */
+function loadUsIdx(){
+  if(!PROXY)return;
+  fetch(PROXY+'/quotes?mkt=US&codes=QQQ,SPY').then(function(r){return r.json();}).then(function(q){
+    if(!q||!q.quotes)return; var m={}; q.quotes.forEach(function(x){m[x.code]=x;});
+    IDX.forEach(function(ix){ if(ix.etf&&m[ix.etf]&&m[ix.etf].px!=null){ var qq=m[ix.etf];
+      ix.v=+qq.px; ix.c=+qq.c||0; ix.d=ix.v*(ix.c/100); ix._real=true;
+      ix.tr=(ix.tr||[]).concat([ix.v]); if(ix.tr.length>9)ix.tr=ix.tr.slice(-9); } });
+    renderIdx();
+  }).catch(function(){});
 }
 /* SMART MONEY */
 function renderSmart(){
@@ -1752,5 +1768,5 @@ function renderBriefing(){
 }
 
 initCards(); renderSummary(); renderBriefing();
-if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초
+if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
