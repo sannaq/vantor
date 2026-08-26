@@ -621,6 +621,7 @@ function showDetail(s){
 }
 const FAPI='https://fapi.binance.com/fapi/v1/';
 let chartObj=null, curInterval='15m', chartTimer=null, chartOn=true, chartWS=null;
+var _savedView={}; // 줌/팬 보존(심볼|봉 → 보이는 범위). live() 45초 재빌드 시 줌 유지
 try{chartOn=localStorage.getItem('oxchart')!=='0';}catch(e){}
 var autoTf=true; try{autoTf=localStorage.getItem('oxauto')!=='0';}catch(e){}
 var lastTfSwitch=0;
@@ -905,6 +906,8 @@ async function drawChart(x){
     }
     drawChannel(data); drawTrend(data);
     chart.timeScale().applyOptions({barSpacing:7,rightOffset:4}); // 적정 밀도(자동 전환 안정) · 최신봉 우측 정렬
+    var _vk=x.s+'|'+curInterval, _sv=_savedView[_vk]; // 같은 심볼·봉이면 이전 줌/팬 복원(재빌드 시 리셋 방지)
+    if(_sv){ try{ chart.timeScale().setVisibleLogicalRange(_sv); }catch(e){} }
     var lastBar=Object.assign({},data[data.length-1]);
     var iv=IVMS[curInterval]||900000;
     chartTimer=setInterval(function(){ fetch(FAPI+'klines?symbol='+x.bn+'&interval='+curInterval+'&limit=2').then(r=>r.json()).then(function(rw){ if(Array.isArray(rw)&&rw.length){var recent=toBars(rw); var nb=recent[recent.length-1]; try{cs.update(nb);}catch(e){} var li=data.length-1; if(li>=0&&data[li].time===nb.time){data[li]=nb;} else if(li>=0&&nb.time>data[li].time){data.push(nb);} lastBar=Object.assign({},nb);} }).catch(function(){}); }, 5000);
@@ -918,6 +921,7 @@ async function drawChart(x){
     // 무한 히스토리: 왼쪽 끝 근처로 팬/줌아웃하면 과거 데이터 자동 로딩(선·차트 자동 연장)
     var loadingHist=false, noMoreHist=false;
     chart.timeScale().subscribeVisibleLogicalRangeChange(function(lr){
+      if(lr)_savedView[x.s+'|'+curInterval]=lr; // 줌/팬 상태 저장(재빌드 시 복원용)
       if(autoTfCheck(lr))return; // 줌 레벨 따라 시간봉 자동 전환(수동 선택 시 OFF)
       if(!lr||loadingHist||noMoreHist)return;
       if(lr.from>10)return;
