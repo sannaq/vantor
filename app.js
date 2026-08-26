@@ -615,12 +615,14 @@ function drawCrosshair(idx){
   var dlabel=dt?((C.tf==='1'||C.tf==='5')?((dt.getMonth()+1)+'/'+dt.getDate()+' '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0')):(dt.getFullYear()+'.'+(dt.getMonth()+1)+'.'+dt.getDate())):'';
   var chg=idx>0?((d[3]-C.data[idx-1][3])/C.data[idx-1][3]*100):0;
   var vfmt=function(v){ v=+v||0; if(v>=1e8)return (v/1e8).toFixed(1)+'억'; if(v>=1e4)return Math.round(v/1e4)+'만'; return Math.round(v).toLocaleString('en-US'); };
+  var amtfmt=function(a){ a=+a||0; if(isUS)return a>=1e9?'$'+(a/1e9).toFixed(2)+'B':(a>=1e6?'$'+(a/1e6).toFixed(1)+'M':'$'+Math.round(a).toLocaleString('en-US')); return a>=1e12?(a/1e12).toFixed(2)+'조':(a>=1e8?Math.round(a/1e8).toLocaleString('en-US')+'억':Math.round(a/1e4).toLocaleString('en-US')+'만'); };
   tip.innerHTML='<div style="font-weight:800;margin-bottom:3px;color:var(--ink)">'+dlabel+'</div>'
     +'<div class="tr"><span>시</span><b>'+fmt(d[0])+'</b></div>'
     +'<div class="tr"><span>고</span><b class="up">'+fmt(d[1])+'</b></div>'
     +'<div class="tr"><span>저</span><b class="down">'+fmt(d[2])+'</b></div>'
     +'<div class="tr"><span>종</span><b class="'+cls(chg)+'">'+fmt(d[3])+' ('+(chg>=0?'+':'')+chg.toFixed(2)+'%)</b></div>'
     +'<div class="tr"><span>량</span><b>'+vfmt(d[4])+'</b></div>'
+    +'<div class="tr"><span>대금</span><b style="color:var(--gold)">'+amtfmt(d[4]*d[3])+'</b></div>'
     +C.MA.map(function(m,mi){return '<div class="tr"><span style="color:'+m[1]+'">MA'+m[0]+'</span><b style="color:'+m[1]+'">'+fmt(C.emas[mi][idx])+'</b></div>';}).join('');
   tip.style.display='block';
   // 위치: 크로스헤어 반대편
