@@ -248,6 +248,14 @@
 #v-liq #chart{width:100%;height:560px;display:block;border-radius:10px;touch-action:none}
 @media(max-width:920px){
 #v-liq #chart{height:440px}}
+@media(max-width:560px){
+#v-liq .wrap{padding:10px 10px 30px}
+#v-liq #chart{height:360px}
+#v-liq #lqSearch{width:100%!important;margin-left:0!important;order:9}
+#v-liq .top{gap:7px}
+#v-liq .legend{font-size:9px;max-width:62%;line-height:1.4}
+#v-liq #lqDeriv>div>div{min-width:calc(50% - 5px)!important}
+#v-liq .stat .v{font-size:17px}}
 #v-liq .legend{position:absolute;left:12px;top:10px;font-size:11px;color:var(--sub);
   background:#0b0f16bb;border:1px solid var(--line);border-radius:8px;padding:6px 9px;backdrop-filter:blur(4px);
   display:flex;flex-direction:column;gap:3px;pointer-events:none;line-height:1.5}
@@ -317,6 +325,7 @@
         <div><span style="color:#4a63e0">▬</span> 청산 히트맵(추정 · 거래량·OI 모델 + 실시간)</div>
         <div><span style="color:var(--sub)">▮</span> 거래대금(하단 바) · 마우스 올리면 상세</div>
         <div><span style="color:var(--sub)">┈</span> 레버리지 청산대(10·25·50·100x)</div>
+        <div><span style="color:#becde1">▏</span> 매물대(좌측, 거래대금 프로파일) · POC=최대매물</div>
       </div>
     </div>
     <div class="card">
@@ -491,7 +500,7 @@ const root=document.documentElement,tb=document.getElementById('theme');
 function sysDark(){return matchMedia&&matchMedia('(prefers-color-scheme:dark)').matches;}
 function applyTheme(t){root.setAttribute('data-theme',t);tb.textContent=t==='dark'?'☀️':'🌙';}
 let sv=null;try{sv=localStorage.getItem('oxtheme');}catch(e){}
-applyTheme(sv||(sysDark()?'dark':'light'));
+applyTheme(sv||'dark'); // 기본 다크(청산맵과 통일) · ☀️로 라이트 전환 가능
 tb.onclick=()=>{const n=root.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(n);try{localStorage.setItem('oxtheme',n);}catch(e){}};
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));document.getElementById('v-'+t.dataset.tab).classList.add('on');});
 
@@ -1545,6 +1554,20 @@ function draw(){
       }
     });
   }
+
+  // --- 매물대(거래대금 프로파일) 좌측 얇은 바 + POC ---
+  var vp={}, vpMax=0, pocBin=null;
+  for(var i=0;i<n;i++){ var c3=cs[i], q3=c3.v*c3.c; if(q3<=0)continue;
+    var b0=binOf(c3.l), b1=binOf(c3.h), span=Math.max(1,b1-b0+1), per=q3/span;
+    for(var pb=b0;pb<=b1;pb++){ vp[pb]=(vp[pb]||0)+per; if(vp[pb]>vpMax){vpMax=vp[pb];pocBin=pb;} } }
+  if(vpMax>0){ var vpW=cw*0.14;
+    for(var pk in vp){ var pp=binPx(+pk); if(pp<lo||pp>hi)continue; var yy2=y(pp), w2=vp[pk]/vpMax*vpW;
+      ctx.fillStyle='rgba(190,205,225,0.09)'; ctx.fillRect(cl,yy2-hpx/2,w2,hpx*0.9); }
+    if(pocBin!=null){ var pocP=binPx(pocBin); if(pocP>=lo&&pocP<=hi){ var yy3=y(pocP);
+      ctx.strokeStyle='rgba(190,205,225,0.35)'; ctx.setLineDash([2,4]); ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(cl,yy3); ctx.lineTo(cl+vpW,yy3); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle='rgba(190,205,225,0.6)'; ctx.font='9px Pretendard,sans-serif'; ctx.textAlign='left';
+      ctx.fillText('POC 매물대',cl+vpW+3,yy3+3); ctx.textAlign='start'; } } }
 
   // --- 레버리지 청산대(모델, 점선) ---
   if(st.price){
