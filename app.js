@@ -1239,7 +1239,7 @@ async function loadCoins(){
     arr.sort(function(a,b){return b.score-a.score;});
     var top=arr.slice(0,12);
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
-      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → VANTOR 코인 터미널에서 상세"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → 상세 차트"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
     $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openCoin(tr.dataset.sym); }; });
     if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
     // 코인 지표 카드(BTC/ETH/SOL/총시총)
@@ -1262,13 +1262,51 @@ async function loadCoinMarket(){
   }catch(e){}
   el.innerHTML=h||'<div style="color:var(--faint);font-size:12px">시장 데이터를 불러오지 못했어요</div>';
 }
-function openCoin(sym){
+/* 코인 상세 — 밤톨이 네이티브(주식 상세와 동일 디자인). Binance 실데이터 + drawStockChart 재사용 */
+var _coinCur=null;
+async function openCoin(sym){
+  sym=(sym||'BTC').toUpperCase().replace(/USDT$/,''); _coinCur=sym;
   var host=$('#coinHost'), body=$('#coinBody'); if(!host)return;
-  var src='coin.html'+(sym?('?s='+encodeURIComponent(sym)):'?v=new');
-  host.innerHTML='<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;font-size:13px">◀ 코인 목록</button><span style="color:var(--faint);font-size:12px">'+(sym?esc(sym)+' · ':'')+'VANTOR 코인 터미널</span><a href="'+src+'" target="_blank" rel="noopener" class="more" style="margin-left:auto">↗ 전체화면</a></div>'
-    +'<iframe src="'+src+'" style="width:100%;height:82vh;min-height:540px;border:1px solid var(--line);border-radius:14px;background:var(--panel)" loading="lazy" title="VANTOR"></iframe>';
-  host.style.display='block'; if(body)body.style.display='none';
-  window.scrollTo({top:0,behavior:'smooth'});
+  host.style.display='block'; if(body)body.style.display='none'; window.scrollTo({top:0,behavior:'smooth'});
+  host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button><div style="padding:30px;color:var(--faint)">'+esc(sym)+' 불러오는 중…</div>';
+  var s=sym+'USDT', F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
+  try{
+    var res=await Promise.all([
+      fetch(F+'ticker/24hr?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
+      fetch(F+'klines?symbol='+s+'&interval=1h&limit=120').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(F+'premiumIndex?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
+      fetch(F+'openInterest?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
+      fetch(D+'globalLongShortAccountRatio?symbol='+s+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return null;})
+    ]);
+    if(_coinCur!==sym)return; // 그새 다른 코인 선택
+    var tk=res[0], kl=res[1], fund=res[2], oi=res[3], ls=res[4];
+    if(!tk||!tk.lastPrice){ host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">'+esc(sym)+' 데이터를 불러오지 못했어요</div>'; return; }
+    var px=+tk.lastPrice, ch=+tk.priceChangePercent, hi=+tk.highPrice, lo=+tk.lowPrice, qv=+tk.quoteVolume;
+    var candles=Array.isArray(kl)?kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}):[];
+    var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,hi:hi,lo:lo,_candles:candles};
+    var fr=(fund&&fund.lastFundingRate!=null)?(+fund.lastFundingRate*100):null;
+    var oiUsd=(oi&&oi.openInterest)?(+oi.openInterest*px):null;
+    var la=(ls&&ls[0])?(+ls[0].longAccount*100):null;
+    function cmet(k,v,s,c){ return '<div class="met"><div class="k">'+k+'</div><div class="v '+(c||'')+'">'+v+'</div><div class="s">'+(s||'')+'</div></div>'; }
+    var fUsd=function(a){ a=+a||0; return a>=1e9?'$'+(a/1e9).toFixed(2)+'B':(a>=1e6?'$'+(a/1e6).toFixed(1)+'M':'$'+Math.round(a).toLocaleString('en-US')); };
+    host.innerHTML=
+      '<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button>'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+esc(sym)+'</span>'
+        +'<span style="color:var(--faint);font-size:13px">'+esc(sym)+'USDT · Binance 무기한</span>'
+        +'<a href="coin.html?s='+encodeURIComponent(sym)+'&liq=1" target="_blank" rel="noopener" class="more" style="margin-left:auto">🔥 청산맵 ↗</a></div>'
+      +'<div style="font-size:30px;font-weight:800;margin-top:4px;color:'+cCol(ch)+'">'+coinPx(px)+' <span style="font-size:16px">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</span></div>'
+      +'<div class="metrics">'
+        +cmet('24h 고가',coinPx(hi),'',null)
+        +cmet('24h 저가',coinPx(lo),'',null)
+        +cmet('거래대금',fUsd(qv),'24h',null)
+        +cmet('펀딩비',fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'),fr==null?'':(fr>=0?'롱→숏 지불':'숏→롱 지불'),fr==null?'':(fr>=0?'up':'down'))
+        +cmet('미결제약정',oiUsd==null?'—':fUsd(oiUsd),'OI',null)
+        +cmet('롱/숏 계정',la==null?'—':('롱 '+la.toFixed(0)+'%'),la==null?'':('숏 '+(100-la).toFixed(0)+'%'),la==null?'':(la>=50?'up':'down'))
+      +'</div>'
+      +'<canvas class="schart" id="coinChartCv"></canvas>'
+      +'<p style="color:var(--faint);font-size:11.5px;margin:10px 2px 0">📊 Binance 1시간봉 · 오더블럭/이동평균 표시 · 마우스 올리면 시고저종·거래대금. 청산 히트맵은 🔥 청산맵에서.</p>';
+    var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r);
+  }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
 function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} if(body)body.style.display=''; }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
@@ -1277,17 +1315,16 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
   var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
-  document.body.style.overflow=coinMode?'hidden':'';   // 코인=전체화면 잠금(뒤 스크롤 제거)
   $$('.view').forEach(function(v){v.classList.remove('on');});
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); }
-  else { var vc=$('#v-coin'); if(vc)vc.innerHTML=''; $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
+  else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
 /* 코인 모드 = VANTOR 터미널을 화면에 꽉 차게(full-bleed, 창 아닌 통째 임베드) */
+/* 코인 모드 = 밤톨이 네이티브 코인 대시보드(주식과 동일 디자인) */
 function openCoinTerminal(){
-  var v=$('#v-coin'); if(!v)return;
-  v.innerHTML='<iframe id="coinFrame" src="coin.html" style="position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;border:0;margin:0;z-index:9998;background:#0b0f16;display:block" title="VANTOR 코인 터미널" loading="eager"></iframe>'
-    +'<button id="coinExit" onclick="setMode(\'stock\')" title="주식 모드로 돌아가기" style="position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483000;pointer-events:auto;background:linear-gradient(135deg,#f0cf78,#e0b552);color:#231a05;border:none;border-radius:24px;padding:11px 22px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5),0 0 0 3px rgba(224,181,82,.25)">◀ 밤톨이 주식 모드로 돌아가기</button>';
+  if(typeof loadCoins==='function')loadCoins();
+  if(!window._coinTimer)window._coinTimer=setInterval(function(){ if(coinMode&&typeof loadCoins==='function')loadCoins(); },60000);
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
 

@@ -508,6 +508,7 @@ let sv=null;try{sv=localStorage.getItem('oxtheme');}catch(e){}
 applyTheme(sv||'dark'); // 기본 다크(청산맵과 통일) · ☀️로 라이트 전환 가능
 tb.onclick=()=>{const n=root.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(n);try{localStorage.setItem('oxtheme',n);}catch(e){}};
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));document.getElementById('v-'+t.dataset.tab).classList.add('on');});
+if(/[?&]liq=1/.test(location.search)){ try{ var _lt=document.querySelector('.tab[data-tab="liq"]'); if(_lt)_lt.click(); }catch(e){} } // 코인 상세→청산맵 링크
 
 /* bn = Binance futures symbol (실시간). 없으면 주식형 스냅샷. */
 const C=[
