@@ -1748,12 +1748,12 @@ function _pc(c){ c=+c||0; return '<span class="'+cls(c)+'">'+arw(c)+' '+pctTxt(c
 function _dec(s){ try{ var d=document.createElement('textarea'); d.innerHTML=s; s=d.value; d.innerHTML=s; return d.value; }catch(e){ return s; } }
 function _bnews(k){ return (_lastNews||[]).slice(0,k).map(function(n){return '<a class="bnews" href="'+n.link+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span>'+esc(_dec(n.title))+'</a>';}).join(''); }
 function _row(cap,inner){ return inner?('<div class="brow"><span class="bcap">'+cap+'</span>'+inner+'</div>'):''; }
-var briefCollapsed={os:false,kr:false};
+var briefCollapsed={os:true,kr:true}; // 기본 접힘 — 헤더 한 줄 요약만 보이게(한눈에 깔끔)
 try{ var _bc=JSON.parse(localStorage.getItem('aurBrief')||'null'); if(_bc)briefCollapsed=_bc; }catch(e){}
 function toggleBriefSec(k){ briefCollapsed[k]=!briefCollapsed[k]; try{localStorage.setItem('aurBrief',JSON.stringify(briefCollapsed));}catch(e){} renderBriefing(); }
 window.toggleBriefSec=toggleBriefSec;
-function _sec(key,title,inner){ var col=briefCollapsed[key]?' collapsed':'';
-  return '<div class="bsec'+col+'"><div class="bsec-h" onclick="toggleBriefSec(\''+key+'\')"><span class="tw">▾</span> '+title+'</div><div class="bsec-b">'+(inner||'')+'</div></div>'; }
+function _sec(key,title,summary,inner){ var col=briefCollapsed[key]?' collapsed':'';
+  return '<div class="bsec'+col+'"><div class="bsec-h" onclick="toggleBriefSec(\''+key+'\')"><span class="tw">▾</span> <b>'+title+'</b>'+(summary?'<span class="bsum">'+summary+'</span>':'')+'</div><div class="bsec-b">'+(inner||'')+'</div></div>'; }
 function _preComment(U){
   var q=U['QQQ'], spy=U['SPY'], dia=U['DIA'], smh=U['SMH'], tlt=U['TLT'], uso=U['USO'], gld=U['GLD'];
   if(!q||q.c==null)return '미국 지수 데이터를 불러오는 중…';
@@ -1836,8 +1836,16 @@ function renderBriefing(){
       +'<div class="bcomment">'+cmt2+'</div>'
       +(_bnews(6)?_row('📰 오늘 뉴스','')+_bnews(6):'');
   }
-  el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📋 오늘의 브리핑</h2><div class="r"><span style="color:var(--faint);font-size:11px">▾ 눌러 접기/펼치기</span></div></div><div class="pad" style="padding-top:2px">'
-    +_sec('os','🌏 해외 · 밤사이',osBody)+_sec('kr','🇰🇷 국내 · 마감',krBody)+'</div></div>';
+  // 헤더 한 줄 요약(접혀 있어도 핵심은 한눈에)
+  function sm(c){ c=+c||0; return '<span class="'+cls(c)+'">'+(c>=0?'+':'')+c.toFixed(2)+'%</span>'; }
+  var _U=BRIEF_US||{}, osSum=[];
+  if(_U.QQQ&&_U.QQQ.c!=null)osSum.push('나스닥 '+sm(_U.QQQ.c));
+  if(_U.SPY&&_U.SPY.c!=null)osSum.push('S&P '+sm(_U.SPY.c));
+  if(typeof BRIEF_BTC!=='undefined'&&BRIEF_BTC)osSum.push('BTC '+sm(BRIEF_BTC.c));
+  var _ks=(IDX||[]).find(function(x){return x.nm==='KOSPI';})||{}, _kq=(IDX||[]).find(function(x){return x.nm==='KOSDAQ';})||{};
+  var krSum=['코스피 '+sm(_ks.c),'코스닥 '+sm(_kq.c)];
+  el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📋 오늘의 브리핑</h2><div class="r"><span style="color:var(--faint);font-size:11px">▾ 눌러 상세</span></div></div><div class="pad" style="padding-top:2px">'
+    +_sec('os','🌏 해외·밤사이',osSum.join(' · '),osBody)+_sec('kr','🇰🇷 국내·마감',krSum.join(' · '),krBody)+'</div></div>';
 }
 
 initCards(); renderSummary(); renderBriefing();
