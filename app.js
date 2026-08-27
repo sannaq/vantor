@@ -593,6 +593,29 @@ function drawStockChart(cv,r){
     ctx.fillStyle=sub;ctx.font='600 14px system-ui,sans-serif';ctx.textAlign='right';
     ctx.fillText('피보나치 · '+(upSwing?'상승 스윙(저→고)':'하락 스윙(고→저)'), plotR-4, priceB-6);
   }
+  // === 코인 전용 분석선: 지지/저항 · 매물대(POC) · 청산대(레버리지) · 타점 ===
+  if(r.mk==='COIN'){
+    var pxf=function(p){ return '$'+(p>=1?(+p).toLocaleString('en-US',{maximumFractionDigits:2}):(+p).toPrecision(4)); };
+    var hline=function(price,color,dash,label,align){ if(price<lo||price>hi)return; var yy=y(price);
+      ctx.strokeStyle=color;ctx.lineWidth=1.2;ctx.setLineDash(dash||[]);ctx.globalAlpha=.85;
+      ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(plotR,yy);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
+      if(label){ ctx.fillStyle=color;ctx.font='700 14px system-ui,sans-serif';ctx.textBaseline='middle';ctx.textAlign=align||'left';
+        ctx.fillText(label, align==='right'?plotR-6:padL+5, yy-9); ctx.textAlign='left'; } };
+    if(r.hi)hline(r.hi,'#f6465d',[6,5],'저항 '+pxf(r.hi),'left');
+    if(r.lo)hline(r.lo,'#2ebd85',[6,5],'지지 '+pxf(r.lo),'left');
+    var _bin=(hi-lo)/60||1, _vp={}, _vmx=0, _poc=null;
+    for(var vpi=0;vpi<n;vpi++){ var _b=Math.round(((data[vpi][1]+data[vpi][2]+data[vpi][3])/3-lo)/_bin); _vp[_b]=(_vp[_b]||0)+data[vpi][4]; if(_vp[_b]>_vmx){_vmx=_vp[_b];_poc=_b;} }
+    if(_poc!=null)hline(lo+_poc*_bin,'#ff9800',[2,3],'매물대 POC','right');
+    [[100,'100x'],[50,'50x'],[25,'25x']].forEach(function(L){ var f=1/L[0];
+      hline(last*(1-f),'rgba(246,70,93,.5)',[3,4],'롱'+L[1]+'청산','right');
+      hline(last*(1+f),'rgba(46,189,133,.5)',[3,4],'숏'+L[1]+'청산','right'); });
+    // 타점 — 가장 가까운 불리시 오더블럭(=매수 자리)
+    var _obs=(typeof findOrderBlocks==='function')?findOrderBlocks(data.map(function(d){return {o:d[0],h:d[1],l:d[2],c:d[3]};}),last):[];
+    var _bob=_obs.filter(function(o){return o.type==='bull'&&o.top<last;}).pop();
+    if(_bob){ var _ey=y(_bob.top); hline(_bob.top,'#e0a83e',[],'','left');
+      ctx.fillStyle='#e0a83e';ctx.font='800 15px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillText('🎯 매수 타점 '+pxf(_bob.top),padL+5,_ey+11);ctx.textBaseline='alphabetic'; }
+  }
   // 현재가 라인 + 우측 현재가 태그
   ctx.lineWidth=1.4;ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(padL,y(last));ctx.lineTo(plotR,y(last));ctx.stroke();ctx.setLineDash([]);
   var lyt=y(last), lt=(r.ccy==='USD'?('$'+last.toFixed(2)):Math.round(last).toLocaleString('en-US'));
