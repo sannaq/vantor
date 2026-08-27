@@ -1271,31 +1271,38 @@ function cCol(ch){ return ch>=0?'#16b364':'#f6465d'; } // 코인=초록↑/빨�
 async function loadCoins(){
   var rr=$('#coinRadar');
   try{
-    var arr=await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=60&page=1&price_change_percentage=24h').then(r=>r.json());
-    if(!Array.isArray(arr)||!arr.length)throw 0;
-    // 스테이블코인·래핑/스테이킹 파생 제외(레이더는 '지금 강한 코인'이라 페그·복제 토큰은 노이즈)
-    var STABLE=/^(usdt|usdc|dai|usds|usde|fdusd|usd1|usdg|tusd|busd|pyusd|usdd|frax|gusd|lusd|usdl|usd0|susds|susde|usdy|crvusd|eurc|eurt|buidl|usdb|usdx)$/i;
-    var WRAP=/^(wbtc|weth|wsteth|weeth|wbeth|steth|reth|cbbtc|lbtc|cbeth|meth|rseth|ezeth|solvbtc|bsc-usd|wbnb|jitosol|msol|bnsol)$/i;
-    arr=arr.filter(function(c){ var sym=(c.symbol||'').toLowerCase();
-      if(STABLE.test(sym)||WRAP.test(sym))return false;
-      // 페그 휴리스틱: 가격 $0.95~1.05 & 24h 변동 |0.5%| 미만 → 스테이블로 간주
-      if(c.current_price>=0.95&&c.current_price<=1.05&&Math.abs(c.price_change_percentage_24h||0)<0.5)return false;
-      return true; });
-    if(!arr.length)throw 0;
-    var maxVol=Math.max.apply(null,arr.map(function(c){return c.total_volume||0;}))||1;
-    arr.forEach(function(c){ var mom=c.price_change_percentage_24h||0, turn=(c.total_volume||0)/(c.market_cap||1), volp=(c.total_volume||0)/maxVol;
-      var s1=Math.max(0,Math.min(55,(mom+4)/20*55)), s2=Math.max(0,Math.min(25,turn*220)), s3=volp*20;
-      c.score=Math.round(s1+s2+s3); });
-    arr.sort(function(a,b){return b.score-a.score;});
-    var top=arr.slice(0,12);
-    rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>SCORE</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
-      +top.map(function(c,i){var ch=c.price_change_percentage_24h||0;return '<tr class="rowbtn" data-sym="'+esc((c.symbol||'').toUpperCase())+'" title="클릭 → 상세 차트"><td class="l"><span class="rank">'+(i+1)+'</span></td><td class="l"><div class="sym">'+esc((c.symbol||'').toUpperCase())+' <span style="color:var(--gold);font-size:10px">↗</span><small>'+esc(c.name)+'</small></div></td><td><span class="scorepill'+(c.score>=65?'':' s2')+'">'+c.score+'</span></td><td class="num">'+coinPx(c.current_price)+'</td><td class="num" style="color:'+cCol(ch)+';font-weight:700">'+(ch>=0?'+':'')+ch.toFixed(2)+'%</td><td class="num" style="color:var(--sub)">$'+fmtBig(c.total_volume)+'</td></tr>';}).join('')+'</tbody>';
+    // 선물 터미널과 동일한 코인 유니버스(바이낸스 실시간 · 스테이블 없음)
+    var COINU=[['BTC','비트코인'],['ETH','이더리움'],['SOL','솔라나'],['XRP','리플'],['DOGE','도지코인'],
+      ['BNB','바이낸스코인'],['ADA','카르다노'],['AVAX','아발란체'],['LINK','체인링크'],['AAVE','AAVE'],
+      ['NEAR','니어'],['UNI','유니스왑'],['SUI','SUI'],['TAO','TAO'],['BCH','비트코인캐시'],
+      ['LTC','라이트코인'],['DOT','폴카닷'],['TRX','트론'],['ATOM','코스모스'],['ZEC','지캐시'],
+      ['XLM','스텔라루멘'],['APT','앱토스'],['ARB','아비트럼'],['ICP','ICP'],['HBAR','HBAR'],
+      ['ETC','이더리움클래식'],['1000SHIB','1000시바이누']];
+    var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();});
+    if(!Array.isArray(all))throw 0;
+    var mp={}; all.forEach(function(t){ mp[t.symbol]=t; });
+    var rows=COINU.map(function(u){ var t=mp[u[0]+'USDT']; if(!t)return null;
+      var px=+t.lastPrice, ch=+t.priceChangePercent, hi=+t.highPrice, lo=+t.lowPrice, qv=+t.quoteVolume;
+      var rp=(hi>lo)?Math.round((px-lo)/(hi-lo)*100):50, st;
+      if(ch<=-3)st='avoid'; else if(rp>=65)st='avoid'; else if(rp<=45)st='buy'; else st=(ch>=2?'buy':'wait');
+      return {s:u[0],k:u[1],px:px,ch:ch,qv:qv,st:st}; }).filter(Boolean);
+    if(!rows.length)throw 0; // 터미널과 동일한 고정 순서 유지(pill이 자연스럽게 섞이도록)
+    var PILL={buy:['관심','#16b364','22,179,100'],wait:['관망','#e0a83e','224,168,62'],avoid:['주의','#f6465d','246,70,93']};
+    rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>상태</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
+      +rows.map(function(c,i){ var p=PILL[c.st], col=cCol(c.ch);
+        return '<tr class="rowbtn" data-sym="'+esc(c.s)+'" title="클릭 → 상세 차트"><td class="l"><span class="rank">'+(i+1)+'</span></td>'
+          +'<td class="l"><div class="sym">'+esc(c.s)+' <span style="color:#16b364;font-size:9px;font-weight:800;vertical-align:1px">●LIVE</span><small>'+esc(c.k)+'</small></div></td>'
+          +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;background:rgba('+p[2]+',.15);color:'+p[1]+'">'+p[0]+'</span></td>'
+          +'<td class="num">'+coinPx(c.px)+'</td>'
+          +'<td class="num" style="color:'+col+';font-weight:700">'+(c.ch>=0?'▲ +':'▼ ')+c.ch.toFixed(2)+'%</td>'
+          +'<td class="num" style="color:var(--sub)">$'+fmtBig(c.qv)+'</td></tr>'; }).join('')+'</tbody>';
     $$('#coinRadar .rowbtn').forEach(function(tr){ tr.onclick=function(){ openCoin(tr.dataset.sym); }; });
     if($('#coinupd'))$('#coinupd').textContent='· '+nowHM()+' 실시간';
-    // 코인 지표 카드(BTC/ETH/SOL/총시총)
-    var pick=function(id){return arr.find(function(c){return c.id===id;});};
-    var cm=$('#coinMetrics'); if(cm){ var cards=['bitcoin','ethereum','solana'].map(function(id){var c=pick(id)||arr[0];var ch=c.price_change_percentage_24h||0;return '<div class="idx"><div class="nm">'+esc((c.symbol||'').toUpperCase())+' · '+esc(c.name)+'</div><div class="v num" style="color:'+cCol(ch)+'">'+coinPx(c.current_price)+'</div><div class="d num" style="color:'+cCol(ch)+'">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</div><div class="foot"><span>시총 $'+fmtBig(c.market_cap)+'</span><span>거래 $'+fmtBig(c.total_volume)+'</span></div></div>';}).join('');
-      cm.innerHTML='<div class="idxstrip" style="margin-bottom:0">'+cards+'<div class="idx"><div class="nm">🪙 코인 RADAR</div><div class="v" style="color:var(--gold);font-size:22px">'+top.length+'종목</div><div class="d" style="color:var(--sub)">실시간 스코어링</div><div class="foot"><span>CoinGecko</span><span>'+nowHM()+'</span></div></div></div>'; }
+    // 코인 지표 카드(BTC/ETH/SOL) — 동일 바이낸스 실시간
+    var cm=$('#coinMetrics'); if(cm){ var pk=function(sy){return mp[sy+'USDT'];};
+      var cards=[['BTC','비트코인'],['ETH','이더리움'],['SOL','솔라나']].map(function(u){ var t=pk(u[0]); if(!t)return ''; var ch=+t.priceChangePercent, col=cCol(ch);
+        return '<div class="idx"><div class="nm">'+u[0]+' · '+u[1]+'</div><div class="v num" style="color:'+col+'">'+coinPx(+t.lastPrice)+'</div><div class="d num" style="color:'+col+'">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</div><div class="foot"><span>24h고 '+coinPx(+t.highPrice)+'</span><span>거래 $'+fmtBig(+t.quoteVolume)+'</span></div></div>'; }).join('');
+      cm.innerHTML='<div class="idxstrip" style="margin-bottom:0">'+cards+'<div class="idx"><div class="nm">🪙 코인 RADAR</div><div class="v" style="color:var(--gold);font-size:22px">'+rows.length+'종목</div><div class="d" style="color:var(--sub)">바이낸스 실시간</div><div class="foot"><span>Binance</span><span>'+nowHM()+'</span></div></div></div>'; }
   }catch(e){ rr.innerHTML='<tbody><tr><td style="color:var(--faint);padding:14px">코인 데이터를 불러오지 못했어요(잠시 후 자동 재시도)</td></tr></tbody>'; }
   loadCoinMarket();
 }

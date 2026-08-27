@@ -476,13 +476,13 @@
   <!-- ===== COIN (코인 모드) ===== -->
   <div class="view" id="v-coin">
     <div class="sec-title">🪙 COIN · 실시간 코인 시장</div>
-    <p class="sec-sub"><b>CoinGecko 실시간</b> 데이터로 지금 강한 코인을 봅니다. 코인을 누르면 <b>차트·타점·수급 상세를 이 화면에서 바로</b> 봅니다.</p>
+    <p class="sec-sub"><b>바이낸스 실시간</b> 데이터로 주요 코인을 봅니다. 코인을 누르면 <b>차트·타점·수급 상세를 이 화면에서 바로</b> 봅니다.</p>
     <div id="coinBody">
       <button onclick="openCoin('BTC')" style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#3a2c07;font-weight:800;font-size:13px;padding:10px 16px;border-radius:10px;margin-bottom:16px;border:none;cursor:pointer;font-family:inherit">🪙 BTC 상세 차트 바로 보기</button>
       <div id="coinMetrics" style="margin-bottom:16px"></div>
       <div class="row a">
         <div class="card">
-          <div class="ch"><h2>🔥 COIN RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">지금 강한 코인</span></h2><div class="r"><span id="coinupd">–</span></div></div>
+          <div class="ch"><h2>🔥 COIN RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">바이낸스 실시간 · 27종</span></h2><div class="r"><span id="coinupd">–</span></div></div>
           <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="coinRadar"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
         </div>
         <div class="card">
@@ -505,7 +505,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=23"></script>
+<script src="app.js?v=24"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
