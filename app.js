@@ -593,28 +593,46 @@ function drawStockChart(cv,r){
     ctx.fillStyle=sub;ctx.font='600 14px system-ui,sans-serif';ctx.textAlign='right';
     ctx.fillText('피보나치 · '+(upSwing?'상승 스윙(저→고)':'하락 스윙(고→저)'), plotR-4, priceB-6);
   }
-  // === 코인 전용 분석선: 지지/저항 · 매물대(POC) · 청산대(레버리지) · 타점 ===
+  // === 코인 분석선: 선물 터미널과 동일(지지/저항·피보·매물대 POC·회귀 채널·골드 추세선) ===
   if(r.mk==='COIN'){
     var pxf=function(p){ return '$'+(p>=1?(+p).toLocaleString('en-US',{maximumFractionDigits:2}):(+p).toPrecision(4)); };
     var hline=function(price,color,dash,label,align){ if(price<lo||price>hi)return; var yy=y(price);
-      ctx.strokeStyle=color;ctx.lineWidth=1.2;ctx.setLineDash(dash||[]);ctx.globalAlpha=.85;
+      ctx.strokeStyle=color;ctx.lineWidth=1.3;ctx.setLineDash(dash||[]);ctx.globalAlpha=.9;
       ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(plotR,yy);ctx.stroke();ctx.setLineDash([]);ctx.globalAlpha=1;
       if(label){ ctx.fillStyle=color;ctx.font='700 14px system-ui,sans-serif';ctx.textBaseline='middle';ctx.textAlign=align||'left';
         ctx.fillText(label, align==='right'?plotR-6:padL+5, yy-9); ctx.textAlign='left'; } };
+    var _dlo=Math.min.apply(null,data.map(function(d){return d[2];})), _dhi=Math.max.apply(null,data.map(function(d){return d[1];}));
+    // 지지/저항 (24h 고·저)
     if(r.hi)hline(r.hi,'#f6465d',[6,5],'저항 '+pxf(r.hi),'left');
     if(r.lo)hline(r.lo,'#2ebd85',[6,5],'지지 '+pxf(r.lo),'left');
-    var _bin=(hi-lo)/60||1, _vp={}, _vmx=0, _poc=null;
-    for(var vpi=0;vpi<n;vpi++){ var _b=Math.round(((data[vpi][1]+data[vpi][2]+data[vpi][3])/3-lo)/_bin); _vp[_b]=(_vp[_b]||0)+data[vpi][4]; if(_vp[_b]>_vmx){_vmx=_vp[_b];_poc=_b;} }
-    if(_poc!=null)hline(lo+_poc*_bin,'#ff9800',[2,3],'매물대 POC','right');
-    [[100,'100x'],[50,'50x'],[25,'25x']].forEach(function(L){ var f=1/L[0];
-      hline(last*(1-f),'rgba(246,70,93,.5)',[3,4],'롱'+L[1]+'청산','right');
-      hline(last*(1+f),'rgba(46,189,133,.5)',[3,4],'숏'+L[1]+'청산','right'); });
-    // 타점 — 가장 가까운 불리시 오더블럭(=매수 자리)
-    var _obs=(typeof findOrderBlocks==='function')?findOrderBlocks(data.map(function(d){return {o:d[0],h:d[1],l:d[2],c:d[3]};}),last):[];
-    var _bob=_obs.filter(function(o){return o.type==='bull'&&o.top<last;}).pop();
-    if(_bob){ var _ey=y(_bob.top); hline(_bob.top,'#e0a83e',[],'','left');
-      ctx.fillStyle='#e0a83e';ctx.font='800 15px system-ui,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';
-      ctx.fillText('🎯 매수 타점 '+pxf(_bob.top),padL+5,_ey+11);ctx.textBaseline='alphabetic'; }
+    // 피보나치 되돌림 0.382·0.5·0.618
+    [[0.382,'0.382'],[0.5,'0.5'],[0.618,'0.618']].forEach(function(f){ hline(_dhi-f[0]*(_dhi-_dlo),'#a06bff',[4,4],'fib '+f[1],'left'); });
+    // 매물대 POC (거래대금 프로파일)
+    var _vw=(_dhi-_dlo)/24;
+    if(_vw>0){ var _vol=new Array(24).fill(0);
+      for(var _vi=0;_vi<n;_vi++){ var _tp=(data[_vi][1]+data[_vi][2]+data[_vi][3])/3, _ix=Math.floor((_tp-_dlo)/_vw); if(_ix<0)_ix=0; if(_ix>23)_ix=23; _vol[_ix]+=data[_vi][4]; }
+      var _mi=0; for(var _k=1;_k<24;_k++)if(_vol[_k]>_vol[_mi])_mi=_k;
+      hline(_dlo+(_mi+0.5)*_vw,'#ff9800',[2,3],'매물대 POC','right'); }
+    // 회귀 채널(파랑 2선)
+    var _sx=0,_sy=0,_sxy=0,_sxx=0;
+    for(var _ci=0;_ci<n;_ci++){ var _cc=data[_ci][3]; _sx+=_ci;_sy+=_cc;_sxy+=_ci*_cc;_sxx+=_ci*_ci; }
+    var _den=n*_sxx-_sx*_sx, _slp=_den?(n*_sxy-_sx*_sy)/_den:0, _itc=(_sy-_slp*_sx)/n, _ab=-1e18,_be=1e18;
+    for(var _c2=0;_c2<n;_c2++){ var _base=_itc+_slp*_c2; if(data[_c2][1]-_base>_ab)_ab=data[_c2][1]-_base; if(data[_c2][2]-_base<_be)_be=data[_c2][2]-_base; }
+    var _diag=function(off,color,wid){ ctx.strokeStyle=color;ctx.lineWidth=wid;ctx.globalAlpha=.9;ctx.beginPath();
+      for(var _di=0;_di<n;_di++){ var _yy=y(_itc+_slp*_di+off), _xx=xAt(_di); if(_di===0)ctx.moveTo(_xx,_yy); else ctx.lineTo(_xx,_yy); } ctx.stroke();ctx.globalAlpha=1; };
+    _diag(_ab,'#4a9eff',1.4); _diag(_be,'#4a9eff',1.4);
+    // 골드 스윙 추세선(피벗 기준)
+    var _upT=data[n-1][3]>=data[0][3];
+    var _piv=function(w,t){ var out=[]; for(var i=w;i<n-w;i++){ var ok=true; for(var j=i-w;j<=i+w;j++){ if(j===i)continue; if(t==='low'&&data[j][2]<data[i][2]){ok=false;break;} if(t==='high'&&data[j][1]>data[i][1]){ok=false;break;} } if(ok)out.push(i); } return out; };
+    var _pv=_piv(4,_upT?'low':'high'); if(_pv.length<2)_pv=_piv(3,_upT?'low':'high');
+    if(_pv.length>=2){ var _an=_pv[0];
+      for(var _p=0;_p<_pv.length;_p++){ if(_upT){ if(data[_pv[_p]][2]<data[_an][2])_an=_pv[_p]; } else { if(data[_pv[_p]][1]>data[_an][1])_an=_pv[_p]; } }
+      var _lat=null; for(var _m=_pv.length-1;_m>=0;_m--){ if(_pv[_m]>_an){_lat=_pv[_m];break;} }
+      if(_lat==null){ var _idx=_pv.indexOf(_an); if(_idx>0){_lat=_an;_an=_pv[_idx-1];} }
+      if(_lat!=null){ var _pa=_upT?data[_an][2]:data[_an][1], _pb=_upT?data[_lat][2]:data[_lat][1], _tslp=(_pb-_pa)/((_lat-_an)||1);
+        ctx.strokeStyle='#e0a83e';ctx.lineWidth=2;ctx.globalAlpha=.95;ctx.beginPath();
+        for(var _ti=_an;_ti<n;_ti++){ var _ty=y(_pa+_tslp*(_ti-_an)), _tx=xAt(_ti); if(_ti===_an)ctx.moveTo(_tx,_ty); else ctx.lineTo(_tx,_ty); } ctx.stroke();ctx.globalAlpha=1; }
+    }
   }
   // 현재가 라인 + 우측 현재가 태그
   ctx.lineWidth=1.4;ctx.strokeStyle=cls(r.ch)==='up'?up:dn;ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(padL,y(last));ctx.lineTo(plotR,y(last));ctx.stroke();ctx.setLineDash([]);
