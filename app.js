@@ -1653,10 +1653,18 @@ function initCards(){
     if(!ch.querySelector('.cardtog')){
       var btn=document.createElement('button'); btn.className='cardtog'; btn.title='접기/펴기'; btn.textContent='▾';
       var rbox=ch.querySelector('.r'); if(rbox)rbox.appendChild(btn); else ch.appendChild(btn);
-      btn.onclick=function(ev){ ev.stopPropagation(); var c=!card.classList.contains('collapsed'); applyCollapse(card,c); CARDPREF.collapsed[id]=c; if(!c)delete CARDPREF.collapsed[id]; saveCardPref(); };
+      btn.onclick=function(ev){ ev.stopPropagation(); var c=!card.classList.contains('collapsed'); applyCollapse(card,c); CARDPREF.collapsed[id]=c; if(!c)delete CARDPREF.collapsed[id]; saveCardPref(); applyCollapseCss(); };
     }
     applyCollapse(card,CARDPREF.collapsed[id]);
   });
+  applyCollapseCss();
+}
+/* id별 CSS로 접힘 강제 — 재렌더 순간에도 즉시 접힌 채(깜빡임 없이) 유지 */
+function applyCollapseCss(){
+  var ids=Object.keys((CARDPREF&&CARDPREF.collapsed)||{});
+  var css=ids.map(function(id){ var sel='.card[data-card="'+id+'"]'; return sel+'>*:not(.ch){display:none!important}'+sel+' .cardtog{transform:rotate(-90deg)}'; }).join('');
+  var st=document.getElementById('collapseStyle'); if(!st){ st=document.createElement('style'); st.id='collapseStyle'; document.head.appendChild(st); }
+  st.textContent=css;
 }
 /* 새로 렌더되는 카드에도 접힘 상태 자동 재적용(모든 탭·비동기 렌더 포함) */
 (function(){ if(window._cardObs||!window.MutationObserver)return; var t=null;
