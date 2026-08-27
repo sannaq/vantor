@@ -245,7 +245,7 @@ function renderCatch(){
     :'<div style="color:var(--faint);font-size:12px;padding:6px 0">±3% 이상 급등락 종목이 아직 없어요 (장중에 채워집니다).</div>';
   $$('#catchFeed .catchchip').forEach(function(t){t.onclick=function(){openStock(t.dataset.c);};});
   if($('#catchupd'))$('#catchupd').textContent='· '+nowHM();
-  surge.forEach(function(x){ if(x.ch>=5&&!_catchSeen[x.c]){ _catchSeen[x.c]=1; toast('🔥 '+x.n+' 급등 +'+(+x.ch).toFixed(1)+'%'); } });
+  surge.forEach(function(x){ if(x.ch>=5&&!_catchSeen[x.c]){ _catchSeen[x.c]=1; if(!coinMode)toast('🔥 '+x.n+' 급등 +'+(+x.ch).toFixed(1)+'%'); } });
 }
 /* 히트맵 색 — 등락률(%) → 빨강(상승)/회색(보합)/파랑(하락), 강도는 |%| */
 function heatColor(ch){
@@ -1271,11 +1271,20 @@ function cCol(ch){ return ch>=0?'#16b364':'#f6465d'; } // 코인=초록↑/빨�
 async function loadCoins(){
   var rr=$('#coinRadar');
   try{
-    var arr=await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&price_change_percentage=24h').then(r=>r.json());
+    var arr=await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=60&page=1&price_change_percentage=24h').then(r=>r.json());
     if(!Array.isArray(arr)||!arr.length)throw 0;
+    // 스테이블코인·래핑/스테이킹 파생 제외(레이더는 '지금 강한 코인'이라 페그·복제 토큰은 노이즈)
+    var STABLE=/^(usdt|usdc|dai|usds|usde|fdusd|usd1|usdg|tusd|busd|pyusd|usdd|frax|gusd|lusd|usdl|usd0|susds|susde|usdy|crvusd|eurc|eurt|buidl|usdb|usdx)$/i;
+    var WRAP=/^(wbtc|weth|wsteth|weeth|wbeth|steth|reth|cbbtc|lbtc|cbeth|meth|rseth|ezeth|solvbtc|bsc-usd|wbnb|jitosol|msol|bnsol)$/i;
+    arr=arr.filter(function(c){ var sym=(c.symbol||'').toLowerCase();
+      if(STABLE.test(sym)||WRAP.test(sym))return false;
+      // 페그 휴리스틱: 가격 $0.95~1.05 & 24h 변동 |0.5%| 미만 → 스테이블로 간주
+      if(c.current_price>=0.95&&c.current_price<=1.05&&Math.abs(c.price_change_percentage_24h||0)<0.5)return false;
+      return true; });
+    if(!arr.length)throw 0;
     var maxVol=Math.max.apply(null,arr.map(function(c){return c.total_volume||0;}))||1;
     arr.forEach(function(c){ var mom=c.price_change_percentage_24h||0, turn=(c.total_volume||0)/(c.market_cap||1), volp=(c.total_volume||0)/maxVol;
-      var s1=Math.max(0,Math.min(45,(mom+5)/25*45)), s2=Math.max(0,Math.min(30,turn*260)), s3=volp*25;
+      var s1=Math.max(0,Math.min(55,(mom+4)/20*55)), s2=Math.max(0,Math.min(25,turn*220)), s3=volp*20;
       c.score=Math.round(s1+s2+s3); });
     arr.sort(function(a,b){return b.score-a.score;});
     var top=arr.slice(0,12);
