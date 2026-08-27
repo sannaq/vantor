@@ -1326,6 +1326,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
 /* 코인 모드 = 밤톨이 네이티브 코인 대시보드(주식과 동일 디자인) */
 function openCoinTerminal(){
   if(typeof loadCoins==='function')loadCoins();
+  if(typeof initCards==='function')setTimeout(initCards,300); // 코인 카드에도 접기 버튼·접힘상태 적용
   if(!window._coinTimer)window._coinTimer=setInterval(function(){ if(coinMode&&typeof loadCoins==='function')loadCoins(); },60000);
 }
 $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.dataset.m); }; });
