@@ -1658,6 +1658,15 @@ function initCards(){
     applyCollapse(card,CARDPREF.collapsed[id]);
   });
 }
+/* 새로 렌더되는 카드에도 접힘 상태 자동 재적용(모든 탭·비동기 렌더 포함) */
+(function(){ if(window._cardObs||!window.MutationObserver)return; var t=null;
+  var obs=new MutationObserver(function(muts){ var need=false;
+    for(var i=0;i<muts.length&&!need;i++){ var an=muts[i].addedNodes;
+      for(var j=0;j<an.length;j++){ var nd=an[j]; if(nd.nodeType!==1)continue;
+        if((nd.classList&&nd.classList.contains('card'))||(nd.querySelector&&nd.querySelector('.card'))){ need=true; break; } } }
+    if(need){ clearTimeout(t); t=setTimeout(function(){ if(typeof initCards==='function')initCards(); },60); } });
+  try{ obs.observe(document.body,{childList:true,subtree:true}); window._cardObs=obs; }catch(e){}
+})();
 function openCardEditor(){
   var cards=$$('.card').filter(function(c){return c.querySelector('.ch h2');});
   // 중복 id 제거(대표 1개씩)
