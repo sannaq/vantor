@@ -1315,6 +1315,8 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
   var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
+  var brf=$('#brief'); if(brf)brf.style.display=coinMode?'none':'';           // 주식 브리핑은 코인 모드에서 숨김
+  var msum=$('#marketSummary'); if(msum)msum.style.display=coinMode?'none':'';  // 주식 시장요약도 숨김
   $$('.view').forEach(function(v){v.classList.remove('on');});
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); }
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
