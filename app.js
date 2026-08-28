@@ -1577,7 +1577,7 @@ async function openCoin(sym){
   host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button><div style="padding:30px;color:var(--faint)">'+esc(sym)+' 불러오는 중…</div>';
   var s=sym+'USDT', F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
   var TF=window._coinTF||'1h'; window._coinTF=TF;
-  var TFLIM={'1m':180,'5m':180,'15m':160,'30m':140,'1h':120,'4h':100,'1d':90};
+  var TFLIM={'1m':500,'5m':500,'15m':500,'30m':500,'1h':500,'4h':500,'1d':500};
   var TFLAB={'1m':'1분','5m':'5분','15m':'15분','30m':'30분','1h':'1시간','4h':'4시간','1d':'1일'};
   if(!window._coinLineOn){ try{window._coinLineOn=JSON.parse(localStorage.getItem('coinLines'))||null;}catch(e){} if(!window._coinLineOn)window._coinLineOn={sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true}; }
   try{
@@ -1761,7 +1761,7 @@ var _coinRefTimer=null;
 function _startCoinRefresh(){ _stopCoinRefresh(); _coinRefTimer=setInterval(function(){ if(coinMode&&_coinCur){ refreshCoinDetail(); } else _stopCoinRefresh(); }, 30000); }
 function _stopCoinRefresh(){ if(_coinRefTimer){clearInterval(_coinRefTimer);_coinRefTimer=null;} }
 async function refreshCoinDetail(){ var sym=_coinCur; if(!sym)return; var s=sym+'USDT', F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
-  var TF=window._coinTF||'1h', TFLIM={'1m':180,'5m':180,'15m':160,'30m':140,'1h':120,'4h':100,'1d':90};
+  var TF=window._coinTF||'1h', TFLIM={'1m':500,'5m':500,'15m':500,'30m':500,'1h':500,'4h':500,'1d':500};
   try{ var res=await Promise.all([
       fetch(F+'ticker/24hr?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(F+'klines?symbol='+s+'&interval='+TF+'&limit='+(TFLIM[TF]||120)).then(function(r){return r.json();}).catch(function(){return [];}),
