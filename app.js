@@ -1306,8 +1306,9 @@ async function loadCoins(){
     var PILL={buy:['관심','#16b364','22,179,100'],wait:['관망','#e0a83e','224,168,62'],avoid:['주의','#f6465d','246,70,93']};
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>상태</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
       +rows.map(function(c,i){ var p=PILL[c.st], col=cCol(c.ch);
+        var _fav=(typeof isCoinFav==='function'&&isCoinFav(c.s));
         return '<tr class="rowbtn" data-sym="'+esc(c.s)+'" title="클릭 → 상세 차트"><td class="l"><span class="rank">'+(i+1)+'</span></td>'
-          +'<td class="l"><div class="sym">'+esc(c.s)+' <span style="color:#16b364;font-size:9px;font-weight:800;vertical-align:1px">●LIVE</span><small>'+esc(c.k)+'</small></div></td>'
+          +'<td class="l"><div class="sym"><span class="cfav'+(_fav?' on':'')+'" data-sym="'+esc(c.s)+'" onclick="toggleCoinFav(\''+esc(c.s)+'\',event)" style="cursor:pointer;margin-right:5px;color:'+(_fav?'#f5b301':'var(--faint)')+'">'+(_fav?'★':'☆')+'</span>'+esc(c.s)+' <span style="color:#16b364;font-size:9px;font-weight:800;vertical-align:1px">●LIVE</span><small>'+esc(c.k)+'</small></div></td>'
           +'<td><span style="display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;background:rgba('+p[2]+',.15);color:'+p[1]+'">'+p[0]+'</span></td>'
           +'<td class="num">'+coinPx(c.px)+'</td>'
           +'<td class="num" style="color:'+col+';font-weight:700">'+(c.ch>=0?'▲ +':'▼ ')+c.ch.toFixed(2)+'%</td>'
@@ -1341,6 +1342,103 @@ async function loadSectors(){ var el=$('#coinSectors'); if(!el)return;
   }catch(e){ if(!el.querySelector('.secgrid'))el.innerHTML='<div class="muted" style="font-size:12px;color:var(--faint)">섹터를 불러오지 못했어요(잠시 후 재시도)</div>'; }
 }
 window.loadSectors=loadSectors;
+/* ===== 코인 모드 상단 메뉴(홈·RADAR·섹터·뉴스·관심·기초) ===== */
+var _stockMenuHTML=null;
+var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')">홈</a>'
+  +'<a class="cmenu-a" data-cs="radar" onclick="coinNav(\'radar\')">RADAR</a>'
+  +'<a class="cmenu-a" data-cs="sector" onclick="coinNav(\'sector\')">섹터</a>'
+  +'<a class="cmenu-a" data-cs="news" onclick="coinNav(\'news\')">뉴스</a>'
+  +'<a class="cmenu-a" data-cs="watch" onclick="coinNav(\'watch\')">관심</a>'
+  +'<a class="cmenu-a" data-cs="learn" onclick="coinNav(\'learn\')">기초</a>';
+function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
+  if(on){ if(_stockMenuHTML===null)_stockMenuHTML=menu.innerHTML; menu.innerHTML=_COIN_MENU; menu.style.display='flex'; }
+  else { if(_stockMenuHTML!==null){ menu.innerHTML=_stockMenuHTML; if(typeof bindNav==='function')$$('#menu a').forEach(bindNav); } menu.style.display='flex'; } }
+function _ensureCoinSection(){ var s=$('#coinSection'); if(!s){ var host=$('#coinHost'); if(!host)return null; s=document.createElement('div'); s.id='coinSection'; s.style.display='none'; host.parentNode.insertBefore(s,host); } return s; }
+window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect=_ensureCoinSection(); if(!sect)return;
+  $$('#menu .cmenu-a').forEach(function(a){ a.classList.toggle('on',a.dataset.cs===sec); });
+  if(host){host.style.display='none';host.innerHTML='';}
+  if(sec==='home'||sec==='radar'||sec==='sector'){ if(body)body.style.display=''; sect.style.display='none';
+    if(sec==='radar'){ var c=$('#coinRadar'); if(c&&c.closest('.card'))c.closest('.card').scrollIntoView({behavior:'smooth',block:'start'}); else window.scrollTo({top:0,behavior:'smooth'}); }
+    else if(sec==='sector'){ var s2=$('#coinSectors'); if(s2&&s2.closest('.card'))s2.closest('.card').scrollIntoView({behavior:'smooth',block:'start'}); }
+    else window.scrollTo({top:0,behavior:'smooth'});
+    return; }
+  if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
+  if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
+};
+/* 관심 코인(즐겨찾기) */
+function _coinFav(){ try{return JSON.parse(localStorage.getItem('coinFav')||'[]');}catch(e){return [];} }
+function _coinFavSet(a){ try{localStorage.setItem('coinFav',JSON.stringify(a));}catch(e){} }
+window.isCoinFav=function(sym){ return _coinFav().indexOf(sym)>=0; };
+window.toggleCoinFav=function(sym,ev){ if(ev){ev.stopPropagation();} var f=_coinFav(), i=f.indexOf(sym); if(i>=0)f.splice(i,1); else f.push(sym); _coinFavSet(f); var on=f.indexOf(sym)>=0;
+  document.querySelectorAll('.cfav[data-sym="'+sym+'"]').forEach(function(el){ el.classList.toggle('on',on); el.textContent=on?'★':'☆'; }); };
+async function renderCoinWatch(el){ var f=_coinFav();
+  var h='<div class="sec-title">⭐ 관심 코인</div><p class="sec-sub">코인 옆 <b>☆</b>를 눌러 추가한 종목을 실시간으로 봅니다.</p>';
+  if(!f.length){ el.innerHTML=h+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px;padding:18px">아직 관심 코인이 없어요. <b>RADAR</b>나 <b>홈</b>에서 코인 옆의 <b>☆</b>를 눌러 추가하세요.</div></div>'; return; }
+  el.innerHTML=h+'<div class="card"><div class="pad" id="cwList"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div>';
+  try{ var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();}); var mp={}; all.forEach(function(t){mp[t.symbol]=t;});
+    var rows=f.map(function(sym){ var t=mp[sym+'USDT']; if(!t)return ''; var ch=+t.priceChangePercent, col=cCol(ch);
+      return '<div class="rowbtn" style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line2);cursor:pointer" onclick="openCoin(\''+esc(sym)+'\')"><span><span class="cfav on" data-sym="'+esc(sym)+'" onclick="toggleCoinFav(\''+esc(sym)+'\',event)" style="cursor:pointer;color:#f5b301">★</span> <b>'+esc(sym)+'</b></span><span style="display:flex;gap:14px;align-items:center"><span class="num">'+coinPx(+t.lastPrice)+'</span><span class="num" style="color:'+col+';font-weight:700;min-width:66px;text-align:right">'+(ch>=0?'▲ +':'▼ ')+Math.abs(ch).toFixed(2)+'%</span></span></div>';
+    }).join(''); var le=$('#cwList'); if(le)le.innerHTML=rows||'<div class="muted" style="font-size:12px">해당 코인 시세가 없어요</div>';
+  }catch(e){ var le2=$('#cwList'); if(le2)le2.innerHTML='<div class="muted" style="font-size:12px">불러오지 못했어요</div>'; } }
+window.renderCoinWatch=renderCoinWatch;
+/* 코인 뉴스 & 트렌딩 */
+async function renderCoinNews(el){
+  var srcs=[['Coinness','실시간 국문 속보','https://coinness.live/'],['CoinDesk','글로벌 표준','https://www.coindesk.com/'],['The Block','온체인·기관','https://www.theblock.co/'],['Blockmedia','국내 블록체인','https://www.blockmedia.co.kr/'],['CoinGecko','시세·데이터','https://www.coingecko.com/'],['Binance Square','거래소 피드·공지','https://www.binance.com/en/square/news']];
+  var h='<div class="sec-title">📰 코인 뉴스 & 트렌딩</div><p class="sec-sub">지금 검색·거래가 몰리는 코인과 빠른 뉴스 소스.</p>'
+    +'<div class="row a"><div class="card"><div class="ch"><h2>🔥 트렌딩 <span style="font-weight:600;color:var(--faint);font-size:12px">검색 급증 · CoinGecko</span></h2></div><div class="pad" id="cnTrend"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div>'
+    +'<div class="card"><div class="ch"><h2>⚡ 빠른 뉴스 소스</h2></div><div class="pad">'+srcs.map(function(s){return '<a href="'+s[2]+'" target="_blank" rel="noopener" class="rowbtn" style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line2)"><span><b>'+s[0]+'</b> <span class="muted" style="font-size:11.5px">· '+s[1]+'</span></span><span class="muted">↗</span></a>';}).join('')+'<p class="muted" style="font-size:11px;margin-top:10px;line-height:1.5">외부 사이트로 이동합니다. 속보는 <b>Coinness</b>, 심층은 <b>The Block</b>가 빠릅니다.</p></div></div></div>';
+  el.innerHTML=h;
+  try{ var t=await fetch('https://api.coingecko.com/api/v3/search/trending').then(function(r){return r.json();}); var coins=(t&&t.coins)||[];
+    var te=$('#cnTrend'); if(te)te.innerHTML=coins.slice(0,12).map(function(c,i){ var it=c.item||{}; var chp=(it.data&&it.data.price_change_percentage_24h&&it.data.price_change_percentage_24h.usd);
+      return '<div class="rowbtn" style="display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px solid var(--line2);cursor:pointer" onclick="openCoin(\''+esc((it.symbol||'').toUpperCase())+'\')"><span><span class="muted">'+(i+1)+'</span> <b>'+esc((it.symbol||'').toUpperCase())+'</b> <span class="muted" style="font-size:11px">'+esc(it.name||'')+'</span></span><span class="num" style="'+(chp!=null?('color:'+cCol(chp)):'color:var(--faint)')+';font-weight:700">'+(chp!=null?((chp>=0?'+':'')+chp.toFixed(1)+'%'):('#'+(it.market_cap_rank||'-')))+'</span></div>';
+    }).join('')||'<div class="muted" style="font-size:12px">트렌딩 없음</div>';
+  }catch(e){ var te2=$('#cnTrend'); if(te2)te2.innerHTML='<div class="muted" style="font-size:12px">트렌딩을 불러오지 못했어요</div>'; } }
+window.renderCoinNews=renderCoinNews;
+/* 기초 자료 — 선물 기초 + 📈 선 그리는 법 */
+function renderCoinLearn(el){
+  var card=function(title,body){ return '<div class="card" style="margin-bottom:14px"><div class="ch"><h2>'+title+'</h2></div><div class="pad" style="font-size:13.5px;line-height:1.7;color:var(--ink)">'+body+'</div></div>'; };
+  var svgSR='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><rect width="220" height="96" fill="transparent"/><line x1="8" y1="24" x2="212" y2="24" stroke="#f6465d" stroke-width="2" stroke-dasharray="5 4"/><line x1="8" y1="76" x2="212" y2="76" stroke="#2ebd85" stroke-width="2" stroke-dasharray="5 4"/><polyline points="12,70 40,40 66,72 96,30 120,74 150,34 180,70 208,40" fill="none" stroke="var(--sub)" stroke-width="2"/><text x="10" y="18" fill="#f6465d" font-size="10" font-weight="700">저항</text><text x="10" y="90" fill="#2ebd85" font-size="10" font-weight="700">지지</text></svg>';
+  var svgTrend='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="10" y1="86" x2="210" y2="30" stroke="#e0a83e" stroke-width="2"/><polyline points="14,80 44,58 60,74 92,46 110,64 146,34 168,52 206,26" fill="none" stroke="var(--sub)" stroke-width="2"/><circle cx="14" cy="84" r="3" fill="#e0a83e"/><circle cx="60" cy="72" r="3" fill="#e0a83e"/><circle cx="110" cy="62" r="3" fill="#e0a83e"/><text x="120" y="88" fill="#e0a83e" font-size="10" font-weight="700">저점 잇기 = 상승추세선</text></svg>';
+  var svgChan='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="10" y1="80" x2="210" y2="34" stroke="#4a9eff" stroke-width="2"/><line x1="10" y1="52" x2="210" y2="8" stroke="#4a9eff" stroke-width="2"/><polyline points="14,74 44,52 60,70 92,40 110,58 146,30 168,46 206,18" fill="none" stroke="var(--sub)" stroke-width="2"/><text x="120" y="92" fill="#4a9eff" font-size="10" font-weight="700">평행 두 선 = 채널</text></svg>';
+  var svgFib='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="8" y1="16" x2="212" y2="16" stroke="#a06bff" stroke-width="1.5"/><line x1="8" y1="40" x2="212" y2="40" stroke="#a06bff" stroke-width="1.5" stroke-dasharray="3 3"/><line x1="8" y1="56" x2="212" y2="56" stroke="#a06bff" stroke-width="2"/><line x1="8" y1="80" x2="212" y2="80" stroke="#a06bff" stroke-width="1.5"/><text x="176" y="38" fill="#a06bff" font-size="9">0.382</text><text x="184" y="54" fill="#a06bff" font-size="9" font-weight="700">0.5</text><text x="176" y="72" fill="#a06bff" font-size="9" font-weight="700">0.618</text><polyline points="12,82 60,18 120,58 200,30" fill="none" stroke="var(--sub)" stroke-width="2"/></svg>';
+  var html='<div class="sec-title">📚 기초 자료 — 코인 선물 & 차트</div><p class="sec-sub">교육용 자료입니다. 매매 신호가 아니라 <b>스스로 판단</b>하는 근거를 기릅니다.</p>';
+  html+=card('📈 선 그리는 법 ① 지지·저항',
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
+    +'<b>지지</b> = 내려오다 <b>멈추고 반등</b>하는 가격대(매수세). <b>저항</b> = 오르다 <b>막히는</b> 가격대(매도세).<br>'
+    +'· 최근 <b>고점 2~3개</b>를 수평으로 이으면 저항, <b>저점 2~3개</b>를 이으면 지지.<br>'
+    +'· 한 번 뚫리면 <b>역할이 바뀜</b>(저항→지지). 거래량 많은 가격대일수록 강합니다.<br>'
+    +'· 대시보드 차트의 빨강/초록 점선이 24h 저항·지지예요.</div>'+svgSR+'</div>');
+  html+=card('📈 선 그리는 법 ② 추세선',
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
+    +'<b>상승추세선</b> = <b>저점끼리</b> 이은 선(우상향). <b>하락추세선</b> = <b>고점끼리</b> 이은 선(우하향).<br>'
+    +'· 점 <b>2개면 그리고, 3번째로 확인</b>. 선을 <b>지지/저항</b>처럼 씁니다(추세 유지 시나리오).<br>'
+    +'· 추세선이 깨지면 추세 전환 신호일 수 있어요. 차트의 <b>금색 선</b>이 스윙 추세선.</div>'+svgTrend+'</div>');
+  html+=card('📈 선 그리는 법 ③ 채널',
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
+    +'추세선과 <b>평행선</b>을 반대편에 그으면 <b>채널</b>. 상단=저항, 하단=지지.<br>'
+    +'· <b>상승 채널</b>이면 하단 매수·상단 매도가 기본 시나리오.<br>'
+    +'· 가격이 채널을 <b>이탈</b>하면 추세 가속 또는 전환. 차트의 <b>파란 두 선</b>이 회귀 채널.</div>'+svgChan+'</div>');
+  html+=card('📈 선 그리는 법 ④ 피보나치 되돌림 & 매물대',
+    '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
+    +'상승 후 눌릴 때 <b>0.382 / 0.5 / 0.618</b>에서 지지받는 경향. <b>0.618</b>을 "황금 되돌림"이라 함(보라 점선).<br>'
+    +'· 저점→고점에 피보를 걸면 되돌림 눌림목 구간이 보여요.<br>'
+    +'· <b>매물대(POC)</b> = 거래량이 가장 많이 쌓인 가격대(주황선) → 강한 지지·저항.<br>'
+    +'· 여러 근거가 <b>겹치는 자리</b>일수록 신뢰↑ (피보+지지+매물대 겹침 = 좋은 타점).</div>'+svgFib+'</div>');
+  html+=card('⚙️ 선물 기초 — 롱·숏·레버리지',
+    '<b>롱</b> = 오를 것에 베팅(싸게 사서 비싸게). <b>숏</b> = 내릴 것에 베팅(비싸게 팔고 싸게 되사기). 선물은 <b>양방향</b> 수익 가능.<br><br>'
+    +'<b>레버리지</b> = 증거금 대비 배율. <b>청산까지 버티는 역행폭 ≈ 1/레버리지</b>.<br>· 10배 → 약 −10%에서 청산 · 25배 → 약 −4% · 100배 → <b>약 −1%만 역행해도 청산</b>.<br>배율↑ = 청산가가 진입가에 <b>바짝 붙음</b>. 초보는 <b>3~5배 이하</b> 권장.');
+  html+=card('💥 청산 · 펀딩비 · 롱숏 비율',
+    '<b>청산가 근사식</b> — 롱 ≈ 진입×(1−1/레버리지), 숏 ≈ 진입×(1+1/레버리지). (수수료·유지증거금 제외)<br><br>'
+    +'<b>펀딩비</b> — <span class="up">+</span>면 롱이 숏에게 지불(롱 과열), <span class="down">−</span>면 숏이 롱에게 지불(숏 과열). 8시간마다 정산.<br><br>'
+    +'<b>롱숏 비율·Top Trader</b> — 시장 쏠림. <b>극단값은 역방향 청산</b>을 주의(과도한 롱쏠림 = 하방 청산 연료).');
+  html+=card('🛡️ 손절 · 리스크 관리 (제일 중요)',
+    '진입과 <b>동시에</b> 손절을 정합니다. 손절 자리는 임의의 %가 아니라 <b>"이 가격이면 내 판단이 틀렸다"</b>는 곳(지지 이탈, 스윙 저점 아래).<br><br>'
+    +'· <b>1회 리스크는 시드의 1~2%</b>로 — 상세의 🧮 계산기가 수량을 역산해줍니다.<br>'
+    +'· <b>손익비 2:1 이상</b>을 노리되, 손절폭이 너무 좁으면 숫자만 커 보이고 쉽게 털립니다.<br>'
+    +'· 손절 없는 매매 한 번이 수십 번의 수익을 지웁니다. <b>계좌를 지키는 게 1순위.</b>');
+  el.innerHTML=html;
+}
+window.renderCoinLearn=renderCoinLearn;
 async function loadCoinMarket(){
   var el=$('#coinMarket'); if(!el)return; var h='';
   try{ var fg=await fetch('https://api.alternative.me/fng/?limit=1').then(r=>r.json()); var v=+fg.data[0].value, kc={'Extreme Fear':'극단적 공포','Fear':'공포','Neutral':'중립','Greed':'탐욕','Extreme Greed':'극단적 탐욕'}[fg.data[0].value_classification]||fg.data[0].value_classification;
@@ -1359,7 +1457,7 @@ var _coinCur=null;
 async function openCoin(sym){
   sym=(sym||'BTC').toUpperCase().replace(/USDT$/,''); _coinCur=sym;
   var host=$('#coinHost'), body=$('#coinBody'); if(!host)return;
-  host.style.display='block'; if(body)body.style.display='none'; window.scrollTo({top:0,behavior:'smooth'});
+  host.style.display='block'; if(body)body.style.display='none'; var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; window.scrollTo({top:0,behavior:'smooth'});
   host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button><div style="padding:30px;color:var(--faint)">'+esc(sym)+' 불러오는 중…</div>';
   var s=sym+'USDT', F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
   var TF=window._coinTF||'1h'; window._coinTF=TF;
@@ -1421,7 +1519,7 @@ async function openCoin(sym){
     if(typeof _startCoinRefresh==='function')_startCoinRefresh();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} if(body)body.style.display=''; _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
+function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
 /* ===== 코인 상세 분석 도구(선물 터미널 이식): 수급·타점·레버리지·포지션 계산기 ===== */
 function _cEma(v,p){var k=2/(p+1),e=v[0],o=[e],i;for(i=1;i<v.length;i++){e=v[i]*k+e*(1-k);o.push(e);}return o;}
@@ -1677,12 +1775,12 @@ window.runCoinBacktest=async function(){ var bt=$('#cBtBox'); if(!bt)return; var
 function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
-  var menu=$('#menu'); if(menu)menu.style.display=coinMode?'none':'flex';
+  _applyCoinMenu(coinMode); // 코인 모드 전용 상단 메뉴(홈/RADAR/섹터/뉴스/관심/기초)
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
   var brf=$('#brief'); if(brf)brf.style.display=coinMode?'none':'';           // 주식 브리핑은 코인 모드에서 숨김
   var msum=$('#marketSummary'); if(msum)msum.style.display=coinMode?'none':'';  // 주식 시장요약도 숨김
   $$('.view').forEach(function(v){v.classList.remove('on');});
-  if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); }
+  if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); coinNav('home'); }
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
