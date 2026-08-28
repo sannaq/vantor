@@ -1812,8 +1812,11 @@ window.coinDepth=coinDepth;
 var _chDrag={active:false,mode:'pan',sx:0,sy:0,sPan:0,sZoom:90,sYS:1,moved:false,cv:null};
 function _chLen(){ return (typeof CHART!=='undefined'&&CHART&&CHART.r&&CHART.r._candles)?CHART.r._candles.length:0; }
 function _chRedraw(cv){ if(cv._ivRAF)cancelAnimationFrame(cv._ivRAF); cv._ivRAF=requestAnimationFrame(function(){ if(typeof CHART!=='undefined'&&CHART&&CHART.r)drawStockChart(cv,CHART.r); }); }
-function _chRegion(cv,e){ var sx=cv.width/(cv.clientWidth||1), sy=cv.height/(cv.clientHeight||1); var cx=e.offsetX*sx, cy=e.offsetY*sy; var plotR=cv.width-76, volB=cv.height-26;
-  if(cx>plotR) return 'y'; if(cy>volB) return 'x'; return 'main'; }
+function _chRegion(cv,e){ var w=cv.clientWidth||0, h=cv.clientHeight||0; if(w<60||h<60)return 'main'; // 레이아웃 전이면 본문 취급
+  var ox=(e.offsetX!=null?e.offsetX:0), oy=(e.offsetY!=null?e.offsetY:0); // CSS 픽셀 기준
+  if(ox>w-40) return 'y';   // 오른쪽 가격축 스트립(~40px)
+  if(oy>h-24) return 'x';   // 하단 시간축 스트립(~24px)
+  return 'main'; }
 var _clamp=function(v,a,b){ return Math.max(a,Math.min(b,v)); };
 function _attachChartZoom(cv){
   if(!window._chDragBound){ window._chDragBound=true; // 전역 1회: 드래그 이동/종료
