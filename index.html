@@ -333,6 +333,40 @@
 .bsec.collapsed .bsec-b{display:none}
 .bsec-b{padding-bottom:6px}
 @media(max-width:640px){.bcap{min-width:100%}.bnews{padding-left:0}}
+/* ===== 코인 상세 분석 도구(선물 터미널 이식) ===== */
+#coinHost{--txt:var(--ink);--accent:var(--gold);--up:#2ebd85;--down:#f6465d;--upbg:rgba(46,189,133,.13);--downbg:rgba(246,70,93,.16)}
+#coinHost .up{color:var(--up)}#coinHost .down{color:var(--down)}#coinHost .muted{color:var(--sub)}#coinHost .num{font-variant-numeric:tabular-nums}
+#coinHost .sect{font-size:11px;font-weight:800;letter-spacing:.5px;color:var(--sub);text-transform:uppercase;margin:18px 0 9px;padding-top:13px;border-top:1px solid var(--line)}
+#coinHost .flowcard{margin-top:6px}
+#coinHost .lqcard{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+#coinHost .lqh{font-size:12px;font-weight:800;margin-bottom:6px}
+#coinHost .lqrow{display:flex;justify-content:space-between;font-size:13px;padding:4px 0}
+#coinHost .rlab2{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;margin:0 0 5px}
+#coinHost .gbar{position:relative;height:24px;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,color-mix(in srgb,var(--down) 88%,#000),var(--down));box-shadow:inset 0 1px 3px rgba(0,0,0,.3);margin:2px 0 4px}
+#coinHost .gbar .gf{position:absolute;left:0;top:0;bottom:0;border-radius:999px;background:linear-gradient(180deg,color-mix(in srgb,var(--up) 92%,#fff),var(--up));box-shadow:0 0 9px color-mix(in srgb,var(--up) 45%,transparent);transition:width .85s cubic-bezier(.22,.9,.3,1);width:0}
+#coinHost .gbar .gl,#coinHost .gbar .gr{position:absolute;top:0;bottom:0;display:flex;align-items:center;font-size:11.5px;font-weight:800;color:#fff;z-index:2;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#coinHost .gbar .gl{left:12px}#coinHost .gbar .gr{right:12px}
+#coinHost .calcgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+#coinHost .calcgrid label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:700;color:var(--sub)}
+#coinHost .calcgrid input{padding:9px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:15px;font-family:inherit;outline:none;width:100%;font-variant-numeric:tabular-nums}
+#coinHost .calcgrid input:focus{border-color:var(--gold)}
+#coinHost .calcrow{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;padding:4px 0;border-bottom:1px solid var(--line)}
+#coinHost .calcrow:last-child{border:none}
+#coinHost .calcok{font-size:11.5px;margin-top:7px;color:var(--up);line-height:1.5;font-weight:700}
+#coinHost .calcwarn{font-size:11.5px;margin-top:7px;color:var(--down);line-height:1.5;font-weight:800}
+#coinHost .hztabs{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 9px}
+#coinHost .hzt{flex:1;min-width:62px;padding:8px 6px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;line-height:1.25}
+#coinHost .hzt.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 13%,var(--panel2))}
+#coinHost .hzt span{display:block;font-size:13px;margin-top:2px;font-weight:800}
+#coinHost .tf{padding:7px 11px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#coinHost .tf.on{border-color:var(--gold);background:color-mix(in srgb,var(--gold) 13%,var(--panel2))}
+#coinHost .livebadge{font-size:9px;font-weight:800;color:#fff;background:var(--down);padding:2px 7px;border-radius:20px;letter-spacing:.5px}
+#coinHost .rsub{font-size:12.5px;color:var(--sub);margin-top:7px;line-height:1.5}
+#coinHost .rsub b{color:var(--ink)}
+#coinHost .sigcard{margin:12px 0 2px;border-radius:12px;padding:12px 14px;border:1px solid var(--line)}
+#coinHost .sig-long{background:var(--upbg);border-color:color-mix(in srgb,var(--up) 40%,transparent)}
+#coinHost .sig-short{background:var(--downbg);border-color:color-mix(in srgb,var(--down) 40%,transparent)}
+#coinHost .sigdir{font-size:18px;font-weight:800}
 </style>
 </head>
 <body>
@@ -505,7 +539,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=24"></script>
+<script src="app.js?v=25"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

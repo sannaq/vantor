@@ -1361,12 +1361,116 @@ async function openCoin(sym){
         +cmet('롱/숏 계정',la==null?'—':('롱 '+la.toFixed(0)+'%'),la==null?'':('숏 '+(100-la).toFixed(0)+'%'),la==null?'':(la>=50?'up':'down'))
       +'</div>'
       +'<canvas class="schart" id="coinChartCv"></canvas>'
-      +'<p style="color:var(--faint);font-size:11.5px;margin:10px 2px 0">📊 Binance 1시간봉 · 오더블럭/이동평균 표시 · 마우스 올리면 시고저종·거래대금. 청산 히트맵은 🔥 청산맵에서.</p>';
+      +'<p style="color:var(--faint);font-size:11.5px;margin:10px 2px 0">📊 Binance 1시간봉 · 지지/저항·채널·추세선·피보·매물대·오더블럭. 마우스 올리면 시고저종·거래대금. 청산 히트맵은 🔥 청산맵에서.</p>'
+      +'<div id="coinTopsig" class="sigcard" style="display:none"></div>'
+      +'<div class="sect">📊 수급 · 매매 판단 · 도구</div>'
+      +'<div id="coinFlow" class="flowcard"><div class="muted" style="font-size:12px;padding:6px 0">롱·숏 & 매물대 불러오는 중…</div></div>';
     var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r);
+    if(typeof coinFlow==='function')coinFlow(sym,s,px);
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} if(body)body.style.display=''; }
+function closeCoin(){ var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} if(body)body.style.display=''; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
+/* ===== 코인 상세 분석 도구(선물 터미널 이식): 수급·타점·레버리지·포지션 계산기 ===== */
+function _cEma(v,p){var k=2/(p+1),e=v[0],o=[e],i;for(i=1;i<v.length;i++){e=v[i]*k+e*(1-k);o.push(e);}return o;}
+function _cRsi(cl,p){if(!cl||cl.length<p+1)return null;var g=0,l=0,i;for(i=1;i<=p;i++){var dd=cl[i]-cl[i-1];if(dd>=0)g+=dd;else l-=dd;}g/=p;l/=p;for(i=p+1;i<cl.length;i++){var d2=cl[i]-cl[i-1],gg=d2>0?d2:0,ll=d2<0?-d2:0;g=(g*(p-1)+gg)/p;l=(l*(p-1)+ll)/p;}if(l===0)return 100;return 100-100/(1+g/l);}
+function _cMacd(cl){if(!cl||cl.length<35)return null;var e12=_cEma(cl,12),e26=_cEma(cl,26),md=[],i;for(i=0;i<cl.length;i++)md.push(e12[i]-e26[i]);var sig=_cEma(md,9);var h=md[md.length-1]-sig[sig.length-1],hp=md[md.length-2]-sig[sig.length-2];return {hist:h,rising:h>hp,bull:h>0};}
+function _cSig(kl){if(!kl||kl.length<12)return null;var n=kl.length,sx=0,sy=0,sxy=0,sxx=0,i;for(i=0;i<n;i++){var c=+kl[i][4];sx+=i;sy+=c;sxy+=i*c;sxx+=i*i;}var den=n*sxx-sx*sx,sl=den?(n*sxy-sx*sy)/den:0,itc=(sy-sl*sx)/n;var ab=-1e18,be=1e18;for(i=0;i<n;i++){var r=itc+sl*i,h=+kl[i][2]-r,l=+kl[i][3]-r;if(h>ab)ab=h;if(l<be)be=l;}var last=itc+sl*(n-1),lo=last+be,up=last+ab,chH=(ab-be)||1,dir=sl>=0?'long':'short',e,tg,sp,rr;if(dir==='long'){e=lo;tg=up;sp=lo-chH*0.15;rr=(tg-e)/((e-sp)||1);}else{e=up;tg=lo;sp=up+chH*0.15;rr=(e-tg)/((sp-e)||1);}return {dir:dir,entry:e,target:tg,stop:sp,rr:rr};}
+function _cVolP(kl){if(!Array.isArray(kl)||!kl.length)return null;var lo=Infinity,hi=-Infinity;kl.forEach(function(k){var l=+k[3],h=+k[2];if(l<lo)lo=l;if(h>hi)hi=h;});var bins=24,w=(hi-lo)/bins;if(!(w>0))return null;var vol=new Array(bins).fill(0);kl.forEach(function(k){var tp=(+k[2]+ +k[3]+ +k[4])/3,v=+k[5];var idx=Math.floor((tp-lo)/w);if(idx<0)idx=0;if(idx>=bins)idx=bins-1;vol[idx]+=v;});var mi=0;for(var i=1;i<bins;i++)if(vol[i]>vol[mi])mi=i;return {low:lo+mi*w,high:lo+(mi+1)*w};}
+function _cFmt(n,d){return (+n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function _cDecOf(p){p=Math.abs(+p);if(!isFinite(p))return 2;if(p>=100)return 2;if(p>=1)return 3;if(p>=0.1)return 4;if(p>=0.01)return 5;return 6;}
+function _cMoney(v){v=+v||0;return '$'+v.toLocaleString('en-US',{maximumFractionDigits:v<1000?2:0});}
+function _cAmt(v){v=+v||0;if(v>=1e12)return (v/1e12).toFixed(2)+'T';if(v>=1e9)return (v/1e9).toFixed(2)+'B';if(v>=1e6)return (v/1e6).toFixed(2)+'M';if(v>=1e3)return (v/1e3).toFixed(1)+'K';return v.toFixed(0);}
+var _cTakerWin=[],_cTakerB=0,_cTakerS=0,_cTakerSym=null,_cTakerWS=null,_cTakerLast=0;
+function _updateCoinTaker(force){var now=Date.now(),cut=now-90000;while(_cTakerWin.length&&_cTakerWin[0].t<cut){var o=_cTakerWin.shift();_cTakerB-=o.b;_cTakerS-=o.s;}if(!force&&now-_cTakerLast<700)return;_cTakerLast=now;var el=document.getElementById('cLivetaker');if(!el)return;var b=_cTakerB,s=_cTakerS,cnt=_cTakerWin.length,tot=b+s;if(tot<=0)return;var bp=b/tot*100;var gf=el.querySelector('.gf');if(gf)gf.style.width=bp.toFixed(1)+'%';var gl=el.querySelector('.gl');if(gl)gl.textContent='매수 '+bp.toFixed(1)+'%';var gr=el.querySelector('.gr');if(gr)gr.textContent='매도 '+(100-bp).toFixed(1)+'%';var amt=document.getElementById('cLiveamt');if(amt)amt.innerHTML='매수 <b class="up">$'+_cAmt(b)+'</b> · 매도 <b class="down">$'+_cAmt(s)+'</b> · '+cnt+'건 <span class="muted">(최근 90초 공격적 체결)</span>';}
+function _openCoinTaker(bn){if(_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;}if(_cTakerSym!==bn){_cTakerWin=[];_cTakerB=0;_cTakerS=0;_cTakerSym=bn;}try{_cTakerWS=new WebSocket('wss://fstream.binance.com/ws/'+bn.toLowerCase()+'@aggTrade');_cTakerWS.onmessage=function(ev){try{var m=JSON.parse(ev.data);var p=+m.p;if(!p)return;var qv=(+m.q||0)*p;if(qv<=0)return;var isBuy=(m.m===false);_cTakerWin.push({t:(m.T||Date.now()),b:isBuy?qv:0,s:isBuy?0:qv});if(isBuy)_cTakerB+=qv;else _cTakerS+=qv;_updateCoinTaker(false);}catch(e){}};}catch(e){}}
+var _cLev=25;try{var _csl=+localStorage.getItem('oxlev');if(_csl)_cLev=_csl;}catch(e){}
+window.setCLev=function(n){_cLev=n;try{localStorage.setItem('oxlev',n);}catch(e){}renderCoinLev();coinCalcPos();};
+function renderCoinLev(){var el=document.getElementById('cLevblk');if(!el)return;var sg=window._csig,d=sg?_cDecOf(sg.entry):2,mx=75;var steps=[5,10,20,25,50,75].filter(function(v){return v<=Math.max(mx,_cLev);});var btns=steps.map(function(v){return '<button class="tf'+(v===_cLev?' on':'')+'" onclick="setCLev('+v+')">'+v+'x</button>';}).join('');var body='';
+  if(sg&&sg.entry&&isFinite(sg.entry)){var isLong=sg.dir==='long',mmr=0.005,liqFrac=Math.max(0.0005,1/_cLev-mmr),liq=isLong?sg.entry*(1-liqFrac):sg.entry*(1+liqFrac),stopDist=Math.abs(sg.entry-sg.stop)/sg.entry*100,liqDist=liqFrac*100,safe=stopDist*1.2<liqDist,safeLev=Math.max(1,Math.floor(1/(stopDist/100*1.2+mmr)));if(safeLev>mx)safeLev=mx;
+    body='<div class="lqrow"><span class="muted">청산가 ('+_cLev+'x · '+(isLong?'롱':'숏')+' 진입 '+_cFmt(sg.entry,d)+')</span><span class="num down">'+_cFmt(liq,d)+'</span></div>'
+      +'<div class="lqrow"><span class="muted">손절까지 '+stopDist.toFixed(2)+'% · 청산까지 '+liqDist.toFixed(2)+'%</span><span class="num '+(safe?'up':'down')+'">'+(safe?'✅ 손절이 먼저':'⚠️ 청산이 먼저')+'</span></div>'
+      +'<div class="lqrow"><span class="muted">이 타점 안전 최대 레버리지</span><span class="num up">'+safeLev+'x</span></div>'
+      +(safe?'<div class="muted" style="font-size:11px;margin-top:4px">손절이 청산보다 앞에 있어 계획된 손절이 정상 작동합니다.</div>':'<div style="font-size:11px;margin-top:4px;color:var(--down)">⚠️ '+_cLev+'x에선 손절 전에 청산됩니다. <b>'+safeLev+'x 이하</b>로 낮추세요.</div>');
+  }else body='<div class="muted" style="font-size:11.5px">신호가 계산되면 청산·안전 레버리지가 표시됩니다.</div>';
+  el.innerHTML='<div class="lqh">⚙️ 레버리지 · 타점 안전도 <span class="muted" style="font-weight:400">(격리 근사)</span></div><div style="margin:6px 0 8px;display:flex;flex-wrap:wrap;gap:4px">'+btns+'</div>'+body+'<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">청산=격리 근사(유지증거금 0.5% 가정·수수료 제외). 정확값은 거래소 청산가로 재확인.</div>';}
+window.showCHz=function(tf){document.querySelectorAll('#coinHost .hzt').forEach(function(b){b.classList.toggle('on',b.dataset.tf===tf);});var out=document.getElementById('cHzout');if(!out)return;var sg=(window._chz||{})[tf],d=window._chzDec||2;if(!sg){out.innerHTML='<div class="muted" style="font-size:12px;padding:4px 0">이 구간 데이터가 부족해요.</div>';return;}var isLong=sg.dir==='long',tgtPct=Math.abs(sg.target-sg.entry)/sg.entry*100,stpPct=Math.abs(sg.entry-sg.stop)/sg.entry*100,rr=stpPct?tgtPct/stpPct:0;
+  out.innerHTML='<div class="lqrow"><span class="muted">방향</span><span class="'+(isLong?'up':'down')+'" style="font-weight:800">'+(isLong?'▲ 롱 (오르면 이익)':'▼ 숏 (내리면 이익)')+'</span></div>'
+   +'<div class="lqrow"><span class="muted">'+(isLong?'매수 진입가':'숏 진입가')+'</span><span class="num" style="font-weight:800">'+_cFmt(sg.entry,d)+'</span></div>'
+   +'<div class="lqrow"><span class="muted">🎯 목표가 (익절)</span><span class="num up">'+_cFmt(sg.target,d)+' <span class="muted" style="font-size:11px">(+'+tgtPct.toFixed(2)+'%)</span></span></div>'
+   +'<div class="lqrow"><span class="muted">✕ 손절가</span><span class="num down">'+_cFmt(sg.stop,d)+' <span class="muted" style="font-size:11px">(−'+stpPct.toFixed(2)+'%)</span></span></div>'
+   +'<div class="muted" style="font-size:11.5px;margin-top:7px;line-height:1.6;background:var(--panel);border-radius:8px;padding:8px 10px">💡 <b>손익비 '+rr.toFixed(1)+' : 1</b> — 목표 닿으면 <b class="up">+'+tgtPct.toFixed(2)+'%</b>, 손절되면 <b class="down">−'+stpPct.toFixed(2)+'%</b>. 보통 <b>2:1 이상</b>이면 유리.</div>';};
+window.coinCalcPos=function(){var out=document.getElementById('cCalcOut');if(!out)return;var g=function(id){return +(document.getElementById(id)||{}).value||0;};var bal=g('cBal'),rk=g('cRisk'),en=g('cEntry'),st=g('cStop');try{localStorage.setItem('oxbal',bal||'');localStorage.setItem('oxrisk',rk||'');}catch(e){}
+  if(!(bal>0&&rk>0&&en>0&&st>0&&en!==st)){out.innerHTML='<div class="muted" style="font-size:11.5px">시드·리스크·진입·손절을 채우면 자동 계산됩니다.</div>';return;}
+  var lev=_cLev||1,riskAmt=bal*rk/100,stopDist=Math.abs(en-st)/en,notional=riskAmt/stopDist,qty=notional/en,margin=notional/lev,marginPct=margin/bal*100,liqFrac=Math.max(0.0005,1/lev-0.005),stopFirst=stopDist<liqFrac;
+  function R(k,v){return '<div class="calcrow"><span class="muted">'+k+'</span><span class="num">'+v+'</span></div>';}
+  var h=R('리스크 금액','<b class="down">'+_cMoney(riskAmt)+'</b> · '+rk+'%')+R('손절까지 거리',(stopDist*100).toFixed(2)+'%')+R('포지션 명목가치',_cMoney(notional))+R('진입 수량',qty.toLocaleString('en-US',{maximumFractionDigits:qty<1?4:2}))+R('필요 증거금 ('+lev+'x)',_cMoney(margin)+' <span class="'+(marginPct>100?'down':'muted')+'">('+marginPct.toFixed(marginPct<10?1:0)+'%)</span>');
+  if(marginPct>100)h+='<div class="calcwarn">⚠️ 필요 증거금이 시드를 초과합니다. 레버리지↑ 또는 리스크%↓.</div>';
+  else if(!stopFirst)h+='<div class="calcwarn">⚠️ '+lev+'x에선 손절 전에 청산됩니다. 레버리지를 낮추세요.</div>';
+  else h+='<div class="calcok">✅ 손절 맞으면 딱 '+_cMoney(riskAmt)+'('+rk+'%)만 잃습니다.</div>';
+  out.innerHTML=h;};
+async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');if(!box)return;var d=_cDecOf(px);
+  try{var B='https://fapi.binance.com/futures/data/',F='https://fapi.binance.com/fapi/v1/';
+    var r=await Promise.all([
+      fetch(B+'globalLongShortAccountRatio?symbol='+bn+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(B+'topLongShortAccountRatio?symbol='+bn+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(B+'takerlongshortRatio?symbol='+bn+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(F+'klines?symbol='+bn+'&interval=15m&limit=200').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(F+'klines?symbol='+bn+'&interval=4h&limit=120').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(B+'openInterestHist?symbol='+bn+'&period=1h&limit=6').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(F+'klines?symbol='+bn+'&interval=5m&limit=200').then(function(r){return r.json();}).catch(function(){return [];}),
+      fetch(F+'klines?symbol='+bn+'&interval=1h&limit=200').then(function(r){return r.json();}).catch(function(){return [];})
+    ]);
+    if(_coinCur!==sym)return;
+    var g=(r[0]&&r[0][0])||{},tt=(r[1]&&r[1][0])||{},tk=(r[2]&&r[2][0])||{},kl=r[3]||[],kl4=r[4]||[],oih=r[5]||[],kl5=r[6]||[],kl1h=r[7]||[];
+    var gL=+g.longAccount*100||50,gS=100-gL,tL=+tt.longAccount*100||50,tS=100-tL,bV=+tk.buyVol||0,sV=+tk.sellVol||0,tot=bV+sV,bP=tot?bV/tot*100:50;
+    var poc=_cVolP(kl),closes=kl.map(function(k){return +k[4];});
+    var h='<div class="lqh">실시간 체결 & 롱·숏 수급 <span class="muted" style="font-weight:400">(체결=실시간 · 비율=5분)</span></div>';
+    h+='<div class="rlab2"><span>⚡ 실시간 체결 흐름</span><span class="livebadge">● LIVE</span></div>';
+    h+='<div id="cLivetaker" class="gbar"><div class="gf" style="width:50%"></div><span class="gl">매수 –</span><span class="gr">매도 –</span></div>';
+    h+='<div class="rsub" id="cLiveamt">체결 대기 중… <span class="muted">(최근 90초 공격적 체결)</span></div>';
+    h+='<div class="rlab2" style="margin-top:13px"><span>롱 / 숏 계정 비율</span><span class="muted" style="font-weight:600">5분</span></div>';
+    h+='<div class="gbar"><div class="gf" data-w="'+gL.toFixed(1)+'"></div><span class="gl">롱 '+gL.toFixed(1)+'%</span><span class="gr">숏 '+gS.toFixed(1)+'%</span></div>';
+    h+='<div class="rlab2" style="margin-top:11px"><span>Top Trader 롱 / 숏</span></div>';
+    h+='<div class="gbar"><div class="gf" data-w="'+tL.toFixed(1)+'"></div><span class="gl">롱 '+tL.toFixed(1)+'%</span><span class="gr">숏 '+tS.toFixed(1)+'%</span></div>';
+    h+='<div class="rsub">Taker 거래량(5분) — 매수 <b class="up">'+bV.toFixed(1)+'</b> / 매도 <b class="down">'+sV.toFixed(1)+'</b> <span class="'+(bP>=50?'up':'down')+'">('+(bP>=50?'매수 우위':'매도 우위')+')</span></div>';
+    if(poc)h+='<div class="rsub">📊 매물대 집중(POC) <b>'+_cFmt(poc.low,d)+' ~ '+_cFmt(poc.high,d)+'</b> — 이 구간 거래량 최다(지지·저항↑)</div>';
+    var rv=_cRsi(closes,14);if(rv!=null){var rz=rv>=70?'<span class="down">과매수</span>':rv<=30?'<span class="up">과매도</span>':'중립';h+='<div class="rsub">📈 RSI(14) <b>'+rv.toFixed(1)+'</b> · '+rz+' <span class="muted">(70↑ 과매수 · 30↓ 과매도)</span></div>';}
+    var mc=_cMacd(closes);if(mc)h+='<div class="rsub">📉 MACD <b class="'+(mc.bull?'up':'down')+'">'+(mc.bull?'상승 우위':'하락 우위')+'</b> · '+(mc.rising?'강해지는 중':'약해지는 중')+'</div>';
+    if(Array.isArray(oih)&&oih.length>=2){var o1=+oih[oih.length-1].sumOpenInterest,o0=+oih[0].sumOpenInterest,oc=o0?((o1-o0)/o0*100):0;h+='<div class="rsub">🔓 미결제약정(OI) <b class="'+(oc>=0?'up':'down')+'">'+(oc>=0?'+':'')+oc.toFixed(1)+'%</b> <span class="muted">(최근 6시간 · '+(oc>=0?'포지션 증가':'감소')+')</span></div>';}
+    var t5=_cSig(kl5),t15=_cSig(kl),t1h=_cSig(kl1h),t4=_cSig(kl4);
+    window._chz={'5m':t5,'15m':t15,'1h':t1h,'4h':t4};window._chzDec=d;
+    var HZ=[['초단기','5m',t5],['단기','15m',t15],['중기','1h',t1h],['장기','4h',t4]];
+    var dirs=HZ.map(function(z){return z[2]?z[2].dir:null;}).filter(Boolean),longs=dirs.filter(function(x){return x==='long';}).length,shorts=dirs.length-longs,consensus=longs>=shorts?'long':'short',allAgree=dirs.length>0&&(longs===dirs.length||shorts===dirs.length);
+    h+='<div style="border-top:1px solid var(--line);margin-top:10px;padding-top:9px"><div class="lqh">🎯 타점 — 구간 선택 <span class="muted" style="font-weight:400">(버튼을 누르면 진입·목표·손절)</span></div>'
+      +'<div class="hztabs">'+HZ.map(function(z){var dc=z[2]?(z[2].dir==='long'?'up':'down'):'muted',ar=z[2]?(z[2].dir==='long'?'▲롱':'▼숏'):'-';return '<button class="hzt" data-tf="'+z[1]+'" onclick="showCHz(\''+z[1]+'\')">'+z[0]+'<span class="'+dc+'">'+ar+'</span></button>';}).join('')+'</div><div id="cHzout"></div>'
+      +'<div class="muted" style="font-size:11px;margin-top:5px;line-height:1.5">'+(allAgree?('✅ 네 구간 방향이 모두 '+(longs?'상승':'하락')+' → 신뢰 높음'):'⚠️ 구간별 방향이 엇갈립니다 — 볼 구간을 정하고 그 버튼만 보세요.')+'</div></div>';
+    var n=kl.length,sx=0,sy=0,sxy=0,sxx=0,i;for(i=0;i<n;i++){var cc=+kl[i][4];sx+=i;sy+=cc;sxy+=i*cc;sxx+=i*i;}
+    var den=n*sxx-sx*sx,sl=den?(n*sxy-sx*sy)/den:0,itc=(sy-sl*sx)/n,above=-1e18,below=1e18;
+    for(i=0;i<n;i++){var r0=itc+sl*i,hh=+kl[i][2]-r0,ll=+kl[i][3]-r0;if(hh>above)above=hh;if(ll<below)below=ll;}
+    var last=itc+sl*(n-1),lower=last+below,upper=last+above,chH=(above-below)||1,stop=lower-chH*0.15;
+    h+='<div id="cLevblk" class="lqcard" style="margin-top:10px"></div>';
+    var _bal='',_rk='1';try{_bal=localStorage.getItem('oxbal')||'';_rk=localStorage.getItem('oxrisk')||'1';}catch(e){}
+    var _pd=Math.max(2,_cDecOf(px));
+    h+='<div class="lqcard" style="margin-top:10px"><div class="lqh">🧮 포지션 계산기 <span class="muted" style="font-weight:400">(리스크 관리 · '+_cLev+'x)</span></div>'
+     +'<div class="calcgrid"><label>시드 (USDT)<input id="cBal" type="number" inputmode="decimal" placeholder="예: 1000" value="'+_bal+'" oninput="coinCalcPos()"></label>'
+     +'<label>1회 리스크 %<input id="cRisk" type="number" inputmode="decimal" placeholder="1~2" value="'+_rk+'" oninput="coinCalcPos()"></label>'
+     +'<label>진입가<input id="cEntry" type="number" inputmode="decimal" value="'+(+lower.toFixed(_pd))+'" oninput="coinCalcPos()"></label>'
+     +'<label>손절가<input id="cStop" type="number" inputmode="decimal" value="'+(+stop.toFixed(_pd))+'" oninput="coinCalcPos()"></label></div><div id="cCalcOut"></div>'
+     +'<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">레버리지는 위 ⚙️의 '+_cLev+'x 사용. 손절 시 리스크%만 잃도록 수량 역산.</div></div>';
+    box.innerHTML=h;
+    box.querySelectorAll('.gf[data-w]').forEach(function(f){var w=f.dataset.w;requestAnimationFrame(function(){f.style.width=w+'%';});});
+    var e,tg,sp;if(consensus==='long'){e=lower;tg=upper;sp=stop;}else{e=upper;tg=lower;sp=upper+chH*0.15;}
+    window._csig={dir:consensus,entry:e,stop:sp,target:tg,px:px};
+    renderCoinLev();coinCalcPos();showCHz('15m');_updateCoinTaker(true);
+    var ts=document.getElementById('coinTopsig');
+    if(ts){var cnt2=(consensus==='long'?longs:shorts)+'/'+dirs.length,verdict=allAgree?((consensus==='long'?'▲ 롱 우세':'▼ 숏 우세')+' ('+cnt2+')'):'⚖ 혼조 · 관망';
+      ts.className='sigcard '+(allAgree?(consensus==='long'?'sig-long':'sig-short'):'');ts.style.display='block';
+      ts.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="sigdir '+(allAgree?(consensus==='long'?'up':'down'):'')+'"'+(allAgree?'':' style="color:var(--gold)"')+'>'+verdict+'</span><span class="muted" style="font-size:11.5px">4구간 종합 · 교육용</span></div><div class="muted" style="font-size:11.5px;margin-top:5px;line-height:1.5">'+(allAgree?'네 구간 방향 일치 — 아래 🎯 타점에서 구간별 진입가를 확인하세요.':'⚠️ 구간 방향이 엇갈립니다 — 확신 진입보다 관망 권장.')+'</div>';}
+    _openCoinTaker(bn);
+  }catch(e){if(_coinCur===sym)box.innerHTML='<div class="muted" style="font-size:12px;padding:2px 0">수급 데이터를 불러오지 못했어요</div>';}
+}
+window.coinFlow=coinFlow;
 function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
