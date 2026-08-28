@@ -379,6 +379,21 @@
 .secch{font-size:16px;font-weight:800;margin-top:4px}
 .sectop{font-size:10.5px;color:var(--sub);margin-top:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .secmc{font-size:10.5px;color:var(--faint);margin-top:2px}
+/* 청산맵(다크) */
+#lqRoot{--lqline:#222d3d;--lqsub:#8b96a7}
+#lqRoot .lqpill{padding:6px 12px;border-radius:9px;border:1px solid var(--lqline);background:#0f151f;color:#c9d3e0;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+#lqRoot .lqpill.on{border-color:#e0b552;background:rgba(224,181,82,.14);color:#e0b552}
+#lqRoot .lqStat{background:#0f151f;border:1px solid var(--lqline);border-radius:12px;padding:12px 14px}
+#lqRoot .lqk{font-size:12px;color:var(--lqsub);font-weight:600;display:flex;align-items:center;gap:5px}
+#lqRoot .lqv{font-size:20px;font-weight:800;margin-top:5px}
+#lqRoot .lqs{font-size:11px;color:#5a6576;margin-top:3px}
+#lqRoot .frow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 9px;border-bottom:1px solid #171f2b;font-size:12px}
+#lqRoot .frow .side{font-weight:800;font-size:11px;padding:2px 7px;border-radius:6px}
+#lqRoot .frow .side.long{background:rgba(246,70,93,.16);color:#f6465d}
+#lqRoot .frow .side.short{background:rgba(46,189,133,.16);color:#2ebd85}
+#lqRoot .frow .px{color:#c9d3e0;font-variant-numeric:tabular-nums}
+#lqRoot .frow .amt{font-weight:800;font-variant-numeric:tabular-nums}
+@media(max-width:820px){#lqRoot .lqStats{grid-template-columns:repeat(2,1fr)!important}#lqRoot .lqMain{grid-template-columns:1fr!important}}
 </style>
 </head>
 <body>
@@ -555,7 +570,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=34"></script>
+<script src="app.js?v=35"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
