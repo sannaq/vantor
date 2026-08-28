@@ -534,8 +534,8 @@ function drawStockChart(cv,r){
   var n, data, last, real=false;
   if(r._candles&&r._candles.length>1){ // 프록시 /candles 실데이터: [ms,o,h,l,c,v]
     var _len=r._candles.length;
-    var _visN=(r.mk==='COIN'&&window._coinZoom)?Math.max(20,Math.min(_len,window._coinZoom)):90; // 휠 줌 반영
-    var _pan=(r.mk==='COIN'&&window._coinPan)?Math.max(0,Math.min(_len-_visN,window._coinPan)):0; // 드래그 팬(과거로 이동)
+    var _visN=window._chartZoom?Math.max(20,Math.min(_len,window._chartZoom)):90; // 휠 줌 반영(코인·주식 공용)
+    var _pan=window._chartPan?Math.max(0,Math.min(_len-_visN,window._chartPan)):0; // 드래그 팬(과거로 이동)
     var _end=_len-_pan, _start=Math.max(0,_end-_visN);
     data=r._candles.slice(_start,_end).map(function(k){ return [k[1],k[2],k[3],k[4],k[5]||0,k[0]]; }); // +ms
     n=data.length; last=data[n-1][3]; real=true;
@@ -719,9 +719,9 @@ function drawCrosshair(idx){
 function hideCrosshair(){ var tip=document.querySelector('#chartTip'); if(tip)tip.style.display='none'; if(CHART)drawStockChart(CHART.cv,CHART.r); }
 function attachChartCrosshair(cv){
   if(!cv||cv._chAttached) return; cv._chAttached=true;
-  cv.addEventListener('mousemove',function(e){ if(window._coinPanning)return; var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
+  cv.addEventListener('mousemove',function(e){ if(window._chartPanning)return; var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
   cv.addEventListener('mouseleave',hideCrosshair);
-  cv.addEventListener('click',function(e){ if(window._coinJustPanned){window._coinJustPanned=false;return;} var i=crosshairIdx(e.clientX); if(i>=0)showCandleDetail(i); });
+  cv.addEventListener('click',function(e){ if(window._chartJustPanned){window._chartJustPanned=false;return;} var i=crosshairIdx(e.clientX); if(i>=0)showCandleDetail(i); });
   cv.style.cursor='pointer';
   cv.addEventListener('touchstart',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i);} } },{passive:true});
   cv.addEventListener('touchmove',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i); e.preventDefault();} } },{passive:false});
@@ -866,7 +866,7 @@ function toggleFib(){ _fibOn=!_fibOn; try{localStorage.setItem('aurFib',_fibOn?'
 function tfLabel(tf){ return {'1':'1분봉','5':'5분봉','D':'일봉','W':'주봉','M':'월봉'}[tf]||tf; }
 /* 봉 전환 — /candles를 해당 tf로 재조회 후 다시 그림. 분봉은 KIS 특성상 장중 위주 */
 async function loadChartTF(r,tf){
-  _chartTF=tf; var cap=$('#chartCap');
+  _chartTF=tf; var cap=$('#chartCap'); window._chartPan=0; // 봉 전환 시 팬 초기화
   if(cap) cap.textContent=tfLabel(tf)+' 불러오는 중…';
   if(!PROXY){ if(cap)cap.textContent=tfLabel(tf)+'(데모)'; drawStockChart($('#sChart'),r); return; }
   var isUS=r.ccy==='USD';
@@ -1121,6 +1121,7 @@ function openStock(code){
       +'</div>'
     +'</div>'
     +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
+  window._chartZoom=Math.min(90,(r._candles&&r._candles.length)||90); window._chartPan=0; // 휠 줌/드래그 팬 초기화
   drawStockChart($('#sChart'),r);
   renderWhy(r);
   // 탭
@@ -1139,6 +1140,7 @@ function openStock(code){
   $$('#tfBar button').forEach(function(b){ b.onclick=function(){ $$('#tfBar button').forEach(function(x){x.classList.toggle('on',x===b);}); loadChartTF(r,b.dataset.tf); }; });
   renderPressureFlow(r); // 초기(RADAR 값) → /flow 도착 시 실데이터로 교체
   attachChartCrosshair($('#sChart')); // 크로스헤어+OHLC 툴팁
+  _attachChartZoom($('#sChart')); // 휠 줌 + 드래그 팬
   enrichStock(r); // 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
   startDetailLive(r); // 열어둔 동안 15초마다 가격·매수매도세·투자자 자동 갱신
   var _is=$('#idxstrip'); if(_is)_is.style.display='none'; var _db=$('#demoban'); if(_db)_db.style.display='none'; // 상세 땐 시장 지수 스트립 숨김 → 상세가 네비 바로 아래
@@ -1409,8 +1411,8 @@ async function openCoin(sym){
       +'<div id="coinFlow" class="flowcard"><div class="muted" style="font-size:12px;padding:6px 0">롱·숏 & 매물대 불러오는 중…</div></div>'
       +'<div class="sect">📓 매매 일지 <span style="font-weight:400;color:var(--faint);font-size:11px;text-transform:none">· 진입 근거 남기고 복기</span></div>'
       +'<div id="cJournal" class="flowcard"></div>';
-    window._coinZoom=Math.min(90,candles.length||90); window._coinPan=0; // 휠 줌/드래그 팬 초기화
-    var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachCoinWheel(cv); }
+    window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; // 휠 줌/드래그 팬 초기화
+    var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); }
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
     if(typeof coinDepth==='function')coinDepth(sym);
     if(typeof renderCoinAlerts==='function')renderCoinAlerts(sym);
@@ -1590,25 +1592,26 @@ async function coinDepth(sym){ var s=sym+'USDT'; try{ var dd=await fetch('https:
   var b=sum(dd.bids), a=sum(dd.asks), bp=Math.round(b/((b+a)||1)*100);
   var el=$('#cBpTxt'); if(el)el.innerHTML='<span class="fill"><span style="width:'+bp+'%"></span></span> '+bp+'% '+(bp>=55?'<span class="up">(매수우위)</span>':bp<=35?'<span class="down">(매도우위)</span>':'<span class="muted">(균형)</span>'); }catch(e){} }
 window.coinDepth=coinDepth;
-/* 차트 휠 줌(확대/축소) + 드래그 팬(가운데·왼쪽 버튼으로 좌우 이동) */
-var _coinDrag={active:false,sx:0,sPan:0,moved:false,cv:null};
-function _coinChartRedraw(cv){ if(cv._ivRAF)cancelAnimationFrame(cv._ivRAF); cv._ivRAF=requestAnimationFrame(function(){ if(typeof drawStockChart==='function'&&window._coinR)drawStockChart(cv,window._coinR); }); }
-function _attachCoinWheel(cv){
-  if(!window._coinDragBound){ window._coinDragBound=true; // 전역 1회: 드래그 이동/종료
-    window.addEventListener('mousemove',function(e){ var dg=_coinDrag; if(!dg.active||!window._coinR)return; var dx=e.clientX-dg.sx; if(Math.abs(dx)>3){dg.moved=true;window._coinPanning=true;}
-      var len=window._coinR._candles.length, visN=Math.max(20,Math.min(len,window._coinZoom||90)), cwCss=(dg.cv.clientWidth||600)/visN, dC=Math.round(dx/cwCss), maxPan=Math.max(0,len-visN), np=Math.max(0,Math.min(maxPan,dg.sPan+dC));
-      if(np!==(window._coinPan||0)){ window._coinPan=np; _coinChartRedraw(dg.cv); } });
-    window.addEventListener('mouseup',function(){ var dg=_coinDrag; if(!dg.active)return; dg.active=false; window._coinPanning=false; if(dg.moved)window._coinJustPanned=true; if(dg.cv)dg.cv.style.cursor='grab'; }); }
+/* 차트 휠 줌(확대/축소) + 드래그 팬(가운데·왼쪽 버튼 좌우 이동) — 코인·주식 공용(CHART 전역) */
+var _chDrag={active:false,sx:0,sPan:0,moved:false,cv:null};
+function _chLen(){ return (typeof CHART!=='undefined'&&CHART&&CHART.r&&CHART.r._candles)?CHART.r._candles.length:0; }
+function _chRedraw(cv){ if(cv._ivRAF)cancelAnimationFrame(cv._ivRAF); cv._ivRAF=requestAnimationFrame(function(){ if(typeof CHART!=='undefined'&&CHART&&CHART.r)drawStockChart(cv,CHART.r); }); }
+function _attachChartZoom(cv){
+  if(!window._chDragBound){ window._chDragBound=true; // 전역 1회: 드래그 이동/종료
+    window.addEventListener('mousemove',function(e){ var dg=_chDrag; if(!dg.active)return; var len=_chLen(); if(!len)return; var dx=e.clientX-dg.sx; if(Math.abs(dx)>3){dg.moved=true;window._chartPanning=true;}
+      var visN=Math.max(20,Math.min(len,window._chartZoom||90)), cwCss=(dg.cv.clientWidth||600)/visN, dC=Math.round(dx/cwCss), maxPan=Math.max(0,len-visN), np=Math.max(0,Math.min(maxPan,dg.sPan+dC));
+      if(np!==(window._chartPan||0)){ window._chartPan=np; _chRedraw(dg.cv); } });
+    window.addEventListener('mouseup',function(){ var dg=_chDrag; if(!dg.active)return; dg.active=false; window._chartPanning=false; if(dg.moved)window._chartJustPanned=true; if(dg.cv)dg.cv.style.cursor='grab'; }); }
   if(!cv||cv._wheelBound)return; cv._wheelBound=true; cv.style.cursor='grab';
-  cv.addEventListener('wheel', function(e){ if(!window._coinR||!window._coinR._candles)return; e.preventDefault();
-    var len=window._coinR._candles.length, cur=window._coinZoom||90, factor=e.deltaY<0?0.85:1.18, nz=Math.round(cur*factor);
-    nz=Math.max(20,Math.min(len,nz)); if(nz===cur)return; window._coinZoom=nz; _coinChartRedraw(cv);
+  cv.addEventListener('wheel', function(e){ var len=_chLen(); if(!len)return; e.preventDefault();
+    var cur=window._chartZoom||90, factor=e.deltaY<0?0.85:1.18, nz=Math.round(cur*factor);
+    nz=Math.max(20,Math.min(len,nz)); if(nz===cur)return; window._chartZoom=nz; _chRedraw(cv);
   }, {passive:false});
-  cv.addEventListener('mousedown', function(e){ if(!window._coinR)return; if(e.button!==0&&e.button!==1)return; if(e.button===1)e.preventDefault();
-    _coinDrag.active=true; _coinDrag.moved=false; _coinDrag.sx=e.clientX; _coinDrag.sPan=window._coinPan||0; _coinDrag.cv=cv; cv.style.cursor='grabbing'; });
+  cv.addEventListener('mousedown', function(e){ if(!_chLen())return; if(e.button!==0&&e.button!==1)return; if(e.button===1)e.preventDefault();
+    _chDrag.active=true; _chDrag.moved=false; _chDrag.sx=e.clientX; _chDrag.sPan=window._chartPan||0; _chDrag.cv=cv; cv.style.cursor='grabbing'; });
   cv.addEventListener('auxclick', function(e){ if(e.button===1)e.preventDefault(); });
 }
-window._attachCoinWheel=_attachCoinWheel;
+window._attachCoinWheel=_attachChartZoom; window._attachChartZoom=_attachChartZoom;
 /* 📓 매매 일지 (localStorage, 종목 공용) */
 function _cjLoad(){ try{return JSON.parse(localStorage.getItem('coinTrades')||'[]');}catch(e){return [];} }
 function _cjSave(t){ try{localStorage.setItem('coinTrades',JSON.stringify(t));}catch(e){} }
