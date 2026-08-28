@@ -372,6 +372,13 @@
 #coinHost .clegend .lgd{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--ink);cursor:pointer;padding:3px 8px;border:1px solid var(--line);border-radius:20px;background:var(--panel2);user-select:none}
 #coinHost .clegend .lgd i{width:11px;height:3px;border-radius:2px;display:inline-block}
 #coinHost .clegend .lgd.off{opacity:.4;text-decoration:line-through}
+/* 섹터 히트 */
+.secgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px}
+.seccard{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:var(--panel2)}
+.secname{font-size:12.5px;font-weight:800;line-height:1.25}
+.secch{font-size:16px;font-weight:800;margin-top:4px}
+.sectop{font-size:10.5px;color:var(--sub);margin-top:5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.secmc{font-size:10.5px;color:var(--faint);margin-top:2px}
 </style>
 </head>
 <body>
@@ -529,6 +536,10 @@
           <div class="pad" id="coinMarket"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div>
         </div>
       </div>
+      <div class="card" style="margin-top:16px">
+        <div class="ch"><h2>🧭 섹터 히트 <span style="font-weight:600;color:var(--faint);font-size:12px">지금 돈이 도는 내러티브 · 24h · CoinGecko</span></h2><div class="r"><span id="secupd">–</span></div></div>
+        <div class="pad" id="coinSectors"><div style="color:var(--faint);font-size:12px">섹터 불러오는 중…</div></div>
+      </div>
     </div>
     <div id="coinHost" style="display:none"></div>
   </div>
@@ -544,7 +555,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

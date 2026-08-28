@@ -1314,7 +1314,26 @@ async function loadCoins(){
       cm.innerHTML='<div class="idxstrip" style="margin-bottom:0">'+cards+'<div class="idx"><div class="nm">🪙 코인 RADAR</div><div class="v" style="color:var(--gold);font-size:22px">'+rows.length+'종목</div><div class="d" style="color:var(--sub)">바이낸스 실시간</div><div class="foot"><span>Binance</span><span>'+nowHM()+'</span></div></div></div>'; }
   }catch(e){ rr.innerHTML='<tbody><tr><td style="color:var(--faint);padding:14px">코인 데이터를 불러오지 못했어요(잠시 후 자동 재시도)</td></tr></tbody>'; }
   loadCoinMarket();
+  loadSectors();
 }
+/* 🧭 섹터 히트 — 지금 돈이 도는 내러티브(CoinGecko 카테고리 · 24h). 4분 스로틀 */
+var _lastSectors=0;
+async function loadSectors(){ var el=$('#coinSectors'); if(!el)return;
+  if(Date.now()-_lastSectors<240000 && el.querySelector('.secgrid'))return; // 4분 내 재조회 방지(레이트리밋)
+  try{ var arr=await fetch('https://api.coingecko.com/api/v3/coins/categories').then(function(r){return r.json();});
+    if(!Array.isArray(arr))throw 0; _lastSectors=Date.now();
+    var WL=/(artificial intelligence|meme|defi|decentralized finance|real world|layer 1|layer 2|gaming|gamefi|depin|solana ecosystem|ethereum ecosystem|liquid staking|oracle|privacy|modular|restaking|payment|metaverse|derivatives|lending|perpetual|bitcoin ecosystem|data availability|zero knowledge|\bnft\b|\brwa\b|\bai\b|\bl1\b|\bl2\b)/i;
+    var seen={}, cats=arr.filter(function(c){ if(c.market_cap_change_24h==null||!(c.market_cap>1.5e9)||!WL.test(c.name))return false; var key=c.name.toLowerCase().replace(/\s*\(.*\)/,''); if(seen[key])return false; seen[key]=1; return true; });
+    cats.sort(function(a,b){return b.market_cap_change_24h-a.market_cap_change_24h;});
+    var top=cats.slice(0,12);
+    if(!top.length){ el.innerHTML='<div class="muted" style="font-size:12px;color:var(--faint)">섹터 데이터가 없어요</div>'; return; }
+    el.innerHTML='<div class="secgrid">'+top.map(function(c){ var ch=c.market_cap_change_24h||0, col=cCol(ch);
+      var tops=(c.top_3_coins_id||[]).slice(0,3).map(function(id){return (id||'').split('-')[0].toUpperCase();}).filter(Boolean).join(' · ');
+      return '<div class="seccard"><div class="secname">'+esc(c.name.replace(/\s*\(.*\)/,''))+'</div><div class="secch" style="color:'+col+'">'+(ch>=0?'▲ +':'▼ ')+Math.abs(ch).toFixed(2)+'%</div><div class="sectop">'+esc(tops)+'</div><div class="secmc">시총 $'+fmtBig(c.market_cap)+'</div></div>'; }).join('')+'</div>';
+    if($('#secupd'))$('#secupd').textContent='· '+nowHM();
+  }catch(e){ if(!el.querySelector('.secgrid'))el.innerHTML='<div class="muted" style="font-size:12px;color:var(--faint)">섹터를 불러오지 못했어요(잠시 후 재시도)</div>'; }
+}
+window.loadSectors=loadSectors;
 async function loadCoinMarket(){
   var el=$('#coinMarket'); if(!el)return; var h='';
   try{ var fg=await fetch('https://api.alternative.me/fng/?limit=1').then(r=>r.json()); var v=+fg.data[0].value, kc={'Extreme Fear':'극단적 공포','Fear':'공포','Neutral':'중립','Greed':'탐욕','Extreme Greed':'극단적 탐욕'}[fg.data[0].value_classification]||fg.data[0].value_classification;
@@ -1357,6 +1376,13 @@ async function openCoin(sym){
     var fr=(fund&&fund.lastFundingRate!=null)?(+fund.lastFundingRate*100):null;
     var oiUsd=(oi&&oi.openInterest)?(+oi.openInterest*px):null;
     var la=(ls&&ls[0])?(+ls[0].longAccount*100):null;
+    var rp=Math.max(0,Math.min(100,Math.round((px-lo)/((hi-lo)||1)*100)));
+    var summaryBox='<div class="sect">📊 24H 시세 요약</div><div class="lqcard" style="margin-top:0">'
+      +'<div class="kv"><span class="muted">24h 레인지 위치</span><span class="num"><span class="bar"><i style="left:'+rp+'%"></i></span> '+rp+'%</span></div>'
+      +'<div class="kv"><span class="muted">매수세 (호가)</span><span class="num" id="cBpTxt"><span class="muted">로딩…</span></span></div>'
+      +'<div class="kv"><span class="muted">저항 (돌파목표)</span><span class="num" style="font-weight:700">'+coinPx(hi)+'</span></div>'
+      +'<div class="kv"><span class="muted">지지</span><span class="num" style="font-weight:700">'+coinPx(lo)+'</span></div>'
+      +'<p class="rsub" id="cRangeNote">레인지 '+rp+'%'+(rp>=85?' (고점권·추격 롱 손익비 불리)':rp<=25?' (저점권)':'')+' · 펀딩 '+(fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'))+'.</p></div>';
     var tfRow='<div class="tfrow" id="cTfRow" style="display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 7px">'+['1m','5m','15m','30m','1h','4h','1d'].map(function(t){return '<button class="tf'+(t===TF?' on':'')+'" onclick="setCoinTF(\''+t+'\')">'+TFLAB[t]+'</button>';}).join('')+'</div>';
     var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
@@ -1372,13 +1398,18 @@ async function openCoin(sym){
       +tfRow+legend
       +'<canvas class="schart" id="coinChartCv"></canvas>'
       +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 표시 전환 · 30초 자동 갱신. 마우스 올리면 시고저종. 청산 히트맵은 🔥 청산맵에서.</p>'
+      +summaryBox
       +alertBox
       +'<div id="coinTopsig" class="sigcard" style="display:none"></div>'
       +'<div class="sect">📊 수급 · 매매 판단 · 도구</div>'
-      +'<div id="coinFlow" class="flowcard"><div class="muted" style="font-size:12px;padding:6px 0">롱·숏 & 매물대 불러오는 중…</div></div>';
+      +'<div id="coinFlow" class="flowcard"><div class="muted" style="font-size:12px;padding:6px 0">롱·숏 & 매물대 불러오는 중…</div></div>'
+      +'<div class="sect">📓 매매 일지 <span style="font-weight:400;color:var(--faint);font-size:11px;text-transform:none">· 진입 근거 남기고 복기</span></div>'
+      +'<div id="cJournal" class="flowcard"></div>';
     var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r);
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
+    if(typeof coinDepth==='function')coinDepth(sym);
     if(typeof renderCoinAlerts==='function')renderCoinAlerts(sym);
+    if(typeof renderCoinJournal==='function')renderCoinJournal();
     if(typeof _startCoinRefresh==='function')_startCoinRefresh();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
@@ -1470,7 +1501,9 @@ async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');i
      +'<label>1회 리스크 %<input id="cRisk" type="number" inputmode="decimal" placeholder="1~2" value="'+_rk+'" oninput="coinCalcPos()"></label>'
      +'<label>진입가<input id="cEntry" type="number" inputmode="decimal" value="'+(+lower.toFixed(_pd))+'" oninput="coinCalcPos()"></label>'
      +'<label>손절가<input id="cStop" type="number" inputmode="decimal" value="'+(+stop.toFixed(_pd))+'" oninput="coinCalcPos()"></label></div><div id="cCalcOut"></div>'
-     +'<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">레버리지는 위 ⚙️의 '+_cLev+'x 사용. 손절 시 리스크%만 잃도록 수량 역산.</div></div>';
+     +'<div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">레버리지는 위 ⚙️의 '+_cLev+'x 사용. 손절 시 리스크%만 잃도록 수량 역산.</div>'
+     +'<button class="tf" style="margin-top:9px" onclick="coinLogTrade()">📓 이 설정 일지에 기록</button></div>';
+    h+='<div class="lqcard" style="margin-top:10px"><button class="tf" onclick="runCoinBacktest()">🔬 이 지표 과거에 맞았나 검증</button><div id="cBtBox" style="margin-top:8px"></div></div>';
     box.innerHTML=h;
     box.querySelectorAll('.gf[data-w]').forEach(function(f){var w=f.dataset.w;requestAnimationFrame(function(){f.style.width=w+'%';});});
     var e,tg,sp;if(consensus==='long'){e=lower;tg=upper;sp=stop;}else{e=upper;tg=lower;sp=upper+chH*0.15;}
@@ -1524,6 +1557,7 @@ async function refreshCoinDetail(){ var sym=_coinCur; if(!sym)return; var s=sym+
     var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
     var cv=$('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r);
     var dot=$('#cLiveDot'); if(dot){dot.style.opacity='.35';setTimeout(function(){if($('#cLiveDot'))$('#cLiveDot').style.opacity='1';},400);}
+    if(typeof coinDepth==='function')coinDepth(sym);
     checkCoinAlerts(sym,px);
   }catch(e){}
 }
@@ -1545,6 +1579,61 @@ function checkCoinAlerts(sym,px){ var all=_loadCoinAlerts(), list=all[sym]||[]; 
     hit.forEach(function(a){ var msg='🔔 '+sym+' '+(a.dir==='above'?'▲':'▼')+' '+coinPx(a.price)+' 도달 (현재 '+coinPx(px)+')'; if(typeof toast==='function')toast(msg); try{ if(window.Notification&&Notification.permission==='granted')new Notification(msg); }catch(e){} }); }
 }
 window.checkCoinAlerts=checkCoinAlerts;
+/* 매수세 (호가 depth) */
+async function coinDepth(sym){ var s=sym+'USDT'; try{ var dd=await fetch('https://fapi.binance.com/fapi/v1/depth?symbol='+s+'&limit=20').then(function(r){return r.json();});
+  if(_coinCur!==sym||!dd||!dd.bids)return; var sum=function(a){return a.slice(0,10).reduce(function(t,r){return t+ +r[1];},0);};
+  var b=sum(dd.bids), a=sum(dd.asks), bp=Math.round(b/((b+a)||1)*100);
+  var el=$('#cBpTxt'); if(el)el.innerHTML='<span class="fill"><span style="width:'+bp+'%"></span></span> '+bp+'% '+(bp>=55?'<span class="up">(매수우위)</span>':bp<=35?'<span class="down">(매도우위)</span>':'<span class="muted">(균형)</span>'); }catch(e){} }
+window.coinDepth=coinDepth;
+/* 📓 매매 일지 (localStorage, 종목 공용) */
+function _cjLoad(){ try{return JSON.parse(localStorage.getItem('coinTrades')||'[]');}catch(e){return [];} }
+function _cjSave(t){ try{localStorage.setItem('coinTrades',JSON.stringify(t));}catch(e){} }
+window.coinLogTrade=function(){ var g=function(id){return (document.getElementById(id)||{}).value||'';}; var sg=window._csig||{};
+  var en=+g('cEntry')||(sg.entry||0), st=+g('cStop')||(sg.stop||0), tg=sg.target||0, sym=_coinCur||'';
+  if(!sym||!(en>0)){ alert('진입가가 필요합니다(계산기에 입력).'); return; }
+  var memo=prompt('진입 근거 메모 (선택)')||''; var t=_cjLoad();
+  t.unshift({id:Date.now(),sym:sym,dir:(sg.dir||'long'),en:en,st:st,tg:tg,memo:memo.trim(),status:'open',exitP:null,pnl:null,lesson:''});
+  _cjSave(t); renderCoinJournal(); var jr=$('#cJournal'); if(jr)jr.scrollIntoView({block:'center',behavior:'smooth'}); };
+window.coinCloseTrade=function(id){ var t=_cjLoad(), it=t.find(function(x){return x.id===id;}); if(!it)return;
+  var ex=prompt('청산가 입력 ('+it.sym+' '+(it.dir==='long'?'롱':'숏')+' · 진입 '+it.en+')'); if(ex==null)return; ex=+ex; if(!(ex>0)){alert('숫자를 입력하세요');return;}
+  it.pnl=it.dir==='long'?(ex-it.en)/it.en*100:(it.en-ex)/it.en*100; it.status='closed'; it.exitP=ex;
+  var ls=prompt('이번 매매에서 배운 점 (복기 · 선택)'); it.lesson=(ls||'').trim(); _cjSave(t); renderCoinJournal(); };
+window.coinDelTrade=function(id){ if(!confirm('이 기록을 삭제할까요?'))return; _cjSave(_cjLoad().filter(function(x){return x.id!==id;})); renderCoinJournal(); };
+function renderCoinJournal(){ var el=$('#cJournal'); if(!el)return; var t=_cjLoad(), closed=t.filter(function(x){return x.status==='closed';});
+  var wins=closed.filter(function(x){return x.pnl>0;}).length, wr=closed.length?wins/closed.length*100:0, sumPnl=closed.reduce(function(s,x){return s+(x.pnl||0);},0);
+  var rs=closed.map(function(x){ if(!x.st)return null; var risk=Math.abs(x.en-x.st)/x.en*100; return risk?x.pnl/risk:null; }).filter(function(v){return v!=null;});
+  var sumR=rs.reduce(function(s,v){return s+v;},0);
+  var sc=function(k,v,c){return '<div style="flex:1;min-width:70px;text-align:center;padding:8px 4px;background:var(--panel2);border:1px solid var(--line);border-radius:9px"><div class="muted" style="font-size:10.5px;font-weight:700">'+k+'</div><div class="'+(c||'')+'" style="font-size:15px;font-weight:800;margin-top:2px">'+v+'</div></div>';};
+  var stats='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+sc('총 기록',t.length+'건')+sc('청산',closed.length+'건')+sc('승률',closed.length?wr.toFixed(0)+'%':'—',closed.length?(wr>=50?'up':'down'):'')+sc('누적 손익',(sumPnl>=0?'+':'')+sumPnl.toFixed(1)+'%',closed.length?(sumPnl>=0?'up':'down'):'')+sc('누적 R',(sumR>=0?'+':'')+sumR.toFixed(1)+'R',rs.length?(sumR>=0?'up':'down'):'')+'</div>';
+  if(!t.length){ el.innerHTML=stats+'<div class="muted" style="font-size:12px;padding:4px 0">아직 기록이 없어요. 위 🧮 계산기의 <b>📓 이 설정 일지에 기록</b>을 눌러 진입 근거를 남기고, 청산 후 복기하세요.</div>'; return; }
+  el.innerHTML=stats+t.map(function(x){ var dc=x.dir==='long'?'up':'down', dn=x.dir==='long'?'롱':'숏';
+    var head='<div style="display:flex;justify-content:space-between;align-items:center;font-weight:700"><span><b class="'+dc+'">'+dn+'</b> '+esc(x.sym)+'</span>'+(x.status==='closed'?'<span class="num '+(x.pnl>=0?'up':'down')+'">'+(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%</span>':'<span style="font-size:11px;color:var(--gold);font-weight:800">진행중</span>')+'</div>';
+    var lv='진입 '+x.en+(x.st?' · 손절 '+x.st:'')+(x.tg?' · 목표 '+(+x.tg).toFixed(4):'')+(x.exitP?' · 청산 '+x.exitP:'');
+    var memo=x.memo?'<div class="muted" style="font-size:11.5px;margin-top:4px">📝 '+esc(x.memo)+'</div>':'';
+    var lesson=x.lesson?'<div style="font-size:11.5px;margin-top:3px;color:var(--gold)">💡 '+esc(x.lesson)+'</div>':'';
+    var btns='<div style="display:flex;gap:5px;margin-top:7px">'+(x.status==='open'?'<button class="tf" style="padding:4px 9px;font-size:11px" onclick="coinCloseTrade('+x.id+')">청산 기록</button>':'')+'<button class="tf" style="padding:4px 9px;font-size:11px" onclick="coinDelTrade('+x.id+')">삭제</button></div>';
+    return '<div class="lqcard" style="margin-top:8px">'+head+'<div class="muted" style="font-size:12px;margin-top:3px">'+lv+'</div>'+memo+lesson+btns+'</div>'; }).join('');
+}
+window.renderCoinJournal=renderCoinJournal;
+/* 🔬 백테스트 — 지표 정직 검증 */
+function _cjSlope(v){var n=v.length,sx=0,sy=0,sxy=0,sxx=0;for(var i=0;i<n;i++){sx+=i;sy+=v[i];sxy+=i*v[i];sxx+=i*i;}var den=n*sxx-sx*sx;return den?(n*sxy-sx*sy)/den:0;}
+window.runCoinBacktest=async function(){ var bt=$('#cBtBox'); if(!bt)return; var sym=_coinCur; if(!sym)return; bt.innerHTML='<div class="muted" style="font-size:12px">과거 500봉 분석 중…</div>';
+  try{ var kl=await fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'USDT&interval=4h&limit=500').then(function(r){return r.json();});
+    if(!Array.isArray(kl)||kl.length<80){bt.innerHTML='<div class="muted" style="font-size:12px">데이터가 부족합니다.</div>';return;}
+    var cl=kl.map(function(k){return +k[4];}), fwd=6, osN=0,osUp=0,osSum=0,obN=0,obDn=0,obSum=0,upN=0,upUp=0;
+    for(var i=30;i<cl.length-fwd;i++){ var rsi=_cRsi(cl.slice(0,i+1),14), ret=(cl[i+fwd]-cl[i])/cl[i]*100;
+      if(rsi!=null){ if(rsi<=30){osN++; if(ret>0)osUp++; osSum+=ret;} if(rsi>=70){obN++; if(ret<0)obDn++; obSum+=ret;} }
+      if(_cjSlope(cl.slice(i-30,i+1))>0){upN++; if(ret>0)upUp++;} }
+    var P=function(a,b){return b?a/b*100:0;};
+    var verdict=function(prob,n){ if(n<8)return '<span class="muted">표본 부족('+n+')</span>'; if(prob>=58)return '<span class="up">신뢰할만(엣지 있음)</span>'; if(prob<=42)return '<span class="down">오히려 반대로 감</span>'; return '<span class="down">엣지 약함 · 동전던지기</span>'; };
+    var R=function(k,v){return '<div class="lqrow"><span class="muted" style="max-width:52%">'+k+'</span><span class="num" style="font-size:12px;text-align:right">'+v+'</span></div>';};
+    bt.innerHTML='<div class="lqh">🔬 이 지표, 과거에 맞았나? <span class="muted" style="font-weight:400">('+esc(sym)+' · 4h·500봉 · 이후 24h)</span></div>'
+      +R('과매도(RSI≤30) 후 반등', osN+'회 · 상승 '+P(osUp,osN).toFixed(0)+'% · 평균 '+(osN?(osSum/osN).toFixed(2):'0')+'%<br>'+verdict(P(osUp,osN),osN))
+      +R('과매수(RSI≥70) 후 하락', obN+'회 · 하락 '+P(obDn,obN).toFixed(0)+'% · 평균 '+(obN?(obSum/obN).toFixed(2):'0')+'%<br>'+verdict(P(obDn,obN),obN))
+      +R('상승추세 방향 지속', '다음 24h 상승 '+P(upUp,upN).toFixed(0)+'%<br>'+verdict(P(upUp,upN),upN))
+      +'<div class="muted" style="font-size:11px;margin-top:7px;line-height:1.5">⚠️ 과거 통계일 뿐 미래를 보장하지 않습니다. 확률이 50% 근처거나 표본이 적으면 그 지표는 이 종목에서 <b>신뢰도가 낮다</b>는 뜻이에요. 지표 맹신 금물.</div>';
+  }catch(e){bt.innerHTML='<div class="muted" style="font-size:12px">분석에 실패했어요.</div>';}
+};
 function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
