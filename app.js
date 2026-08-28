@@ -23,7 +23,9 @@ function fmtEok(v){ // 억원 표기
   return Math.round(v).toLocaleString('en-US')+'억';
 }
 function sparkline(data,w,h,color){
-  if(!Array.isArray(data)||data.length<2)return ''; // 데이터 1개 이하면 NaN 좌표 방지
+  if(!Array.isArray(data))return '';
+  data=data.map(Number).filter(function(v){return isFinite(v);}); // NaN·비수치 제거
+  if(data.length<2)return ''; // 유효 데이터 2개 미만이면 NaN 좌표 방지
   var lo=Math.min.apply(null,data), hi=Math.max.apply(null,data), rng=(hi-lo)||1;
   var pts=data.map(function(v,i){ return (i/(data.length-1)*w).toFixed(1)+','+(h-(v-lo)/rng*h).toFixed(1); }).join(' ');
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';
