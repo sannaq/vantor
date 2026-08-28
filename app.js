@@ -554,6 +554,7 @@ function drawStockChart(cv,r){
   var emas=MA.map(function(m){return emaSeries(closes,m[0]);});
   emas.forEach(function(e){ e.forEach(function(v){ if(v<lo)lo=v; if(v>hi)hi=v; }); });
   var pad=(hi-lo)*0.04; hi+=pad; lo-=pad;
+  if(window._chartYScale&&window._chartYScale!==1){ var _cen=(hi+lo)/2, _hr=(hi-lo)/2/window._chartYScale; lo=_cen-_hr; hi=_cen+_hr; } // 가격축 세로 확대/축소
   var gh=priceB-padT;
   function y(v){return padT+(hi-v)/((hi-lo)||1)*gh;}
   function xAt(i){ return padL+(i+0.5)*((plotR-padL)/n); }
@@ -866,7 +867,7 @@ function toggleFib(){ _fibOn=!_fibOn; try{localStorage.setItem('aurFib',_fibOn?'
 function tfLabel(tf){ return {'1':'1분봉','5':'5분봉','D':'일봉','W':'주봉','M':'월봉'}[tf]||tf; }
 /* 봉 전환 — /candles를 해당 tf로 재조회 후 다시 그림. 분봉은 KIS 특성상 장중 위주 */
 async function loadChartTF(r,tf){
-  _chartTF=tf; var cap=$('#chartCap'); window._chartPan=0; // 봉 전환 시 팬 초기화
+  _chartTF=tf; var cap=$('#chartCap'); window._chartPan=0; window._chartYScale=1; // 봉 전환 시 뷰 초기화
   if(cap) cap.textContent=tfLabel(tf)+' 불러오는 중…';
   if(!PROXY){ if(cap)cap.textContent=tfLabel(tf)+'(데모)'; drawStockChart($('#sChart'),r); return; }
   var isUS=r.ccy==='USD';
@@ -1121,7 +1122,7 @@ function openStock(code){
       +'</div>'
     +'</div>'
     +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
-  window._chartZoom=Math.min(90,(r._candles&&r._candles.length)||90); window._chartPan=0; // 휠 줌/드래그 팬 초기화
+  window._chartZoom=Math.min(90,(r._candles&&r._candles.length)||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
   drawStockChart($('#sChart'),r);
   renderWhy(r);
   // 탭
@@ -1403,7 +1404,7 @@ async function openCoin(sym){
       +'<div class="metrics" id="cDetMet">'+_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la)+'</div>'
       +tfRow+legend
       +'<canvas class="schart" id="coinChartCv"></canvas>'
-      +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠로 확대·축소, 드래그로 좌우 이동 · 30초 자동 갱신. 청산 히트맵은 🔥 청산맵에서.</p>'
+      +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
       +summaryBox
       +alertBox
       +'<div id="coinTopsig" class="sigcard" style="display:none"></div>'
@@ -1411,7 +1412,7 @@ async function openCoin(sym){
       +'<div id="coinFlow" class="flowcard"><div class="muted" style="font-size:12px;padding:6px 0">롱·숏 & 매물대 불러오는 중…</div></div>'
       +'<div class="sect">📓 매매 일지 <span style="font-weight:400;color:var(--faint);font-size:11px;text-transform:none">· 진입 근거 남기고 복기</span></div>'
       +'<div id="cJournal" class="flowcard"></div>';
-    window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; // 휠 줌/드래그 팬 초기화
+    window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
     var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); }
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
     if(typeof coinDepth==='function')coinDepth(sym);
@@ -1592,24 +1593,36 @@ async function coinDepth(sym){ var s=sym+'USDT'; try{ var dd=await fetch('https:
   var b=sum(dd.bids), a=sum(dd.asks), bp=Math.round(b/((b+a)||1)*100);
   var el=$('#cBpTxt'); if(el)el.innerHTML='<span class="fill"><span style="width:'+bp+'%"></span></span> '+bp+'% '+(bp>=55?'<span class="up">(매수우위)</span>':bp<=35?'<span class="down">(매도우위)</span>':'<span class="muted">(균형)</span>'); }catch(e){} }
 window.coinDepth=coinDepth;
-/* 차트 휠 줌(확대/축소) + 드래그 팬(가운데·왼쪽 버튼 좌우 이동) — 코인·주식 공용(CHART 전역) */
-var _chDrag={active:false,sx:0,sPan:0,moved:false,cv:null};
+/* 차트 조작(코인·주식 공용, CHART 전역):
+   본문=드래그 팬·휠 시간축 줌 / 가격축(오른쪽)=세로 스케일 / 시간축(하단)=가로 스케일 */
+var _chDrag={active:false,mode:'pan',sx:0,sy:0,sPan:0,sZoom:90,sYS:1,moved:false,cv:null};
 function _chLen(){ return (typeof CHART!=='undefined'&&CHART&&CHART.r&&CHART.r._candles)?CHART.r._candles.length:0; }
 function _chRedraw(cv){ if(cv._ivRAF)cancelAnimationFrame(cv._ivRAF); cv._ivRAF=requestAnimationFrame(function(){ if(typeof CHART!=='undefined'&&CHART&&CHART.r)drawStockChart(cv,CHART.r); }); }
+function _chRegion(cv,e){ var sx=cv.width/(cv.clientWidth||1), sy=cv.height/(cv.clientHeight||1); var cx=e.offsetX*sx, cy=e.offsetY*sy; var plotR=cv.width-76, volB=cv.height-26;
+  if(cx>plotR) return 'y'; if(cy>volB) return 'x'; return 'main'; }
+var _clamp=function(v,a,b){ return Math.max(a,Math.min(b,v)); };
 function _attachChartZoom(cv){
   if(!window._chDragBound){ window._chDragBound=true; // 전역 1회: 드래그 이동/종료
-    window.addEventListener('mousemove',function(e){ var dg=_chDrag; if(!dg.active)return; var len=_chLen(); if(!len)return; var dx=e.clientX-dg.sx; if(Math.abs(dx)>3){dg.moved=true;window._chartPanning=true;}
-      var visN=Math.max(20,Math.min(len,window._chartZoom||90)), cwCss=(dg.cv.clientWidth||600)/visN, dC=Math.round(dx/cwCss), maxPan=Math.max(0,len-visN), np=Math.max(0,Math.min(maxPan,dg.sPan+dC));
+    window.addEventListener('mousemove',function(e){ var dg=_chDrag; if(!dg.active)return; var len=_chLen();
+      if(dg.mode==='yscale'){ var dy=e.clientY-dg.sy; if(Math.abs(dy)>2){dg.moved=true;window._chartPanning=true;} var ns=_clamp(dg.sYS*(1+(-dy)/220),0.25,10); if(ns!==(window._chartYScale||1)){window._chartYScale=ns;_chRedraw(dg.cv);} return; }
+      if(!len)return;
+      if(dg.mode==='xzoom'){ var dxx=e.clientX-dg.sx; if(Math.abs(dxx)>2){dg.moved=true;window._chartPanning=true;} var nzx=_clamp(Math.round(dg.sZoom*(1-dxx/320)),20,len); if(nzx!==(window._chartZoom||90)){window._chartZoom=nzx;_chRedraw(dg.cv);} return; }
+      var dx=e.clientX-dg.sx; if(Math.abs(dx)>3){dg.moved=true;window._chartPanning=true;}
+      var visN=Math.max(20,Math.min(len,window._chartZoom||90)), cwCss=(dg.cv.clientWidth||600)/visN, dC=Math.round(dx/cwCss), maxPan=Math.max(0,len-visN), np=_clamp(dg.sPan+dC,0,maxPan);
       if(np!==(window._chartPan||0)){ window._chartPan=np; _chRedraw(dg.cv); } });
     window.addEventListener('mouseup',function(){ var dg=_chDrag; if(!dg.active)return; dg.active=false; window._chartPanning=false; if(dg.moved)window._chartJustPanned=true; if(dg.cv)dg.cv.style.cursor='grab'; }); }
   if(!cv||cv._wheelBound)return; cv._wheelBound=true; cv.style.cursor='grab';
   cv.addEventListener('wheel', function(e){ var len=_chLen(); if(!len)return; e.preventDefault();
-    var cur=window._chartZoom||90, factor=e.deltaY<0?0.85:1.18, nz=Math.round(cur*factor);
-    nz=Math.max(20,Math.min(len,nz)); if(nz===cur)return; window._chartZoom=nz; _chRedraw(cv);
+    if(_chRegion(cv,e)==='y'){ var ns=_clamp((window._chartYScale||1)*(e.deltaY<0?1.1:0.9),0.25,10); window._chartYScale=ns; _chRedraw(cv); return; } // 가격축 위 휠=세로 스케일
+    var cur=window._chartZoom||90, factor=e.deltaY<0?0.85:1.18, nz=_clamp(Math.round(cur*factor),20,len); if(nz===cur)return; window._chartZoom=nz; _chRedraw(cv);
   }, {passive:false});
-  cv.addEventListener('mousedown', function(e){ if(!_chLen())return; if(e.button!==0&&e.button!==1)return; if(e.button===1)e.preventDefault();
-    _chDrag.active=true; _chDrag.moved=false; _chDrag.sx=e.clientX; _chDrag.sPan=window._chartPan||0; _chDrag.cv=cv; cv.style.cursor='grabbing'; });
+  cv.addEventListener('mousedown', function(e){ if(e.button!==0&&e.button!==1)return; if(e.button===1)e.preventDefault();
+    var rg=_chRegion(cv,e); if(rg!=='y'&&!_chLen())return;
+    _chDrag.active=true; _chDrag.moved=false; _chDrag.mode=(rg==='y'?'yscale':rg==='x'?'xzoom':'pan'); _chDrag.sx=e.clientX; _chDrag.sy=e.clientY; _chDrag.sPan=window._chartPan||0; _chDrag.sZoom=window._chartZoom||90; _chDrag.sYS=window._chartYScale||1; _chDrag.cv=cv;
+    cv.style.cursor=(rg==='y'?'ns-resize':rg==='x'?'ew-resize':'grabbing'); });
+  cv.addEventListener('mousemove', function(e){ if(_chDrag.active)return; var rg=_chRegion(cv,e); cv.style.cursor=(rg==='y'?'ns-resize':rg==='x'?'ew-resize':'grab'); }); // 커서 힌트
   cv.addEventListener('auxclick', function(e){ if(e.button===1)e.preventDefault(); });
+  cv.addEventListener('dblclick', function(){ window._chartYScale=1; window._chartPan=0; _chRedraw(cv); }); // 더블클릭=세로/팬 리셋
 }
 window._attachCoinWheel=_attachChartZoom; window._attachChartZoom=_attachChartZoom;
 /* 📓 매매 일지 (localStorage, 종목 공용) */
