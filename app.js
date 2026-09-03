@@ -1399,62 +1399,68 @@ async function renderCoinNews(el){
 window.renderCoinNews=renderCoinNews;
 /* 기초 자료 — 선물 기초 + 📈 선 그리는 법 */
 function renderCoinLearn(el){
-  var card=function(title,body){ return '<div class="card" style="margin-bottom:14px"><div class="ch"><h2>'+title+'</h2></div><div class="pad" style="font-size:13.5px;line-height:1.7;color:var(--ink)">'+body+'</div></div>'; };
+  var card=function(title,body){ return '<div class="lacc"><button class="lacc-h" onclick="_toggleLacc(this)"><span class="lacc-t">'+title+'</span><span class="lacc-x">＋</span></button><div class="lacc-b">'+body+'</div></div>'; };
+  var cat=function(t){ return '<div class="lcat">'+t+'</div>'; };
   var svgSR='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><rect width="220" height="96" fill="transparent"/><line x1="8" y1="24" x2="212" y2="24" stroke="#f6465d" stroke-width="2" stroke-dasharray="5 4"/><line x1="8" y1="76" x2="212" y2="76" stroke="#2ebd85" stroke-width="2" stroke-dasharray="5 4"/><polyline points="12,70 40,40 66,72 96,30 120,74 150,34 180,70 208,40" fill="none" stroke="var(--sub)" stroke-width="2"/><text x="10" y="18" fill="#f6465d" font-size="10" font-weight="700">저항</text><text x="10" y="90" fill="#2ebd85" font-size="10" font-weight="700">지지</text></svg>';
   var svgTrend='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="10" y1="86" x2="210" y2="30" stroke="#e0a83e" stroke-width="2"/><polyline points="14,80 44,58 60,74 92,46 110,64 146,34 168,52 206,26" fill="none" stroke="var(--sub)" stroke-width="2"/><circle cx="14" cy="84" r="3" fill="#e0a83e"/><circle cx="60" cy="72" r="3" fill="#e0a83e"/><circle cx="110" cy="62" r="3" fill="#e0a83e"/><text x="120" y="88" fill="#e0a83e" font-size="10" font-weight="700">저점 잇기 = 상승추세선</text></svg>';
   var svgChan='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="10" y1="80" x2="210" y2="34" stroke="#4a9eff" stroke-width="2"/><line x1="10" y1="52" x2="210" y2="8" stroke="#4a9eff" stroke-width="2"/><polyline points="14,74 44,52 60,70 92,40 110,58 146,30 168,46 206,18" fill="none" stroke="var(--sub)" stroke-width="2"/><text x="120" y="92" fill="#4a9eff" font-size="10" font-weight="700">평행 두 선 = 채널</text></svg>';
   var svgFib='<svg viewBox="0 0 220 96" style="width:100%;max-width:300px;height:auto"><line x1="8" y1="16" x2="212" y2="16" stroke="#a06bff" stroke-width="1.5"/><line x1="8" y1="40" x2="212" y2="40" stroke="#a06bff" stroke-width="1.5" stroke-dasharray="3 3"/><line x1="8" y1="56" x2="212" y2="56" stroke="#a06bff" stroke-width="2"/><line x1="8" y1="80" x2="212" y2="80" stroke="#a06bff" stroke-width="1.5"/><text x="176" y="38" fill="#a06bff" font-size="9">0.382</text><text x="184" y="54" fill="#a06bff" font-size="9" font-weight="700">0.5</text><text x="176" y="72" fill="#a06bff" font-size="9" font-weight="700">0.618</text><polyline points="12,82 60,18 120,58 200,30" fill="none" stroke="var(--sub)" stroke-width="2"/></svg>';
-  var html='<div class="sec-title">📚 기초 자료 — 코인 선물 & 차트</div><p class="sec-sub">교육용 자료입니다. 매매 신호가 아니라 <b>스스로 판단</b>하는 근거를 기릅니다.</p>';
-  html+=card('📈 선 그리는 법 ① 지지·저항',
+  var html='<div class="sec-title">📚 기초 자료 — 코인 선물 & 차트</div><p class="sec-sub">교육용 자료입니다. 매매 신호가 아니라 <b>스스로 판단</b>하는 근거를 기릅니다. 제목을 누르면 펼쳐져요.</p>';
+  html+='<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="tf" onclick="_toggleAllLacc(this)">전체 펼치기</button></div>';
+  html+=cat('📈 선 그리는 법');
+  html+=card('① 지지·저항',
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
     +'<b>지지</b> = 내려오다 <b>멈추고 반등</b>하는 가격대(매수세). <b>저항</b> = 오르다 <b>막히는</b> 가격대(매도세).<br>'
     +'· 최근 <b>고점 2~3개</b>를 수평으로 이으면 저항, <b>저점 2~3개</b>를 이으면 지지.<br>'
     +'· 한 번 뚫리면 <b>역할이 바뀜</b>(저항→지지). 거래량 많은 가격대일수록 강합니다.<br>'
     +'· 대시보드 차트의 빨강/초록 점선이 24h 저항·지지예요.</div>'+svgSR+'</div>');
-  html+=card('📈 선 그리는 법 ② 추세선',
+  html+=card('② 추세선',
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
     +'<b>상승추세선</b> = <b>저점끼리</b> 이은 선(우상향). <b>하락추세선</b> = <b>고점끼리</b> 이은 선(우하향).<br>'
     +'· 점 <b>2개면 그리고, 3번째로 확인</b>. 선을 <b>지지/저항</b>처럼 씁니다(추세 유지 시나리오).<br>'
     +'· 추세선이 깨지면 추세 전환 신호일 수 있어요. 차트의 <b>금색 선</b>이 스윙 추세선.</div>'+svgTrend+'</div>');
-  html+=card('📈 선 그리는 법 ③ 채널',
+  html+=card('③ 채널',
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
     +'추세선과 <b>평행선</b>을 반대편에 그으면 <b>채널</b>. 상단=저항, 하단=지지.<br>'
     +'· <b>상승 채널</b>이면 하단 매수·상단 매도가 기본 시나리오.<br>'
     +'· 가격이 채널을 <b>이탈</b>하면 추세 가속 또는 전환. 차트의 <b>파란 두 선</b>이 회귀 채널.</div>'+svgChan+'</div>');
-  html+=card('📈 선 그리는 법 ④ 피보나치 되돌림 & 매물대',
+  html+=card('④ 피보나치 되돌림 & 매물대',
     '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:180px">'
     +'상승 후 눌릴 때 <b>0.382 / 0.5 / 0.618</b>에서 지지받는 경향. <b>0.618</b>을 "황금 되돌림"이라 함(보라 점선).<br>'
     +'· 저점→고점에 피보를 걸면 되돌림 눌림목 구간이 보여요.<br>'
     +'· <b>매물대(POC)</b> = 거래량이 가장 많이 쌓인 가격대(주황선) → 강한 지지·저항.<br>'
     +'· 여러 근거가 <b>겹치는 자리</b>일수록 신뢰↑ (피보+지지+매물대 겹침 = 좋은 타점).</div>'+svgFib+'</div>');
-  html+=card('📉 패턴 ① 가짜 이탈(페이크아웃) & 트랩',
+  html+=cat('🧩 패턴 & 전략');
+  html+=card('① 가짜 이탈(페이크아웃) & 트랩',
     '지지/저항을 <b>살짝 깨고 도로 돌아오는</b> 속임수 패턴이에요.<br>'
     +'· <b>베어 트랩</b> — 하단(지지)을 이탈했다가 회복 → 이탈 보고 숏 친 사람·손절한 롱이 <b>갇히고</b>, 그 손절·숏커버가 위로 미는 연료가 됩니다.<br>'
     +'· <b>불 트랩</b> — 상단(저항)을 돌파했다 흘러내림 → 추격 롱이 갇힘. 방향만 반대예요.<br>'
     +'· <b>트리거</b> = 봉을 <b>종가로 되돌려 마감</b>(꼬리만 나갔다 들어온 건 무효).<br>'
     +'· <b>무효화</b> = 꼬리 저점/고점을 다시 종가로 이탈하면 논리 깨짐 → 여기가 손절 기준.<br>'
     +'· <b>확신 근거</b> = 반등에 <b>거래량 실림</b> + <b>RSI 다이버전스</b>가 겹치면 신뢰도↑.');
-  html+=card('📦 패턴 ② 레인지(횡보) 매매 & 돌파',
+  html+=card('② 레인지(횡보) 매매 & 돌파',
     '박스권(횡보) 안에선 벽을 오가는 게 기본이에요.<br>'
     +'· <b>레인지 매매</b> — 하단 지지 확인 → 목표는 <b>박스 상단</b> / 상단 저항 → 목표는 하단.<br>'
     +'· <b>돌파 매매</b> — 박스 상단을 <b>종가로 돌파 + 되돌아와 지지로 리테스트(역할전환)</b> 되면 추세 재개 신호. 봉 하나 삐죽으론 판단 금물.<br>'
     +'· <b>측정이동(Measured Move)</b> — 돌파 목표는 대충 찍지 말고 <b>박스 높이를 돌파 지점에 더한</b> 값으로. 근거 있는 1차 목표가 됩니다.<br>'
     +'· 박스를 <b>확실히 넘고 지지로 굳으면</b> 그때 "추세 전환"을 논할 수 있어요(그전엔 여전히 레인지).');
-  html+=card('🔭 패턴 ③ 시간봉 보는 법 (탑다운)',
+  html+=card('③ 시간봉 보는 법 (탑다운)',
     '<b>1·15·30분봉만</b> 뚫어져라 봐도 실력은 안 늘어요 — 맥락(구조)이 안 보이거든요.<br>'
     +'· <b>높은 시간봉(일·4시간) = 지도</b> → 어디가 큰 지지/저항인지, 추세인지 레인지인지 <b>방향·위치</b>를 정함.<br>'
     +'· <b>낮은 시간봉(5·15분) = 시계</b> → 그 자리에서 <b>언제</b> 들어갈지 타이밍만.<br>'
     +'· 방향은 <b>위에서</b>, 트리거만 <b>아래에서</b> — 이게 <b>탑다운(Top-down)</b> 분석입니다.<br>'
     +'· 높은 시간봉 지지가 더 잘 지켜지는 이유 = <b>참여자·주문·기억</b>이 훨씬 많이 쌓여 있어서예요.<br>'
     +'· 저 시간봉만 돌리면 <b>수수료·펀딩·감정 소모</b>가 커져 오버트레이딩의 지름길입니다.');
-  html+=card('⚙️ 선물 기초 — 롱·숏·레버리지',
+  html+=cat('⚙️ 선물 기초');
+  html+=card('롱·숏·레버리지',
     '<b>롱</b> = 오를 것에 베팅(싸게 사서 비싸게). <b>숏</b> = 내릴 것에 베팅(비싸게 팔고 싸게 되사기). 선물은 <b>양방향</b> 수익 가능.<br><br>'
     +'<b>레버리지</b> = 증거금 대비 배율. <b>청산까지 버티는 역행폭 ≈ 1/레버리지</b>.<br>· 10배 → 약 −10%에서 청산 · 25배 → 약 −4% · 100배 → <b>약 −1%만 역행해도 청산</b>.<br>배율↑ = 청산가가 진입가에 <b>바짝 붙음</b>. 초보는 <b>3~5배 이하</b> 권장.');
   html+=card('💥 청산 · 펀딩비 · 롱숏 비율',
     '<b>청산가 근사식</b> — 롱 ≈ 진입×(1−1/레버리지), 숏 ≈ 진입×(1+1/레버리지). (수수료·유지증거금 제외)<br><br>'
     +'<b>펀딩비</b> — <span class="up">+</span>면 롱이 숏에게 지불(롱 과열), <span class="down">−</span>면 숏이 롱에게 지불(숏 과열). 8시간마다 정산.<br><br>'
     +'<b>롱숏 비율·Top Trader</b> — 시장 쏠림. <b>극단값은 역방향 청산</b>을 주의(과도한 롱쏠림 = 하방 청산 연료).');
-  html+=card('🛡️ 손절 · 리스크 관리 (제일 중요)',
+  html+=cat('🛡️ 리스크 관리');
+  html+=card('손절 · 리스크 관리 (제일 중요)',
     '진입과 <b>동시에</b> 손절을 정합니다. 손절 자리는 임의의 %가 아니라 <b>"이 가격이면 내 판단이 틀렸다"</b>는 곳(지지 이탈, 스윙 저점 아래).<br><br>'
     +'· <b>1회 리스크는 시드의 1~2%</b>로 — 상세의 🧮 계산기가 수량을 역산해줍니다.<br>'
     +'· <b>손익비 2:1 이상</b>을 노리되, 손절폭이 너무 좁으면 숫자만 커 보이고 쉽게 털립니다.<br>'
@@ -1462,6 +1468,9 @@ function renderCoinLearn(el){
   el.innerHTML=html;
 }
 window.renderCoinLearn=renderCoinLearn;
+window._toggleLacc=function(btn){ var it=btn.closest('.lacc'); if(!it)return; it.classList.toggle('open'); var x=btn.querySelector('.lacc-x'); if(x)x.textContent=it.classList.contains('open')?'−':'＋'; };
+window._toggleAllLacc=function(btn){ var root=btn.closest('#coinSection')||document, accs=root.querySelectorAll('.lacc'); var anyClosed=[].some.call(accs,function(a){return !a.classList.contains('open');});
+  accs.forEach(function(a){ a.classList.toggle('open',anyClosed); var x=a.querySelector('.lacc-x'); if(x)x.textContent=anyClosed?'−':'＋'; }); btn.textContent=anyClosed?'전체 접기':'전체 펼치기'; };
 /* ===== 🔥 청산맵(네이티브 이식: 구 VANTOR 터미널 liqmap) ===== */
 function _liqHTML(){ return '<div id="lqRoot">'
   +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div style="font-weight:800;font-size:17px">🔥 청산맵 <span style="color:#8b96a7;font-weight:500;font-size:13px">· Liquidation Heatmap</span></div><span style="font-size:11px;color:#8b96a7">● <span id="lqLiveTxt">연결 중…</span></span><input id="lqSearch" placeholder="🔍 코인 검색 (예: ADA·1000PEPE·SUI)" style="margin-left:auto;background:#0f151f;border:1px solid #222d3d;border-radius:10px;padding:9px 13px;color:#e8ecf3;font-family:inherit;font-size:13px;outline:none;min-width:200px"></div>'
