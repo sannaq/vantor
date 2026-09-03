@@ -1427,6 +1427,26 @@ function renderCoinLearn(el){
     +'· 저점→고점에 피보를 걸면 되돌림 눌림목 구간이 보여요.<br>'
     +'· <b>매물대(POC)</b> = 거래량이 가장 많이 쌓인 가격대(주황선) → 강한 지지·저항.<br>'
     +'· 여러 근거가 <b>겹치는 자리</b>일수록 신뢰↑ (피보+지지+매물대 겹침 = 좋은 타점).</div>'+svgFib+'</div>');
+  html+=card('📉 패턴 ① 가짜 이탈(페이크아웃) & 트랩',
+    '지지/저항을 <b>살짝 깨고 도로 돌아오는</b> 속임수 패턴이에요.<br>'
+    +'· <b>베어 트랩</b> — 하단(지지)을 이탈했다가 회복 → 이탈 보고 숏 친 사람·손절한 롱이 <b>갇히고</b>, 그 손절·숏커버가 위로 미는 연료가 됩니다.<br>'
+    +'· <b>불 트랩</b> — 상단(저항)을 돌파했다 흘러내림 → 추격 롱이 갇힘. 방향만 반대예요.<br>'
+    +'· <b>트리거</b> = 봉을 <b>종가로 되돌려 마감</b>(꼬리만 나갔다 들어온 건 무효).<br>'
+    +'· <b>무효화</b> = 꼬리 저점/고점을 다시 종가로 이탈하면 논리 깨짐 → 여기가 손절 기준.<br>'
+    +'· <b>확신 근거</b> = 반등에 <b>거래량 실림</b> + <b>RSI 다이버전스</b>가 겹치면 신뢰도↑.');
+  html+=card('📦 패턴 ② 레인지(횡보) 매매 & 돌파',
+    '박스권(횡보) 안에선 벽을 오가는 게 기본이에요.<br>'
+    +'· <b>레인지 매매</b> — 하단 지지 확인 → 목표는 <b>박스 상단</b> / 상단 저항 → 목표는 하단.<br>'
+    +'· <b>돌파 매매</b> — 박스 상단을 <b>종가로 돌파 + 되돌아와 지지로 리테스트(역할전환)</b> 되면 추세 재개 신호. 봉 하나 삐죽으론 판단 금물.<br>'
+    +'· <b>측정이동(Measured Move)</b> — 돌파 목표는 대충 찍지 말고 <b>박스 높이를 돌파 지점에 더한</b> 값으로. 근거 있는 1차 목표가 됩니다.<br>'
+    +'· 박스를 <b>확실히 넘고 지지로 굳으면</b> 그때 "추세 전환"을 논할 수 있어요(그전엔 여전히 레인지).');
+  html+=card('🔭 패턴 ③ 시간봉 보는 법 (탑다운)',
+    '<b>1·15·30분봉만</b> 뚫어져라 봐도 실력은 안 늘어요 — 맥락(구조)이 안 보이거든요.<br>'
+    +'· <b>높은 시간봉(일·4시간) = 지도</b> → 어디가 큰 지지/저항인지, 추세인지 레인지인지 <b>방향·위치</b>를 정함.<br>'
+    +'· <b>낮은 시간봉(5·15분) = 시계</b> → 그 자리에서 <b>언제</b> 들어갈지 타이밍만.<br>'
+    +'· 방향은 <b>위에서</b>, 트리거만 <b>아래에서</b> — 이게 <b>탑다운(Top-down)</b> 분석입니다.<br>'
+    +'· 높은 시간봉 지지가 더 잘 지켜지는 이유 = <b>참여자·주문·기억</b>이 훨씬 많이 쌓여 있어서예요.<br>'
+    +'· 저 시간봉만 돌리면 <b>수수료·펀딩·감정 소모</b>가 커져 오버트레이딩의 지름길입니다.');
   html+=card('⚙️ 선물 기초 — 롱·숏·레버리지',
     '<b>롱</b> = 오를 것에 베팅(싸게 사서 비싸게). <b>숏</b> = 내릴 것에 베팅(비싸게 팔고 싸게 되사기). 선물은 <b>양방향</b> 수익 가능.<br><br>'
     +'<b>레버리지</b> = 증거금 대비 배율. <b>청산까지 버티는 역행폭 ≈ 1/레버리지</b>.<br>· 10배 → 약 −10%에서 청산 · 25배 → 약 −4% · 100배 → <b>약 −1%만 역행해도 청산</b>.<br>배율↑ = 청산가가 진입가에 <b>바짝 붙음</b>. 초보는 <b>3~5배 이하</b> 권장.');
@@ -1619,6 +1639,7 @@ async function openCoin(sym){
       +tfRow+legend
       +'<canvas class="schart" id="coinChartCv"></canvas>'
       +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
+      +'<div id="cChartTip" style="margin:9px 2px 0;font-size:12.5px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--gold) 10%,var(--panel2));border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);border-radius:10px;padding:9px 12px;line-height:1.55;cursor:pointer" title="클릭하면 다음 팁" onclick="_nextChartTip()"></div>'
       +summaryBox
       +alertBox
       +'<div id="coinTopsig" class="sigcard" style="display:none"></div>'
@@ -1633,10 +1654,34 @@ async function openCoin(sym){
     if(typeof renderCoinAlerts==='function')renderCoinAlerts(sym);
     if(typeof renderCoinJournal==='function')renderCoinJournal();
     if(typeof _startCoinRefresh==='function')_startCoinRefresh();
+    if(typeof _startChartTips==='function')_startChartTips();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
+function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof _stopChartTips==='function')_stopChartTips(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
+/* 💡 차트 팁 — 차트 볼 때 도움 팁 회전(클릭 시 다음) */
+var CHART_TIPS=[
+ '지지·저항은 <b>선이 아니라 구간(존)</b>으로 보세요. 딱 떨어지는 한 가격이 아니라 반응하는 띠입니다.',
+ '한 번 뚫린 저항은 다음에 <b>지지로 역할이 바뀝니다</b>(역할전환). 반대도 마찬가지예요.',
+ '<b>가짜 이탈(페이크아웃)</b>: 지지를 살짝 깨고 <b>봉 종가로 되돌아오면</b> 오히려 상방 트랩 신호. 꼬리만 나갔다 들어온 건 무효.',
+ '돌파는 <b>봉 마감</b>으로 확인하세요. 장중에 삐죽 나온 꼬리로 "뚫렸다"고 판단하면 자주 당합니다.',
+ '돌파 후 <b>그 자리를 지지로 리테스트</b>하면 진짜 돌파. 리테스트 실패면 불트랩일 수 있어요.',
+ '<b>거래량</b>이 실렸는지 보세요. 거래량 없는 돌파·반등은 신뢰도가 낮습니다.',
+ '방향은 <b>높은 시간봉(일·4시간)</b>에서, 진입 타이밍만 낮은 봉에서. 낮은 봉만 보면 노이즈에 휘둘려요.',
+ '높은 시간봉의 지지/저항이 더 잘 지켜집니다 — <b>참여자·주문이 더 많이 쌓여</b> 있기 때문이에요.',
+ '레인지(횡보)에선 <b>하단 지지→상단 목표</b>, 상단 저항→하단 목표가 기본 시나리오.',
+ '박스 돌파 목표는 <b>측정이동</b>: 박스 높이를 돌파 지점에 더한 값이 근거 있는 1차 목표.',
+ 'RSI <b>다이버전스</b>(가격 저점↓인데 RSI 저점↑)는 반전 신호가 될 수 있어요. 단독 말고 지지와 겹칠 때.',
+ '<b>매물대(POC)</b>는 거래량이 가장 많이 쌓인 가격 — 강한 지지·저항으로 작동합니다.',
+ '펀딩비가 <b>극단적으로 높으면</b> 한쪽 쏠림 과열 → 반대방향 청산 스퀴즈를 조심하세요.',
+ '진입 전 체크: <b>셋업·손절·손익비·1~2% 룰·청산가·심리</b> 전부 "예"일 때만. 하나라도 아니오면 관망.',
+ '손절은 % 로 찍지 말고 <b>"이 가격이면 내 판단이 틀렸다"</b>는 구조 자리(스윙 저점 아래 등)에 두세요.'
+];
+var _chartTipIdx=0, _chartTipTimer=null;
+function _showChartTip(){ var el=$('#cChartTip'); if(!el)return; el.innerHTML='💡 <b style="color:var(--gold)">차트 팁</b> · '+CHART_TIPS[_chartTipIdx%CHART_TIPS.length]; }
+window._nextChartTip=function(){ _chartTipIdx++; _showChartTip(); };
+function _startChartTips(){ _stopChartTips(); _chartTipIdx=Math.floor(Math.random()*CHART_TIPS.length); _showChartTip(); _chartTipTimer=setInterval(function(){ if(!$('#cChartTip')){_stopChartTips();return;} _chartTipIdx++; _showChartTip(); },11000); }
+function _stopChartTips(){ if(_chartTipTimer){clearInterval(_chartTipTimer);_chartTipTimer=null;} }
 /* ===== 코인 상세 분석 도구(선물 터미널 이식): 수급·타점·레버리지·포지션 계산기 ===== */
 function _cEma(v,p){var k=2/(p+1),e=v[0],o=[e],i;for(i=1;i<v.length;i++){e=v[i]*k+e*(1-k);o.push(e);}return o;}
 function _cRsi(cl,p){if(!cl||cl.length<p+1)return null;var g=0,l=0,i;for(i=1;i<=p;i++){var dd=cl[i]-cl[i-1];if(dd>=0)g+=dd;else l-=dd;}g/=p;l/=p;for(i=p+1;i<cl.length;i++){var d2=cl[i]-cl[i-1],gg=d2>0?d2:0,ll=d2<0?-d2:0;g=(g*(p-1)+gg)/p;l=(l*(p-1)+ll)/p;}if(l===0)return 100;return 100-100/(1+g/l);}
