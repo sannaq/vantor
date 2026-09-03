@@ -414,6 +414,22 @@
 #coinHost #cLiveDot{animation:cPulse 1.7s infinite}
 @keyframes cPulse{50%{opacity:.35}}
 @media(prefers-reduced-motion:reduce){#coinHost #cLiveDot{animation:none}}
+/* 프로 티커 헤더 */
+#coinHost .cliqbtn{background:linear-gradient(135deg,#ff7a45,#f6465d);color:#fff;border:none;font-family:inherit;font-weight:800;font-size:12.5px;padding:8px 14px;border-radius:10px;cursor:pointer;box-shadow:0 2px 8px -2px rgba(246,70,93,.5)}
+#coinHost .cliqbtn:hover{filter:brightness(1.06)}
+#coinHost .cticker{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--line2)}
+#coinHost .cticker .cid{min-width:0}
+#coinHost .cticker .csym{font-size:25px;font-weight:800;letter-spacing:-.5px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+#coinHost .cticker .clive{font-size:9px;font-weight:800;color:#fff;background:var(--up);padding:2px 7px;border-radius:20px;letter-spacing:.4px}
+#coinHost .cticker .cfav{font-size:19px;cursor:pointer;color:var(--faint);line-height:1}
+#coinHost .cticker .cfav.on{color:#f5b301}
+#coinHost .cticker .csub{font-size:12px;color:var(--faint);margin-top:4px;font-weight:600}
+#coinHost .cticker .cpxwrap{margin-left:auto;display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;justify-content:flex-end}
+#coinHost .cpx{font-size:30px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;color:var(--ink)}
+#coinHost .chgpill{display:inline-block;font-size:14px;font-weight:800;padding:4px 11px;border-radius:9px;font-variant-numeric:tabular-nums}
+#coinHost .chgpill.up{color:var(--up);background:var(--upbg)}
+#coinHost .chgpill.down{color:var(--down);background:var(--downbg)}
+@media(max-width:560px){#coinHost .cticker .cpxwrap{margin-left:0;width:100%;justify-content:flex-start}#coinHost .cpx{font-size:26px}}
 </style>
 </head>
 <body>
@@ -590,7 +606,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=39"></script>
+<script src="app.js?v=40"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

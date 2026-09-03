@@ -1637,13 +1637,15 @@ async function openCoin(sym){
     var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
+    var _fav=(typeof isCoinFav==='function'&&isCoinFav(sym));
     host.innerHTML=
-      '<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button>'
-      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:24px;font-weight:800">'+esc(sym)+'</span>'
-        +'<span style="color:var(--faint);font-size:13px">'+esc(sym)+'USDT · Binance 무기한</span>'
-        +'<span id="cLiveDot" title="자동 갱신" style="color:#2ebd85;font-size:11px;font-weight:800">● LIVE</span>'
-        +'<span class="more" style="margin-left:auto;cursor:pointer" onclick="openLiqMap(\''+esc(sym)+'\')">🔥 청산맵</span></div>'
-      +'<div id="cDetPx" style="font-size:30px;font-weight:800;margin-top:4px;color:'+cCol(ch)+'">'+coinPx(px)+' <span style="font-size:16px">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</span></div>'
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;cursor:pointer">◀ 코인 목록</button>'
+        +'<button class="cliqbtn" style="margin-left:auto" onclick="openLiqMap(\''+esc(sym)+'\')">🔥 청산맵</button></div>'
+      +'<div class="cticker"><div class="cid"><div class="csym">'+esc(sym)
+        +' <span class="clive" id="cLiveDot" title="30초 자동 갱신">● LIVE</span>'
+        +' <span class="cfav'+(_fav?' on':'')+'" data-sym="'+esc(sym)+'" onclick="toggleCoinFav(\''+esc(sym)+'\',event)" title="관심 추가">'+(_fav?'★':'☆')+'</span></div>'
+        +'<div class="csub">'+esc(sym)+'USDT · Binance 무기한 선물</div></div>'
+        +'<div class="cpxwrap"><div id="cDetPx">'+_coinPxHtml(px,ch)+'</div></div></div>'
       +'<div class="metrics" id="cDetMet">'+_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la)+'</div>'
       +tfRow+legend
       +'<canvas class="schart" id="coinChartCv"></canvas>'
@@ -1795,6 +1797,7 @@ async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');i
 window.coinFlow=coinFlow;
 /* 코인 상세 지표 카드 HTML(오픈·갱신 공용) */
 function _coinFUsd(a){ a=+a||0; return a>=1e9?'$'+(a/1e9).toFixed(2)+'B':(a>=1e6?'$'+(a/1e6).toFixed(1)+'M':'$'+Math.round(a).toLocaleString('en-US')); }
+function _coinPxHtml(px,ch){ var cls=ch>=0?'up':'down'; return '<span class="cpx">'+coinPx(px)+'</span> <span class="chgpill '+cls+'">'+(ch>=0?'▲ +':'▼ ')+Math.abs(ch).toFixed(2)+'%</span>'; }
 function _coinMetricsHtml(hi,lo,qv,fr,oiUsd,la){
   var cmet=function(k,v,su,c){ return '<div class="met"><div class="k">'+k+'</div><div class="v '+(c||'')+'">'+v+'</div><div class="s">'+(su||'')+'</div></div>'; };
   return cmet('24h 고가',coinPx(hi),'',null)+cmet('24h 저가',coinPx(lo),'',null)+cmet('거래대금',_coinFUsd(qv),'24h',null)
@@ -1827,7 +1830,7 @@ async function refreshCoinDetail(){ var sym=_coinCur; if(!sym)return; var s=sym+
     var px=+tk.lastPrice, ch=+tk.priceChangePercent, hi=+tk.highPrice, lo=+tk.lowPrice, qv=+tk.quoteVolume;
     var kl=res[1], fund=res[2], oi=res[3], ls=res[4];
     var fr=(fund&&fund.lastFundingRate!=null)?(+fund.lastFundingRate*100):null, oiUsd=(oi&&oi.openInterest)?(+oi.openInterest*px):null, la=(ls&&ls[0])?(+ls[0].longAccount*100):null;
-    var pxEl=$('#cDetPx'); if(pxEl){ pxEl.style.color=cCol(ch); pxEl.innerHTML=coinPx(px)+' <span style="font-size:16px">'+(ch>=0?'▲':'▼')+' '+Math.abs(ch).toFixed(2)+'%</span>'; }
+    var pxEl=$('#cDetPx'); if(pxEl)pxEl.innerHTML=_coinPxHtml(px,ch);
     var metEl=$('#cDetMet'); if(metEl)metEl.innerHTML=_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la);
     var candles=Array.isArray(kl)?kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}):[];
     var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
