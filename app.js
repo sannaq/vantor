@@ -1451,6 +1451,17 @@ function renderCoinLearn(el){
     +'· 방향은 <b>위에서</b>, 트리거만 <b>아래에서</b> — 이게 <b>탑다운(Top-down)</b> 분석입니다.<br>'
     +'· 높은 시간봉 지지가 더 잘 지켜지는 이유 = <b>참여자·주문·기억</b>이 훨씬 많이 쌓여 있어서예요.<br>'
     +'· 저 시간봉만 돌리면 <b>수수료·펀딩·감정 소모</b>가 커져 오버트레이딩의 지름길입니다.');
+  html+=card('④ 계단식 상승 (저점 높이기)',
+    '<b>저점이 계속 높아지는(Higher Lows)</b> 상승 구조예요. 작은 박스를 만들며 <b>한 계단씩</b> 올라갑니다.<br>'
+    +'· 상승추세의 <b>건강한 눌림</b> 형태 — 이 저점 라인(계단)이 깨지지 않는 한 추세 유효.<br>'
+    +'· 계단(저점)이 깨지면 <b>추세 훼손 경고</b>. 저점 라인을 손절·추세 판단 기준으로 씁니다.<br>'
+    +'· 저항 앞에서 저점을 높이며 숨고르기 = <b>돌파 준비(에너지 응축)</b>로 보기도 해요.');
+  html+=card('⑤ 기간조정 vs 가격조정',
+    '조정에는 두 종류가 있어요.<br>'
+    +'· <b>가격조정</b> = 가격이 <b>아래로 빠지며</b>(세로) 과열을 식힘.<br>'
+    +'· <b>기간조정</b> = 가격은 <b>옆으로 횡보하며</b>(가로) 시간으로 과열을 식힘.<br>'
+    +'· 급등 후 저항 앞 <b>좁은 박스에서 며칠 횡보</b> = 기간조정 → 매물 소화·응축 후 재상승 발판이 되기도.<br>'
+    +'· "며칠 옆으로 기는데 안 빠지네" = 대개 가격조정이 아니라 기간조정입니다.');
   html+=cat('⚙️ 선물 기초');
   html+=card('롱·숏·레버리지',
     '<b>롱</b> = 오를 것에 베팅(싸게 사서 비싸게). <b>숏</b> = 내릴 것에 베팅(비싸게 팔고 싸게 되사기). 선물은 <b>양방향</b> 수익 가능.<br><br>'
@@ -1465,6 +1476,33 @@ function renderCoinLearn(el){
     +'· <b>1회 리스크는 시드의 1~2%</b>로 — 상세의 🧮 계산기가 수량을 역산해줍니다.<br>'
     +'· <b>손익비 2:1 이상</b>을 노리되, 손절폭이 너무 좁으면 숫자만 커 보이고 쉽게 털립니다.<br>'
     +'· 손절 없는 매매 한 번이 수십 번의 수익을 지웁니다. <b>계좌를 지키는 게 1순위.</b>');
+  html+=cat('🌐 시황 · 매크로 읽기');
+  html+=card('순환매 & BTC 도미넌스',
+    '<b>BTC 도미넌스</b> = 전체 코인 시총 중 비트코인 비중이에요.<br>'
+    +'· 유동성이 <b>BTC → 알트로</b> 돌면 도미넌스↓ = <b>알트 강세(알트장)</b>.<br>'
+    +'· BTC가 저항 앞에서 쉬는 동안 돈이 알트로 흐르면 = <b>순환매</b> 장.<br>'
+    +'· 도미넌스 방향으로 "지금 돈이 어디로 도는지" 읽어요. 알트만 오르고 BTC는 횡보면 순환매 신호.');
+  html+=card('금리 · 매크로가 크립토에 미치는 영향',
+    'BTC는 <b>위험자산</b>이라 금리·유동성에 민감해요.<br>'
+    +'· <b>10년물 국채금리 ↑</b> = 위험자산 부담(조정 가능) · <b>안정</b> = 재반등 여력.<br><br>'
+    +'<b>4분면 (서비스 경기 × 물가)</b><br>'
+    +'· 경기 유지 + 물가 <span class="down">하락</span> = <b class="up">최상</b> (주식·BTC·알트 우호적)<br>'
+    +'· 경기 강세 + 물가 <span class="up">상승</span> = 과열·물가부담, 인하기대 약화 → <b class="down">조정 가능</b><br>'
+    +'· 경기 둔화 + 물가 <span class="down">하락</span> = 인하기대↑ → 초반 긍정적<br>'
+    +'· 경기 둔화 + 물가 <span class="up">상승</span> = 스태그플레이션형, <b class="down">위험자산 최악</b><br><br>'
+    +'※ <b>경향</b>일 뿐 확정 아님. 단기 변동성은 금리가 흔들지만, <b>큰 방향</b>은 금리만으로 정해지지 않아요.');
+  html+=card('온체인 — 현물 매수압력 & 레버리지',
+    '같은 상승이라도 <b>질</b>이 달라요.<br>'
+    +'· <b>현물(시장가) 매수압력이 오르며</b> 반등 = <b class="up">건강한 반등</b> (진짜 돈이 들어옴).<br>'
+    +'· 매수압력이 <b>빠지며</b> 반등 = 약한 반등(되돌림·숏커버 위주일 수 있음).<br>'
+    +'· <b>레버리지(미결제약정)가 과하지 않으면</b> 청산 연쇄 위험↓ = 더 건강한 상승.<br>'
+    +'· CryptoQuant 등 온체인 데이터로 "돈의 성격"을 확인해요.');
+  html+=card('경제지표 & 이벤트 캘린더',
+    '지표 발표 <b>전후로 단기 변동성 급증</b> → 이벤트 리스크예요.<br>'
+    +'· 크립토가 보는 주요 지표: <b>ISM 비제조업(물가·고용), 서비스 PMI, 실업수당청구, 고용지수, 실업률, CPI/PCE</b>.<br>'
+    +'· 연준 이벤트: <b>FOMC, 잭슨홀, 연준 위원 발언</b>(매파/비둘기).<br>'
+    +'· "언제 발표"인지 <b>미리 알고</b>, 그 시각엔 무리한 진입·높은 레버리지 자제.<br>'
+    +'· 발표로 <b>단기 변동</b>은 나와도, 그게 곧 <b>추세 전환</b>은 아님 — 구조와 함께 보세요.');
   el.innerHTML=html;
 }
 window.renderCoinLearn=renderCoinLearn;
@@ -1638,6 +1676,8 @@ async function openCoin(sym){
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
     var _fav=(typeof isCoinFav==='function'&&isCoinFav(sym));
+    var mark=(fund&&fund.markPrice)?+fund.markPrice:px; window._fundNextTime=(fund&&fund.nextFundingTime)?+fund.nextFundingTime:0;
+    var infoBar='<div class="cinfobar"><span>마크가 <b>'+coinPx(mark)+'</b></span><span class="cib-sep"></span><span>펀딩 <b class="'+(fr==null?'':(fr>=0?'up':'down'))+'">'+(fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'))+'</b></span><span class="cib-sep"></span><span>다음 정산 <b id="cFundCd">—</b></span><span class="cib-live">● 실시간</span></div>';
     host.innerHTML=
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;cursor:pointer">◀ 코인 목록</button>'
         +'<button class="cliqbtn" style="margin-left:auto" onclick="openLiqMap(\''+esc(sym)+'\')">🔥 청산맵</button></div>'
@@ -1647,6 +1687,7 @@ async function openCoin(sym){
         +'<div class="csub">'+esc(sym)+'USDT · Binance 무기한 선물</div></div>'
         +'<div class="cpxwrap"><div id="cDetPx">'+_coinPxHtml(px,ch)+'</div></div></div>'
       +'<div class="metrics" id="cDetMet">'+_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la)+'</div>'
+      +infoBar
       +tfRow+legend
       +'<canvas class="schart" id="coinChartCv"></canvas>'
       +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
@@ -1666,9 +1707,10 @@ async function openCoin(sym){
     if(typeof renderCoinJournal==='function')renderCoinJournal();
     if(typeof _startCoinRefresh==='function')_startCoinRefresh();
     if(typeof _startChartTips==='function')_startChartTips();
+    if(typeof _startFundCd==='function')_startFundCd();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof _stopChartTips==='function')_stopChartTips(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
+function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof _stopChartTips==='function')_stopChartTips(); if(typeof _stopFundCd==='function')_stopFundCd(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
 /* 💡 차트 팁 — 차트 볼 때 도움 팁 회전(클릭 시 다음) */
 var CHART_TIPS=[
@@ -1686,13 +1728,24 @@ var CHART_TIPS=[
  '<b>매물대(POC)</b>는 거래량이 가장 많이 쌓인 가격 — 강한 지지·저항으로 작동합니다.',
  '펀딩비가 <b>극단적으로 높으면</b> 한쪽 쏠림 과열 → 반대방향 청산 스퀴즈를 조심하세요.',
  '진입 전 체크: <b>셋업·손절·손익비·1~2% 룰·청산가·심리</b> 전부 "예"일 때만. 하나라도 아니오면 관망.',
- '손절은 % 로 찍지 말고 <b>"이 가격이면 내 판단이 틀렸다"</b>는 구조 자리(스윙 저점 아래 등)에 두세요.'
+ '손절은 % 로 찍지 말고 <b>"이 가격이면 내 판단이 틀렸다"</b>는 구조 자리(스윙 저점 아래 등)에 두세요.',
+ '<b>계단식 상승(저점 높이기)</b>은 건강한 상승 구조예요. 저점 라인이 안 깨지는 한 추세 유효, 깨지면 경고.',
+ '<b>기간조정</b> = 안 빠지고 옆으로 횡보하며 시간으로 식히는 것. 급등 후 저항 앞 좁은 박스가 대표적.',
+ '<b>BTC 도미넌스</b>가 내리면 알트로 돈이 도는 <b>순환매·알트장</b> 신호. BTC 횡보 중 알트만 오를 때 특히.',
+ '<b>10년물 국채금리↑</b>는 위험자산(코인)에 하방 압력. 금리 안정되면 재반등 여력. 큰 방향은 금리만으론 안 정해져요.',
+ '같은 반등도 <b>현물 매수압력이 오르며</b> 반등하면 건강, <b>빠지며</b> 반등하면 약함. 온체인으로 "돈의 성격"을 봐요.',
+ 'CPI·FOMC·잭슨홀 <b>지표 발표 시각</b>엔 변동성 급증. 그 시간대엔 무리한 진입·고배율 자제가 안전해요.'
 ];
 var _chartTipIdx=0, _chartTipTimer=null;
 function _showChartTip(){ var el=$('#cChartTip'); if(!el)return; el.innerHTML='💡 <b style="color:var(--gold)">차트 팁</b> · '+CHART_TIPS[_chartTipIdx%CHART_TIPS.length]; }
 window._nextChartTip=function(){ _chartTipIdx++; _showChartTip(); };
 function _startChartTips(){ _stopChartTips(); _chartTipIdx=Math.floor(Math.random()*CHART_TIPS.length); _showChartTip(); _chartTipTimer=setInterval(function(){ if(!$('#cChartTip')){_stopChartTips();return;} _chartTipIdx++; _showChartTip(); },11000); }
 function _stopChartTips(){ if(_chartTipTimer){clearInterval(_chartTipTimer);_chartTipTimer=null;} }
+/* 다음 펀딩 정산 카운트다운 */
+var _fundCdTimer=null;
+function _updateFundCd(){ var el=$('#cFundCd'); if(!el)return; var t=window._fundNextTime||0, d=t-Date.now(); if(!(t>0)){el.textContent='—';return;} if(d<=0){el.textContent='정산 임박';return;} var h=Math.floor(d/3600000), m=Math.floor(d%3600000/60000), sec=Math.floor(d%60000/1000); el.textContent=(h>0?h+'시간 ':'')+m+'분 '+('0'+sec).slice(-2)+'초'; }
+function _startFundCd(){ _stopFundCd(); _updateFundCd(); _fundCdTimer=setInterval(function(){ if(!$('#cFundCd')){_stopFundCd();return;} _updateFundCd(); },1000); }
+function _stopFundCd(){ if(_fundCdTimer){clearInterval(_fundCdTimer);_fundCdTimer=null;} }
 /* ===== 코인 상세 분석 도구(선물 터미널 이식): 수급·타점·레버리지·포지션 계산기 ===== */
 function _cEma(v,p){var k=2/(p+1),e=v[0],o=[e],i;for(i=1;i<v.length;i++){e=v[i]*k+e*(1-k);o.push(e);}return o;}
 function _cRsi(cl,p){if(!cl||cl.length<p+1)return null;var g=0,l=0,i;for(i=1;i<=p;i++){var dd=cl[i]-cl[i-1];if(dd>=0)g+=dd;else l-=dd;}g/=p;l/=p;for(i=p+1;i<cl.length;i++){var d2=cl[i]-cl[i-1],gg=d2>0?d2:0,ll=d2<0?-d2:0;g=(g*(p-1)+gg)/p;l=(l*(p-1)+ll)/p;}if(l===0)return 100;return 100-100/(1+g/l);}
@@ -1757,9 +1810,11 @@ async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');i
     h+='<div class="gbar"><div class="gf" data-w="'+tL.toFixed(1)+'"></div><span class="gl">롱 '+tL.toFixed(1)+'%</span><span class="gr">숏 '+tS.toFixed(1)+'%</span></div>';
     h+='<div class="rsub">Taker 거래량(5분) — 매수 <b class="up">'+bV.toFixed(1)+'</b> / 매도 <b class="down">'+sV.toFixed(1)+'</b> <span class="'+(bP>=50?'up':'down')+'">('+(bP>=50?'매수 우위':'매도 우위')+')</span></div>';
     if(poc)h+='<div class="rsub">📊 매물대 집중(POC) <b>'+_cFmt(poc.low,d)+' ~ '+_cFmt(poc.high,d)+'</b> — 이 구간 거래량 최다(지지·저항↑)</div>';
-    var rv=_cRsi(closes,14);if(rv!=null){var rz=rv>=70?'<span class="down">과매수</span>':rv<=30?'<span class="up">과매도</span>':'중립';h+='<div class="rsub">📈 RSI(14) <b>'+rv.toFixed(1)+'</b> · '+rz+' <span class="muted">(70↑ 과매수 · 30↓ 과매도)</span></div>';}
-    var mc=_cMacd(closes);if(mc)h+='<div class="rsub">📉 MACD <b class="'+(mc.bull?'up':'down')+'">'+(mc.bull?'상승 우위':'하락 우위')+'</b> · '+(mc.rising?'강해지는 중':'약해지는 중')+'</div>';
-    if(Array.isArray(oih)&&oih.length>=2){var o1=+oih[oih.length-1].sumOpenInterest,o0=+oih[0].sumOpenInterest,oc=o0?((o1-o0)/o0*100):0;h+='<div class="rsub">🔓 미결제약정(OI) <b class="'+(oc>=0?'up':'down')+'">'+(oc>=0?'+':'')+oc.toFixed(1)+'%</b> <span class="muted">(최근 6시간 · '+(oc>=0?'포지션 증가':'감소')+')</span></div>';}
+    var _chips='';
+    var rv=_cRsi(closes,14); if(rv!=null){ var rz=rv>=70?'과매수':rv<=30?'과매도':'중립', rc=rv>=70?'down':rv<=30?'up':''; _chips+='<div class="cind"><div class="cind-k">RSI(14)</div><div class="cind-v '+rc+'">'+rv.toFixed(1)+'</div><div class="cind-s">'+rz+'</div></div>'; }
+    var mc=_cMacd(closes); if(mc)_chips+='<div class="cind"><div class="cind-k">MACD</div><div class="cind-v '+(mc.bull?'up':'down')+'">'+(mc.bull?'상승 우위':'하락 우위')+'</div><div class="cind-s">'+(mc.rising?'강해지는 중':'약해지는 중')+'</div></div>';
+    if(Array.isArray(oih)&&oih.length>=2){ var o1=+oih[oih.length-1].sumOpenInterest,o0=+oih[0].sumOpenInterest,oc=o0?((o1-o0)/o0*100):0; _chips+='<div class="cind"><div class="cind-k">OI 6h</div><div class="cind-v '+(oc>=0?'up':'down')+'">'+(oc>=0?'+':'')+oc.toFixed(1)+'%</div><div class="cind-s">'+(oc>=0?'포지션 증가':'감소')+'</div></div>'; }
+    if(_chips)h+='<div class="cindgrid">'+_chips+'</div>';
     var t5=_cSig(kl5),t15=_cSig(kl),t1h=_cSig(kl1h),t4=_cSig(kl4);
     window._chz={'5m':t5,'15m':t15,'1h':t1h,'4h':t4};window._chzDec=d;
     var HZ=[['초단기','5m',t5],['단기','15m',t15],['중기','1h',t1h],['장기','4h',t4]];
@@ -1949,6 +2004,9 @@ window.runCoinBacktest=async function(){ var bt=$('#cBtBox'); if(!bt)return; var
   }catch(e){bt.innerHTML='<div class="muted" style="font-size:12px">분석에 실패했어요.</div>';}
 };
 function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
+  try{ var _rt=document.documentElement; // 코인 모드는 다크 터미널 느낌으로 기본 전환, 나가면 원복
+    if(coinMode){ if(window._preCoinTheme===undefined)window._preCoinTheme=_rt.getAttribute('data-theme'); _rt.setAttribute('data-theme','dark'); }
+    else if(window._preCoinTheme!==undefined){ if(window._preCoinTheme)_rt.setAttribute('data-theme',window._preCoinTheme); else _rt.removeAttribute('data-theme'); window._preCoinTheme=undefined; } }catch(e){}
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
   var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
   _applyCoinMenu(coinMode); // 코인 모드 전용 상단 메뉴(홈/RADAR/섹터/뉴스/관심/기초)
