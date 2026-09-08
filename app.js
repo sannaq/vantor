@@ -728,6 +728,28 @@ function attachChartCrosshair(cv){
   cv.addEventListener('touchmove',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i); e.preventDefault();} } },{passive:false});
   cv.addEventListener('touchend',hideCrosshair);
 }
+/* 🧭 진입 환경 컨플루언스(주식) — 매수세·체결강도·이평배열·추세·RSI·투자자수급 (교육용) */
+function stockConfluence(r){ var el=$('#stkConf'); if(!el||!r)return;
+  var _cf=[], V=function(l,d,x){_cf.push({l:l,d:d,x:x});};
+  var fl=r._flow||{}, bp=(fl.bp!=null?fl.bp:r.bidRatio), stg=(fl.strength!=null?fl.strength:r.strength);
+  if(bp!=null)V('매수세(호가)', bp>=55?'long':(bp<=45?'short':'flat'), Math.round(bp)+'%');
+  if(stg!=null)V('체결강도', stg>=100?'long':(stg<95?'short':'flat'), Math.round(stg)+(stg>=100?' 매수우위':stg<95?' 매도우위':' 중립'));
+  var cs=(r._candles&&r._candles.length>20)?r._candles:null;
+  if(cs){ var closes=cs.map(function(k){return +k[4];});
+    var ma=function(p){ if(closes.length<p)return null; var s=0; for(var i=closes.length-p;i<closes.length;i++)s+=closes[i]; return s/p; };
+    var m5=ma(5),m20=ma(20),m60=ma(60);
+    if(m5&&m20&&m60){ var arr=(m5>m20&&m20>m60)?'long':((m5<m20&&m20<m60)?'short':'flat'); V('이평 배열', arr, arr==='long'?'정배열':arr==='short'?'역배열':'혼조'); }
+    var n=closes.length,sx=0,sy=0,sxy=0,sxx=0,i2; for(i2=0;i2<n;i2++){sx+=i2;sy+=closes[i2];sxy+=i2*closes[i2];sxx+=i2*i2;} var den=n*sxx-sx*sx,sl=den?(n*sxy-sx*sy)/den:0; V('추세', sl>0?'long':(sl<0?'short':'flat'), sl>0?'우상향':sl<0?'우하향':'횡보');
+    var rsi=(typeof _cRsi==='function')?_cRsi(closes,14):null; if(rsi!=null)V('RSI(14)', rsi<=35?'long':(rsi>=65?'short':'flat'), rsi.toFixed(0)+(rsi<=35?' 과매도':rsi>=65?' 과매수':' 중립'));
+  }
+  if(r.invest)V('투자자 수급', (r.invest==='both'||r.invest==='buy')?'long':(r.invest==='sell'?'short':'flat'), r.invest==='both'?'외인+기관 순매수':r.invest==='buy'?'순매수':r.invest==='sell'?'순매도':'중립');
+  if(_cf.length<2){ el.innerHTML=''; return; }
+  var lv=_cf.filter(function(f){return f.d==='long';}).length, sv=_cf.filter(function(f){return f.d==='short';}).length, tot=_cf.length;
+  var env,ec; if(lv-sv>=2){env='매수 우호';ec='up';} else if(sv-lv>=2){env='매도 우호';ec='down';} else {env='중립·혼조';ec='';}
+  var rows=_cf.map(function(f){var a=f.d==='long'?'<span class="up">▲ 매수</span>':f.d==='short'?'<span class="down">▼ 매도</span>':'<span style="color:var(--faint)">– 중립</span>';return '<div class="cfrow"><span style="color:var(--sub)">'+f.l+'</span><span>'+a+' <span style="color:var(--faint);font-size:11px">'+f.x+'</span></span></div>';}).join('');
+  el.innerHTML='<div class="stkconf"><div class="cfhead">🧭 진입 환경 <span style="color:var(--faint);font-weight:400">(컨플루언스 · 교육용)</span> <span class="'+ec+'" style="margin-left:auto;font-weight:800">'+env+' '+Math.max(lv,sv)+'/'+tot+'</span></div>'+rows+'<div style="color:var(--faint);font-size:11px;margin-top:8px;line-height:1.5">근거가 몇 개나 겹치는지 보여주는 <b>교육용 참고</b>예요. 매수/매도 지시가 아닙니다 — 손절·비중과 함께 판단하세요.</div></div>';
+}
+window.stockConfluence=stockConfluence;
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
   var W=120,H=240,pad=20,cx=60,bw=44, rng=(h-l)||1;
@@ -804,7 +826,7 @@ function liveRefresh(r){
     if(!SEL||SEL.c!==r.c||!j) return;
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
              foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r); renderWhy(r);
+    renderPressureFlow(r); renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
   });
 }
 /* 차트 아래 매수/매도세 + 투자자 순매수(개인·기관·외국인) 패널 */
@@ -1010,7 +1032,7 @@ async function enrichStock(r){
     // /flow가 체결강도·호가를 안 줄 때(장외 등) RADAR가 이미 가진 값을 유지
     r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
              foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r); renderWhy(r);
+    renderPressureFlow(r); renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
   });
 
   /* 4) 호가 10단 */
@@ -1103,6 +1125,7 @@ function openStock(code){
           +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
           +'<div id="chartCap" style="font-size:11px;color:var(--faint);margin-top:6px">불러오는 중…</div>'
           +'<div id="pressureFlow"></div>'
+          +'<div id="stkConf"></div>'
         +'</div>'
         +'<div id="stab-flow" style="display:none"></div>'
         +'<div id="stab-book" style="display:none"></div>'
@@ -1124,7 +1147,7 @@ function openStock(code){
     +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
   window._chartZoom=Math.min(90,(r._candles&&r._candles.length)||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
   drawStockChart($('#sChart'),r);
-  renderWhy(r);
+  renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
   // 탭
   var flowHtml='<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">(억원·데모)</span></div>'
     +'<table><thead><tr><th class="l">구분</th><th>개인</th><th>외국인</th><th>기관</th><th>프로그램</th></tr></thead><tbody>'
@@ -1676,7 +1699,7 @@ async function openCoin(sym){
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
     var _fav=(typeof isCoinFav==='function'&&isCoinFav(sym));
-    var mark=(fund&&fund.markPrice)?+fund.markPrice:px; window._fundNextTime=(fund&&fund.nextFundingTime)?+fund.nextFundingTime:0;
+    var mark=(fund&&fund.markPrice)?+fund.markPrice:px; window._fundNextTime=(fund&&fund.nextFundingTime)?+fund.nextFundingTime:0; window._coinFundingPct=fr;
     var infoBar='<div class="cinfobar"><span>마크가 <b>'+coinPx(mark)+'</b></span><span class="cib-sep"></span><span>펀딩 <b class="'+(fr==null?'':(fr>=0?'up':'down'))+'">'+(fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'))+'</b></span><span class="cib-sep"></span><span>다음 정산 <b id="cFundCd">—</b></span><span class="cib-live">● 실시간</span></div>';
     host.innerHTML=
       '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;cursor:pointer">◀ 코인 목록</button>'
@@ -1849,6 +1872,8 @@ async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');i
     _vote('Top Trader', tL>=52?'long':(tL<=48?'short':'flat'), '롱 '+tL.toFixed(0)+'%');
     if(rv!=null)_vote('RSI(14)', rv<=35?'long':(rv>=65?'short':'flat'), rv.toFixed(0)+(rv<=35?' 과매도':rv>=65?' 과매수':' 중립'));
     if(mc)_vote('MACD', mc.bull?'long':'short', mc.bull?'상승 우위':'하락 우위');
+    var _fp=window._coinFundingPct; if(_fp!=null)_vote('펀딩 극단', _fp>=0.05?'short':(_fp<=-0.03?'long':'flat'), (_fp>=0?'+':'')+_fp.toFixed(4)+'%'+(_fp>=0.05?' 롱과열':_fp<=-0.03?' 숏과열':' 보통'));
+    var _vols=kl.map(function(k){return +k[5];}), _vn=_vols.length; if(_vn>=25){ var _vr=_vols.slice(-5).reduce(function(a,b){return a+b;},0)/5, _vp2=_vols.slice(-25,-5).reduce(function(a,b){return a+b;},0)/20, _volUp=_vr>_vp2*1.1; _vote('거래량 동력', _volUp?consensus:'flat', _volUp?'실림(동력↑)':'빈약'); }
     _vote('타점 4구간', consensus, (consensus==='long'?longs:shorts)+'/'+dirs.length+' 일치');
     var _lv=_cf.filter(function(f){return f.d==='long';}).length, _sv=_cf.filter(function(f){return f.d==='short';}).length, _tot=_cf.length;
     var _env,_ec; if(_lv-_sv>=2){_env='매수 우호';_ec='up';} else if(_sv-_lv>=2){_env='매도 우호';_ec='down';} else {_env='중립·혼조';_ec='';}
