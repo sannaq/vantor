@@ -1843,9 +1843,20 @@ async function coinFlow(sym,bn,px){var box=document.getElementById('coinFlow');i
     window._csig={dir:consensus,entry:e,stop:sp,target:tg,px:px};
     renderCoinLev();coinCalcPos();showCHz('15m');_updateCoinTaker(true);
     var ts=document.getElementById('coinTopsig');
+    // 🧭 진입 환경(컨플루언스) — 매수세·수급·지표가 몇 개나 겹치는지(교육용, 신호 아님)
+    var _cf=[]; var _vote=function(l,d,x){ _cf.push({l:l,d:d,x:x}); };
+    _vote('실시간 매수세', bP>=55?'long':(bP<=45?'short':'flat'), bP>=55?'매수 우위':bP<=45?'매도 우위':'균형');
+    _vote('Top Trader', tL>=52?'long':(tL<=48?'short':'flat'), '롱 '+tL.toFixed(0)+'%');
+    if(rv!=null)_vote('RSI(14)', rv<=35?'long':(rv>=65?'short':'flat'), rv.toFixed(0)+(rv<=35?' 과매도':rv>=65?' 과매수':' 중립'));
+    if(mc)_vote('MACD', mc.bull?'long':'short', mc.bull?'상승 우위':'하락 우위');
+    _vote('타점 4구간', consensus, (consensus==='long'?longs:shorts)+'/'+dirs.length+' 일치');
+    var _lv=_cf.filter(function(f){return f.d==='long';}).length, _sv=_cf.filter(function(f){return f.d==='short';}).length, _tot=_cf.length;
+    var _env,_ec; if(_lv-_sv>=2){_env='매수 우호';_ec='up';} else if(_sv-_lv>=2){_env='매도 우호';_ec='down';} else {_env='중립·혼조';_ec='';}
+    var _cfRows=_cf.map(function(f){ var a=f.d==='long'?'<span class="up">▲ 롱</span>':f.d==='short'?'<span class="down">▼ 숏</span>':'<span class="muted">– 중립</span>'; return '<div class="cfrow"><span class="muted">'+f.l+'</span><span>'+a+' <span class="muted" style="font-size:11px">'+f.x+'</span></span></div>'; }).join('');
+    var _cfBox='<div class="cfbox"><div class="cfhead">🧭 진입 환경 <span class="muted" style="font-weight:400;text-transform:none">(컨플루언스 · 교육용)</span> <span class="'+_ec+'" style="margin-left:auto;font-weight:800">'+_env+' '+Math.max(_lv,_sv)+'/'+_tot+'</span></div>'+_cfRows+'<div class="muted" style="font-size:11px;margin-top:8px;line-height:1.5">근거가 <b>몇 개나 겹치는지(컨플루언스)</b>를 보여주는 <b>교육용 참고</b>예요. "지금 사라"는 신호가 아닙니다. 진입은 항상 <b>손절·손익비</b>와 함께 — 아래 🎯 타점에서 진입가·손절을 확인하세요.</div></div>';
     if(ts){var cnt2=(consensus==='long'?longs:shorts)+'/'+dirs.length,verdict=allAgree?((consensus==='long'?'▲ 롱 우세':'▼ 숏 우세')+' ('+cnt2+')'):'⚖ 혼조 · 관망';
       ts.className='sigcard '+(allAgree?(consensus==='long'?'sig-long':'sig-short'):'');ts.style.display='block';
-      ts.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="sigdir '+(allAgree?(consensus==='long'?'up':'down'):'')+'"'+(allAgree?'':' style="color:var(--gold)"')+'>'+verdict+'</span><span class="muted" style="font-size:11.5px">4구간 종합 · 교육용</span></div><div class="muted" style="font-size:11.5px;margin-top:5px;line-height:1.5">'+(allAgree?'네 구간 방향 일치 — 아래 🎯 타점에서 구간별 진입가를 확인하세요.':'⚠️ 구간 방향이 엇갈립니다 — 확신 진입보다 관망 권장.')+'</div>';}
+      ts.innerHTML='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="sigdir '+(allAgree?(consensus==='long'?'up':'down'):'')+'"'+(allAgree?'':' style="color:var(--gold)"')+'>'+verdict+'</span><span class="muted" style="font-size:11.5px">4구간 종합 · 교육용</span></div><div class="muted" style="font-size:11.5px;margin-top:5px;line-height:1.5">'+(allAgree?'네 구간 방향 일치 — 아래 🎯 타점에서 구간별 진입가를 확인하세요.':'⚠️ 구간 방향이 엇갈립니다 — 확신 진입보다 관망 권장.')+'</div>'+_cfBox;}
     _openCoinTaker(bn);
   }catch(e){if(_coinCur===sym)box.innerHTML='<div class="muted" style="font-size:12px;padding:2px 0">수급 데이터를 불러오지 못했어요</div>';}
 }
