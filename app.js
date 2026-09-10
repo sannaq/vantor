@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   밤톨이 Pro — app.js
-   - 밤톨이 DAY SCORE 100점 엔진 (스펙 §3~4)
+   VANTOR Pro — app.js
+   - VANTOR DAY SCORE 100점 엔진 (스펙 §3~4)
    - 데모 목데이터로 즉시 작동, PROXY 설정 시 실데이터로 확장
    ═══════════════════════════════════════════════════════════ */
 // 시세 프록시(Cloudflare Worker → 토스증권 Open API). 응답 실패 시 자동으로 데모 폴백
@@ -31,7 +31,7 @@ function sparkline(data,w,h,color){
   return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 }
 
-/* ═══════════ 밤톨이 DAY SCORE 엔진 (100점) ═══════════ */
+/* ═══════════ VANTOR DAY SCORE 엔진 (100점) ═══════════ */
 function sVal(p){ return p>=99?10:p>=97?9:p>=95?8:p>=90?7:p>=80?5:p>=60?3:p>=40?2:0; }         // 거래대금 순위 백분위
 function sValInc(i){ return i>=300?10:i>=200?9:i>=150?8:i>=100?7:i>=70?6:i>=40?5:i>=20?3:i>0?1:0; } // 전일동시간대비 증가율
 function sAccel(x){ return x>=4?10:x>=3?9:x>=2.5?8:x>=2?7:x>=1.5?5:x>=1.2?3:x>=1?1:0; }          // 5분 가속도
@@ -1132,7 +1132,7 @@ function openStock(code){
         +'<div id="stab-score" style="display:none"></div>'
       +'</div>'
       +'<div>'
-        +'<div class="card"><div class="ch"><h2>밤톨이 SCORE</h2></div><div class="pad" style="padding-top:12px">'
+        +'<div class="card"><div class="ch"><h2>VANTOR SCORE</h2></div><div class="pad" style="padding-top:12px">'
           +'<div style="display:flex;align-items:center;gap:16px"><div class="ring" style="background:conic-gradient(var(--gold) '+gaugeDeg+'deg, var(--line) 0)"><div class="rc"><b>'+r.score+'</b><br><span>/100</span></div></div>'
             +'<div><div style="font-size:18px;font-weight:800" class="'+grd[1]+'">'+grd[0]+'</div><div style="font-size:12px;color:var(--sub);margin-top:3px;line-height:1.4">'+(r.score>=80?'모멘텀·수급이 강하고 단기 추세가 살아있는 종목':'추세·수급을 함께 확인하며 접근')+'</div></div></div>'
           +'<div class="subs">'+Object.keys(subs).map(function(k){var v=subs[k];var g=gradeTxt(v);return '<div class="sub"><div class="sk">'+k+'</div><div class="sv">'+v+'</div><div class="sg '+g[1]+'">'+g[0]+'</div></div>';}).join('')+'</div>'
@@ -1678,7 +1678,7 @@ async function loadCoinMarket(){
   }catch(e){}
   el.innerHTML=h||'<div style="color:var(--faint);font-size:12px">시장 데이터를 불러오지 못했어요</div>';
 }
-/* 코인 상세 — 밤톨이 네이티브(주식 상세와 동일 디자인). Binance 실데이터 + drawStockChart 재사용 */
+/* 코인 상세 — VANTOR 네이티브(주식 상세와 동일 디자인). Binance 실데이터 + drawStockChart 재사용 */
 var _coinCur=null;
 async function openCoin(sym){
   sym=(sym||'BTC').toUpperCase().replace(/USDT$/,''); _coinCur=sym;
@@ -2079,7 +2079,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 /* 코인 모드 = VANTOR 터미널을 화면에 꽉 차게(full-bleed, 창 아닌 통째 임베드) */
-/* 코인 모드 = 밤톨이 네이티브 코인 대시보드(주식과 동일 디자인) */
+/* 코인 모드 = VANTOR 네이티브 코인 대시보드(주식과 동일 디자인) */
 function openCoinTerminal(){
   if(typeof loadCoins==='function')loadCoins();
   if(typeof initCards==='function')setTimeout(initCards,300); // 코인 카드에도 접기 버튼·접힘상태 적용
@@ -2089,7 +2089,7 @@ $$('.segmode button').forEach(function(b){ b.onclick=function(){ setMode(b.datas
 
 /* ═══════════════════════════════════════════════════════════
    LEARN 탭 — 교육용 학습 콘텐츠 (캔들·패턴·지표·매매원칙·엘리엇 파동)
-   ※ 전부 공개된 표준 기술적 분석 개념을 밤톨이가 독자 서술. 매매 신호 아님.
+   ※ 전부 공개된 표준 기술적 분석 개념을 VANTOR가 독자 서술. 매매 신호 아님.
    ═══════════════════════════════════════════════════════════ */
 var _learnTab='basic';
 /* 캔들 SVG — vals 0..118(위=0). up:true=상승(빨강)/false=하락(파랑)/null=중립(골드) */
@@ -2108,11 +2108,11 @@ function lpath(pts,col,neck){ var nl=neck?'<line x1="'+neck[0]+'" y1="'+neck[1]+
 function learnBasic(){
   return '<div class="lcard"><h3>차트의 3대 기본</h3><p class="lead">보조지표 다 끄고 이 3개만 제대로 봐도 절반은 먹고 들어갑니다.</p>'
     +'<div class="lrow"><div class="ic">🕯</div><div><p class="tt">캔들 (Candlestick)</p><p class="bd">한 봉의 <b>시가·고가·저가·종가</b>. 종가&gt;시가면 <b>양봉(빨강)</b>, 종가&lt;시가면 <b>음봉(파랑)</b>. 캔들 하나만 보지 말고 <b>위치·거래량·추세</b>를 함께.</p></div></div>'
-    +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 (MA)</p><p class="bd">일정 기간 평균가를 이은 선. 주가가 MA <b>위=상승추세</b>, <b>아래=하락추세</b>. 5·20·60·120일을 많이 씀. 밤톨이 차트엔 MA5·20·60이 겹쳐 그려집니다.</p></div></div>'
+    +'<div class="lrow"><div class="ic">📐</div><div><p class="tt">이동평균선 (MA)</p><p class="bd">일정 기간 평균가를 이은 선. 주가가 MA <b>위=상승추세</b>, <b>아래=하락추세</b>. 5·20·60·120일을 많이 씀. VANTOR 차트엔 MA5·20·60이 겹쳐 그려집니다.</p></div></div>'
     +'<div class="lrow"><div class="ic">📊</div><div><p class="tt">거래량 (Volume)</p><p class="bd">얼마나 많은 사람이 참여했나. 가격 움직임은 <b>반드시 거래량으로 검증</b> — 돌파 + 대량거래 = 신뢰.</p></div></div></div>'
     +'<div class="lcard"><h3>🎯 confluence — 신호 겹침이 핵심</h3><p class="lead">한 지표만 믿지 마세요. <b>여러 신호가 같은 방향</b>을 가리킬 때가 진짜 자리입니다.</p>'
-    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">예) <b style="color:var(--ink)">지지 구간 + RSI 과매도 + 반전 캔들 + 거래량 증가</b> → 네 가지가 겹치면 신뢰도가 높아집니다. 밤톨이 RADAR의 100점 점수도 같은 원리 — 여러 지표를 합산해 평가합니다.</p></div>'
-    +'<div class="lcard"><h3>🌰 밤톨이로 바로 실습</h3><p class="lead">배운 걸 실제 시장에서 확인해보세요.</p><div class="chips" style="display:flex;flex-wrap:wrap;gap:8px">'
+    +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.7">예) <b style="color:var(--ink)">지지 구간 + RSI 과매도 + 반전 캔들 + 거래량 증가</b> → 네 가지가 겹치면 신뢰도가 높아집니다. VANTOR RADAR의 100점 점수도 같은 원리 — 여러 지표를 합산해 평가합니다.</p></div>'
+    +'<div class="lcard"><h3>◆ VANTOR로 바로 실습</h3><p class="lead">배운 걸 실제 시장에서 확인해보세요.</p><div class="chips" style="display:flex;flex-wrap:wrap;gap:8px">'
     +'<span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="showView(\'radar\')">🎯 지금 강한 종목 RADAR →</span>'
     +'<span class="rulechip" style="cursor:pointer" onclick="showView(\'stock\')">🕯 종목 차트에서 이평·거래량 보기 →</span>'
     +'<span class="rulechip" style="cursor:pointer" onclick="showView(\'market\')">🌊 오늘 시장 흐름 →</span>'
@@ -2314,7 +2314,7 @@ function learnMind(){
     +'<div class="ltip"><div class="n">3</div><div><p class="h">분할 · 작게 시작</p><p class="p">한 번에 몰빵 대신 나눠 진입·청산. 배우는 단계엔 <b>아플 만큼 크지 않게</b> 베팅해 판단력을 지킵니다.</p></div></div></div>'
     +'<div class="lcard"><h3>🏆 꾸준히 버는 1~3%의 공통점</h3>'
     +'<p class="bd" style="color:var(--sub);font-size:13px;line-height:1.8">화려한 기법이 아니라 <b style="color:var(--ink)">지루한 습관</b>입니다 — 작게 시작 · <b>매매일지</b>로 복기 · 규칙 준수 · 손실 관리. 기법은 20%, 심리·자금관리가 80%예요.</p>'
-    +'<div style="margin-top:8px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="setMode&&setMode(\'coin\')">📓 밤톨이 매매일지로 복기 시작하기 →</span></div></div>';
+    +'<div style="margin-top:8px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#3a2c07" onclick="setMode&&setMode(\'coin\')">📓 VANTOR 매매일지로 복기 시작하기 →</span></div></div>';
 }
 /* 엘리엇 파동 다이어그램 (독자 작성) */
 function waveImpulseSVG(){
@@ -2377,7 +2377,7 @@ function learnEcon(){
       ['🏭','ISM/PMI','50 위=경기 확장, 아래=수축.'],
       ['🇰🇷','한국 금리·수출입','한은 금통위, 월초 수출 동향이 코스피에 직결.']].map(function(x){
       return '<div class="lrow" style="border:none;padding:8px 0"><div class="ic">'+x[0]+'</div><div><p class="tt">'+x[1]+'</p><p class="bd">'+x[2]+'</p></div></div>';}).join('')+'</div>'
-    +'<div style="margin-top:12px"><a class="rulechip" style="cursor:pointer" onclick="showView(\'news\')">📰 밤톨이 뉴스 탭에서 실시간 헤드라인 보기 →</a></div></div>';
+    +'<div style="margin-top:12px"><a class="rulechip" style="cursor:pointer" onclick="showView(\'news\')">📰 VANTOR 뉴스 탭에서 실시간 헤드라인 보기 →</a></div></div>';
 }
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
