@@ -529,7 +529,7 @@ function findOrderBlocks(cs,cur){ var n=cs.length; if(n<8)return []; var s=0; fo
   br.filter(fresh).filter(function(o){return o.bottom>=cur;}).slice(-2).forEach(function(o){out.push(o);}); return out; }
 function drawStockChart(cv,r){
   if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect();
-  cv.width=Math.round(rect.width*2); cv.height=520;
+  cv.width=Math.round(rect.width*2); cv.height=cv.classList.contains('chartbig')?Math.max(360,Math.round((rect.height||520)*2)):520; // 확대(전체화면)는 실제 높이로
   function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
   var up=css('--up')||'#e5384d', dn=css('--down')||'#2f6bff', line=css('--line')||'#e7eaf0',
       sub=css('--sub')||'#8a94a6';
@@ -1127,6 +1127,7 @@ function openStock(code){
               +['1|1분','5|5분','D|일','W|주','M|월'].map(function(t){var p=t.split('|');return '<button data-tf="'+p[0]+'"'+(p[0]===_chartTF?' class="on"':'')+'>'+p[1]+'</button>';}).join('')
             +'</div>'
             +'<button class="tfbtn2'+(_fibOn?' on':'')+'" id="fibBtn" title="피보나치 되돌림" onclick="toggleFib()" style="margin-left:8px">📐 피보</button>'
+            +'<button class="tfbtn2" title="차트 크게 보기" onclick="openChartFs()" style="margin-left:6px">⛶ 확대</button>'
             +(PROXY?'<span style="margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--faint);font-weight:700"><span id="liveDotChart" style="width:7px;height:7px;border-radius:50%;background:#16b364;box-shadow:0 0 5px #16b364;transition:opacity .4s"></span>LIVE 7초</span>':'')
           +'</div>'
           +'<div style="position:relative"><canvas class="schart" id="sChart"></canvas><div id="chartTip"></div></div>'
@@ -1721,7 +1722,7 @@ async function openCoin(sym){
       +'<div class="kv"><span class="muted">저항 (돌파목표)</span><span class="num" style="font-weight:700">'+coinPx(hi)+'</span></div>'
       +'<div class="kv"><span class="muted">지지</span><span class="num" style="font-weight:700">'+coinPx(lo)+'</span></div>'
       +'<p class="rsub" id="cRangeNote">레인지 '+rp+'%'+(rp>=85?' (고점권·추격 롱 손익비 불리)':rp<=25?' (저점권)':'')+' · 펀딩 '+(fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'))+'.</p></div>';
-    var tfRow='<div class="tfrow" id="cTfRow" style="display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 7px">'+['1m','5m','15m','30m','1h','4h','1d'].map(function(t){return '<button class="tf'+(t===TF?' on':'')+'" onclick="setCoinTF(\''+t+'\')">'+TFLAB[t]+'</button>';}).join('')+'</div>';
+    var tfRow='<div class="tfrow" id="cTfRow" style="display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 7px">'+['1m','5m','15m','30m','1h','4h','1d'].map(function(t){return '<button class="tf'+(t===TF?' on':'')+'" onclick="setCoinTF(\''+t+'\')">'+TFLAB[t]+'</button>';}).join('')+'<button class="tf" onclick="openChartFs()" title="차트 크게 보기" style="margin-left:auto">⛶ 확대</button></div>';
     var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
@@ -2644,3 +2645,20 @@ window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ 
 window.setFont=function(f){ var z={s:0.9,m:1,l:1.12}[f]; if(z==null){f='m';z=1;} try{document.body.style.zoom=z;}catch(e){} try{localStorage.setItem('aurFont',f);}catch(e){}
   document.querySelectorAll('.fontseg button').forEach(function(b){ b.classList.toggle('on',b.dataset.f===f); }); };
 (function(){ var f='m'; try{f=localStorage.getItem('aurFont')||'m';}catch(e){} if(['s','m','l'].indexOf(f)<0)f='m'; if(typeof window.setFont==='function')window.setFont(f); })();
+/* ===== 차트 확대(전체화면) — 주식·코인 공용 ===== */
+window.openChartFs=function(){ if(typeof CHART==='undefined'||!CHART||!CHART.r)return; var r=CHART.r, src=CHART.cv;
+  var fs=document.getElementById('chartFs');
+  if(!fs){ fs=document.createElement('div'); fs.id='chartFs';
+    fs.innerHTML='<div class="cfs-bar"><span class="cfs-title" id="cfsTitle"></span><button class="cfs-x" onclick="closeChartFs()">✕ 닫기</button></div>'
+      +'<div class="cfs-body"><canvas id="cfsCanvas" class="schart chartbig"></canvas></div>'
+      +'<div class="cfs-hint">휠 확대·축소 · 드래그 좌우 이동 · 오른쪽 가격축 세로·아래 시간축 가로 드래그 · 더블클릭 리셋</div>';
+    document.body.appendChild(fs);
+    fs.addEventListener('click',function(e){ if(e.target===fs)closeChartFs(); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ var f=document.getElementById('chartFs'); if(f&&f.style.display==='flex')closeChartFs(); } });
+  }
+  fs._srcCv=src; fs.style.display='flex';
+  var tt=document.getElementById('cfsTitle'); if(tt)tt.textContent=(r.n||r.c||'차트')+(r.mk==='COIN'?' · Binance '+((window._coinTF||'1h')):'');
+  var cv=document.getElementById('cfsCanvas');
+  requestAnimationFrame(function(){ if(typeof drawStockChart==='function')drawStockChart(cv,r); if(typeof _attachChartZoom==='function')_attachChartZoom(cv); if(typeof attachChartCrosshair==='function')attachChartCrosshair(cv); }); };
+window.closeChartFs=function(){ var fs=document.getElementById('chartFs'); if(!fs)return; fs.style.display='none';
+  var src=fs._srcCv; if(src&&typeof drawStockChart==='function'&&typeof CHART!=='undefined'&&CHART&&CHART.r){ drawStockChart(src,CHART.r); } };
