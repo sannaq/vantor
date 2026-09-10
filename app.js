@@ -2607,3 +2607,12 @@ function renderBriefing(){
 initCards(); renderSummary(); renderBriefing();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
+/* ===== 첫 진입 스플래시 — 주식/코인 선택 ===== */
+window.enterMode=function(m){ try{ var r=document.getElementById('spRemember'); if(r&&r.checked)localStorage.setItem('aurEntry',m); else localStorage.removeItem('aurEntry'); }catch(e){}
+  if(typeof setMode==='function')setMode(m);
+  var sp=document.getElementById('splash'); if(sp){ sp.classList.add('hide'); setTimeout(function(){ sp.style.display='none'; },520); } };
+window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ sp.style.display=''; void sp.offsetWidth; sp.classList.remove('hide'); } };
+(function(){ var sp=document.getElementById('splash'); if(!sp)return; var pre=null; try{pre=localStorage.getItem('aurEntry');}catch(e){}
+  if(pre==='stock'||pre==='coin'){ if(typeof setMode==='function')setMode(pre); sp.classList.add('hide'); sp.style.display='none'; }
+  var lg=document.querySelector('.nav .logo'); if(lg){ lg.style.cursor='pointer'; lg.title='시작 화면 다시 열기 (주식/코인 선택)'; lg.addEventListener('click',function(){ window.showSplash(); }); }
+})();
