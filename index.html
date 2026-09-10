@@ -4,8 +4,10 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
 <title>VANTOR · 실시간 주식·코인 분석</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M20 4.5C13.5 10 8.5 19 9 26.5 9.4 31.5 14 34 20 34s10.6-2.5 11-7.5C31.5 19 26.5 10 20 4.5Z' fill='%236b3d21'/%3E%3Cpath d='M10.2 27.8c2.8 4.6 16.8 4.6 19.6 0 .4 3-3.8 6.2-9.8 6.2s-10.2-3.2-9.8-6.2Z' fill='%23d9b483'/%3E%3Ccircle cx='16.2' cy='21.5' r='1.9' fill='%23241611'/%3E%3Ccircle cx='23.8' cy='21.5' r='1.9' fill='%23241611'/%3E%3Cpath d='M17.6 24.4Q20 26.2 22.4 24.4' fill='none' stroke='%23241611' stroke-width='1.1' stroke-linecap='round'/%3E%3C/svg%3E"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M24 3 L11 22 H18 L15 37 L29 17 H21 Z' fill='%23e0b552'/%3E%3C/svg%3E"/>
 <meta name="description" content="VANTOR — 시장 자금 흐름·업종 강도·DAY TRADE RADAR로 지금 돈이 들어오는 주식과 코인을 실시간으로 포착하는 분석 터미널."/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap">
 <style>
   /* ===== VANTOR Pro — 디자인 토큰 ===== */
   :root{
@@ -477,6 +479,12 @@
   display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#93a0b1;cursor:pointer;user-select:none;
   background:rgba(8,11,17,.5);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:7px 14px;backdrop-filter:blur(4px)}
 #splash .sp-remember input{accent-color:#e0b552}
+#splash .sp-sign{position:absolute;left:0;right:0;top:8%;z-index:3;text-align:center;pointer-events:none;
+  font-family:'Great Vibes','Dancing Script',cursive;font-weight:400;font-size:clamp(48px,8vw,86px);line-height:1;
+  color:transparent;background:linear-gradient(180deg,#f6e19c 0%,#e0b552 55%,#b07d1e 100%);-webkit-background-clip:text;background-clip:text;
+  filter:drop-shadow(0 5px 22px rgba(224,181,82,.4));
+  animation:spRise .8s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.05s}
+@media(max-width:640px){#splash .sp-sign{top:3%;font-size:clamp(42px,13vw,66px)}}
 @media(max-width:640px){#splash{flex-direction:column}#splash::before{left:14%;right:14%;top:50%;bottom:auto;width:auto;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)}#splash .sp-half:hover{flex-grow:1.2}#splash .sp-center{top:auto;top:2%}}
 /* 등장·앰비언트 애니메이션 */
 @keyframes spRise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -512,11 +520,12 @@
       <div class="sp-go">들어가기 →</div>
     </div>
   </button>
+  <div class="sp-sign">Vantor</div>
   <label class="sp-remember"><input type="checkbox" id="spRemember"> 다음부터 이 화면 건너뛰고 바로 열기</label>
 </div>
 
 <nav class="nav">
-  <div class="logo"><svg width="32" height="32" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="bam" cx="0.38" cy="0.32" r="0.85"><stop offset="0" stop-color="#8a5230"/><stop offset="0.55" stop-color="#6b3d21"/><stop offset="1" stop-color="#4e2c17"/></radialGradient></defs><ellipse cx="20" cy="35" rx="12" ry="2.4" fill="rgba(0,0,0,.14)"/><path d="M20 4.5 C13.5 10 8.5 19 9 26.5 C9.4 31.5 14 34 20 34 C26 34 30.6 31.5 31 26.5 C31.5 19 26.5 10 20 4.5 Z" fill="url(#bam)"/><path d="M10.2 27.8 C13 32.4 27 32.4 29.8 27.8 C30.2 30.8 26 34 20 34 C14 34 9.8 30.8 10.2 27.8 Z" fill="#d9b483"/><circle cx="20" cy="27.5" r="0.9" fill="#a9895f"/><circle cx="16.2" cy="21.5" r="1.9" fill="#241611"/><circle cx="23.8" cy="21.5" r="1.9" fill="#241611"/><circle cx="16.9" cy="20.8" r="0.55" fill="#fff"/><circle cx="24.5" cy="20.8" r="0.55" fill="#fff"/><path d="M17.6 24.4 Q20 26.2 22.4 24.4" fill="none" stroke="#241611" stroke-width="1.1" stroke-linecap="round"/><ellipse cx="13.6" cy="24" rx="1.7" ry="1.1" fill="#e0847a" opacity=".55"/><ellipse cx="26.4" cy="24" rx="1.7" ry="1.1" fill="#e0847a" opacity=".55"/></svg><span class="wm">VANTOR</span></div>
+  <div class="logo"><svg width="26" height="26" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="van" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0cf78"/><stop offset="1" stop-color="#c19a3e"/></linearGradient></defs><path d="M24 3 L11 22 H18 L15 37 L29 17 H21 Z" fill="url(#van)"/></svg><span class="wm">VANTOR</span></div>
   <div class="segmode"><button class="on" data-m="stock">주식</button><button data-m="coin">코인</button></div>
   <div class="menu" id="menu">
     <a data-v="home" class="on">HOME</a>
@@ -687,7 +696,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=49"></script>
+<script src="app.js?v=50"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
