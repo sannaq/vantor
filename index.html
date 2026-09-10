@@ -470,7 +470,24 @@
 #splash .sp-remember{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#8b96a7;cursor:pointer;user-select:none}
 #splash .sp-remember input{accent-color:#e0b552}
 @media(max-width:560px){#splash .sp-panels{grid-template-columns:1fr}#splash .sp-card{padding:30px 20px 24px}}
-@media(prefers-reduced-motion:reduce){#splash,#splash .sp-card{transition:none}}
+/* 스플래시 등장 애니메이션 */
+#splash .sp-inner{position:relative;z-index:1}
+#splash::before{content:"";position:absolute;top:-8%;left:50%;transform:translateX(-50%);width:78%;height:58%;z-index:0;
+  background:radial-gradient(closest-side,rgba(224,181,82,.16),transparent 72%);filter:blur(34px);pointer-events:none;animation:spGlow 6.5s ease-in-out infinite}
+@keyframes spGlow{0%,100%{opacity:.45;transform:translateX(-50%) scale(1)}50%{opacity:.9;transform:translateX(-50%) scale(1.1)}}
+@keyframes spRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes spPop{0%{transform:scale(1)}45%{transform:scale(1.035)}100%{transform:scale(1.02)}}
+#splash .sp-brand{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.05s}
+#splash .sp-tag{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.16s}
+#splash .sp-stock{animation:spRise .62s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.28s}
+#splash .sp-coin{animation:spRise .62s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.4s}
+#splash .sp-remember{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.54s}
+#splash .sp-ico{animation:spFloat 3.6s ease-in-out infinite}
+#splash .sp-coin .sp-ico{animation-delay:.7s}
+#splash .sp-card.sp-picked{animation:spPop .32s ease forwards;border-color:#e0b552}
+#splash .sp-stock.sp-picked{border-color:#e5384d}
+@media(prefers-reduced-motion:reduce){#splash,#splash .sp-card,#splash::before,#splash .sp-brand,#splash .sp-tag,#splash .sp-ico,#splash .sp-remember{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -667,7 +684,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=45"></script>
+<script src="app.js?v=46"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

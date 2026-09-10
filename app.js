@@ -2609,8 +2609,9 @@ if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInt
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 주식/코인 선택 ===== */
 window.enterMode=function(m){ try{ var r=document.getElementById('spRemember'); if(r&&r.checked)localStorage.setItem('aurEntry',m); else localStorage.removeItem('aurEntry'); }catch(e){}
+  var card=document.querySelector('#splash .sp-'+m); if(card)card.classList.add('sp-picked'); // 선택 카드 팝
   if(typeof setMode==='function')setMode(m);
-  var sp=document.getElementById('splash'); if(sp){ sp.classList.add('hide'); setTimeout(function(){ sp.style.display='none'; },520); } };
+  var sp=document.getElementById('splash'); if(sp){ setTimeout(function(){ sp.classList.add('hide'); },200); setTimeout(function(){ sp.style.display='none'; if(card)card.classList.remove('sp-picked'); },740); } };
 window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ sp.style.display=''; void sp.offsetWidth; sp.classList.remove('hide'); } };
 (function(){ var sp=document.getElementById('splash'); if(!sp)return; var pre=null; try{pre=localStorage.getItem('aurEntry');}catch(e){}
   if(pre==='stock'||pre==='coin'){ if(typeof setMode==='function')setMode(pre); sp.classList.add('hide'); sp.style.display='none'; }
