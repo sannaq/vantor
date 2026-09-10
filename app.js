@@ -2640,3 +2640,7 @@ window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ 
   else { _spCanvasStart(); }
   var lg=document.querySelector('.nav .logo'); if(lg){ lg.style.cursor='pointer'; lg.title='시작 화면 다시 열기 (주식/코인 선택)'; lg.addEventListener('click',function(){ window.showSplash(); }); }
 })();
+/* ===== 글자 크기 설정 (소·중·대 = S/M/L · body zoom) ===== */
+window.setFont=function(f){ var z={s:0.9,m:1,l:1.12}[f]; if(z==null){f='m';z=1;} try{document.body.style.zoom=z;}catch(e){} try{localStorage.setItem('aurFont',f);}catch(e){}
+  document.querySelectorAll('.fontseg button').forEach(function(b){ b.classList.toggle('on',b.dataset.f===f); }); };
+(function(){ var f='m'; try{f=localStorage.getItem('aurFont')||'m';}catch(e){} if(['s','m','l'].indexOf(f)<0)f='m'; if(typeof window.setFont==='function')window.setFont(f); })();
