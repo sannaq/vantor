@@ -144,7 +144,9 @@ const CATS=[
 ];
 const SMART={
   foreign:[['삼성전자',1245],['SK하이닉스',842],['현대차',682],['KB금융',475],['LG에너지솔루션',431]],
-  inst:[['삼성전자',1102],['NAVER',587],['삼성바이오로직스',523],['현대모비스',412],['신한지주',378]]
+  inst:[['삼성전자',1102],['NAVER',587],['삼성바이오로직스',523],['현대모비스',412],['신한지주',378]],
+  foreignSell:[['카카오',612],['LG화학',498],['POSCO홀딩스',421],['셀트리온',356],['크래프톤',298]],
+  instSell:[['삼성SDI',534],['에코프로비엠',467],['카카오뱅크',389],['하이브',312],['넷마블',276]]
 };
 const FLOW={
   breadth:{up:642,down:746,flat:106,upH:2,downH:4,h52u:128,h52d:32},
@@ -452,10 +454,15 @@ function loadUsIdx(){
 }
 /* SMART MONEY */
 function renderSmart(){
-  var el=$('#smartMoney'); if(!el)return;
-  el.innerHTML='<div style="display:grid;gap:16px">'
-    +'<div><div style="font-size:12px;font-weight:800;margin-bottom:5px">🌐 외국인 순매수 TOP</div><table><tbody>'+SMART.foreign.map(function(r,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span> '+r[0]+'</td><td class="up" style="font-weight:700">+'+r[1].toLocaleString()+'억</td></tr>';}).join('')+'</tbody></table></div>'
-    +'<div><div style="font-size:12px;font-weight:800;margin-bottom:5px">🏛️ 기관 순매수 TOP</div><table><tbody>'+SMART.inst.map(function(r,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span> '+r[0]+'</td><td class="up" style="font-weight:700">+'+r[1].toLocaleString()+'억</td></tr>';}).join('')+'</tbody></table></div></div>';
+  var el=$('#smartMoney'); if(!el)return; var side=window._smartSide||'buy', sell=(side==='sell');
+  var tbl=function(rows){ return '<table><tbody>'+(rows||[]).map(function(r,i){return '<tr><td class="l"><span class="rank">'+(i+1)+'</span> '+r[0]+'</td><td class="'+(sell?'down':'up')+'" style="font-weight:700">'+(sell?'−':'+')+r[1].toLocaleString()+'억</td></tr>';}).join('')+'</tbody></table>'; };
+  var tog=function(s,t){ var on=side===s; return '<button class="ibtn smtog" data-s="'+s+'" style="width:auto;padding:0 14px;border:1px solid '+(on?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:12.5px'+(on?';color:var(--gold)':'')+'">'+t+'</button>'; };
+  var lbl=sell?'순매도':'순매수', fList=sell?SMART.foreignSell:SMART.foreign, iList=sell?SMART.instSell:SMART.inst;
+  el.innerHTML='<div style="display:flex;gap:6px;margin-bottom:12px">'+tog('buy','순매수')+tog('sell','순매도')+'</div>'
+    +'<div style="display:grid;gap:16px">'
+    +'<div><div style="font-size:12px;font-weight:800;margin-bottom:5px">🌐 외국인 '+lbl+' TOP</div>'+tbl(fList)+'</div>'
+    +'<div><div style="font-size:12px;font-weight:800;margin-bottom:5px">🏛️ 기관 '+lbl+' TOP</div>'+tbl(iList)+'</div></div>';
+  el.querySelectorAll('.smtog').forEach(function(b){ b.onclick=function(){ window._smartSide=b.dataset.s; renderSmart(); }; });
 }
 /* MARKET FLOW */
 function renderFlow(){
