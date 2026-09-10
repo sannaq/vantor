@@ -2659,6 +2659,9 @@ window.openChartFs=function(){ if(typeof CHART==='undefined'||!CHART||!CHART.r)r
   fs._srcCv=src; fs.style.display='flex';
   var tt=document.getElementById('cfsTitle'); if(tt)tt.textContent=(r.n||r.c||'차트')+(r.mk==='COIN'?' · Binance '+((window._coinTF||'1h')):'');
   var cv=document.getElementById('cfsCanvas');
-  requestAnimationFrame(function(){ if(typeof drawStockChart==='function')drawStockChart(cv,r); if(typeof _attachChartZoom==='function')_attachChartZoom(cv); if(typeof attachChartCrosshair==='function')attachChartCrosshair(cv); }); };
+  void fs.offsetHeight; // 레이아웃 강제 계산
+  var _drawFs=function(){ if(fs.style.display!=='flex')return; if(typeof drawStockChart==='function')drawStockChart(cv,r); };
+  _drawFs(); if(typeof _attachChartZoom==='function')_attachChartZoom(cv); if(typeof attachChartCrosshair==='function')attachChartCrosshair(cv);
+  setTimeout(_drawFs,70); setTimeout(_drawFs,250); }; // 레이아웃 안정 후 재그림
 window.closeChartFs=function(){ var fs=document.getElementById('chartFs'); if(!fs)return; fs.style.display='none';
   var src=fs._srcCv; if(src&&typeof drawStockChart==='function'&&typeof CHART!=='undefined'&&CHART&&CHART.r){ drawStockChart(src,CHART.r); } };
