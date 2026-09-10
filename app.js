@@ -2607,13 +2607,29 @@ function renderBriefing(){
 initCards(); renderSummary(); renderBriefing();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
-/* ===== 첫 진입 스플래시 — 주식/코인 선택 ===== */
+/* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
+var _spRAF=null, _spRun=false;
+function _spCanvasStart(){ var cv=document.getElementById('spCanvas'); if(!cv)return; if(_spRun)return; var ctx=cv.getContext('2d'), DPR=Math.min(2,window.devicePixelRatio||1), W=0,H=0;
+  function size(){ W=cv.clientWidth; H=cv.clientHeight; cv.width=Math.max(1,W*DPR); cv.height=Math.max(1,H*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); }
+  size(); if(!cv._spResize){ cv._spResize=1; window.addEventListener('resize',function(){ if(_spRun)size(); }); }
+  var reduce=false; try{reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;}catch(e){}
+  var mk=function(){ var x=Math.random()*W; return {x:x,y:Math.random()*H,w:3+Math.random()*3.5,bh:10+Math.random()*40,wick:18+Math.random()*46,sp:0.12+Math.random()*0.45,up:Math.random()>0.5,left:x<W/2}; };
+  var N=Math.max(24,Math.floor((W||900)/44)), C=[]; for(var i=0;i<N;i++)C.push(mk());
+  function frame(){ if(!_spRun)return; ctx.clearRect(0,0,W,H);
+    for(var i=0;i<C.length;i++){ var c=C[i]; c.y-=c.sp; if(c.y<-c.wick){ C[i]=mk(); C[i].y=H+30; c=C[i]; }
+      var base=c.left?(c.up?'229,56,77':'150,40,58'):(c.up?'46,189,133':'224,181,82');
+      ctx.strokeStyle='rgba('+base+',0.11)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(c.x,c.y-c.wick/2); ctx.lineTo(c.x,c.y+c.wick/2); ctx.stroke();
+      ctx.fillStyle='rgba('+base+',0.15)'; ctx.fillRect(c.x-c.w/2,c.y-c.bh/2,c.w,c.bh); }
+    if(!reduce)_spRAF=requestAnimationFrame(frame); else _spRun=false; }
+  _spRun=true; frame(); }
+function _spCanvasStop(){ _spRun=false; if(_spRAF)cancelAnimationFrame(_spRAF); _spRAF=null; }
 window.enterMode=function(m){ try{ var r=document.getElementById('spRemember'); if(r&&r.checked)localStorage.setItem('aurEntry',m); else localStorage.removeItem('aurEntry'); }catch(e){}
-  var card=document.querySelector('#splash .sp-'+m); if(card)card.classList.add('sp-picked'); // 선택 카드 팝
+  var card=document.querySelector('#splash .sp-'+m); if(card)card.classList.add('sp-picked'); // 선택 반쪽 팝
   if(typeof setMode==='function')setMode(m);
-  var sp=document.getElementById('splash'); if(sp){ setTimeout(function(){ sp.classList.add('hide'); },200); setTimeout(function(){ sp.style.display='none'; if(card)card.classList.remove('sp-picked'); },740); } };
-window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ sp.style.display=''; void sp.offsetWidth; sp.classList.remove('hide'); } };
+  var sp=document.getElementById('splash'); if(sp){ setTimeout(function(){ sp.classList.add('hide'); },220); setTimeout(function(){ sp.style.display='none'; if(card)card.classList.remove('sp-picked'); _spCanvasStop(); },800); } };
+window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ sp.style.display=''; void sp.offsetWidth; sp.classList.remove('hide'); _spCanvasStart(); } };
 (function(){ var sp=document.getElementById('splash'); if(!sp)return; var pre=null; try{pre=localStorage.getItem('aurEntry');}catch(e){}
   if(pre==='stock'||pre==='coin'){ if(typeof setMode==='function')setMode(pre); sp.classList.add('hide'); sp.style.display='none'; }
+  else { _spCanvasStart(); }
   var lg=document.querySelector('.nav .logo'); if(lg){ lg.style.cursor='pointer'; lg.title='시작 화면 다시 열기 (주식/코인 선택)'; lg.addEventListener('click',function(){ window.showSplash(); }); }
 })();

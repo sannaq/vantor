@@ -448,68 +448,75 @@
 .stkconf{margin-top:12px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
 .stkconf .cfhead{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;margin-bottom:7px}
 .stkconf .cfrow{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;padding:4px 0}
-/* 첫 진입 스플래시 (주식/코인 선택) */
-#splash{position:fixed;inset:0;z-index:2000;background:radial-gradient(120% 90% at 50% 0%,#131c2b 0%,#0b0f16 60%);
-  color:#e8ecf3;display:flex;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s}
+/* 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 */
+#splash{position:fixed;inset:0;z-index:2000;display:flex;background:#080b11;color:#e8ecf3;overflow:hidden;
+  transition:opacity .55s ease,visibility .55s}
 #splash.hide{opacity:0;visibility:hidden;pointer-events:none}
-#splash .sp-inner{width:100%;max-width:920px;padding:26px 22px;text-align:center}
-#splash .sp-brand{font-size:30px;font-weight:800;letter-spacing:.5px}
-#splash .sp-tag{font-size:13px;color:#8b96a7;margin-top:7px}
-#splash .sp-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:36px 0 20px}
-#splash .sp-card{position:relative;overflow:hidden;border:1px solid #1f2a3a;border-radius:18px;background:#0f151f;
-  padding:40px 22px 30px;cursor:pointer;font-family:inherit;color:#e8ecf3;text-align:center;
-  transition:transform .18s ease,border-color .18s,background .3s,box-shadow .3s}
-#splash .sp-card:hover{transform:translateY(-4px)}
-#splash .sp-stock:hover{border-color:#e5384d;background:linear-gradient(180deg,#141c28,rgba(229,56,77,.1));box-shadow:0 18px 40px -20px rgba(229,56,77,.5)}
-#splash .sp-coin:hover{border-color:#e0b552;background:linear-gradient(180deg,#141c28,rgba(224,181,82,.11));box-shadow:0 18px 40px -20px rgba(224,181,82,.5)}
-#splash .sp-ico{font-size:42px;line-height:1}
-#splash .sp-t{font-size:26px;font-weight:800;margin-top:12px}
-#splash .sp-s{font-size:12.5px;color:#8b96a7;margin-top:7px;line-height:1.5}
-#splash .sp-go{font-size:12.5px;font-weight:700;margin-top:18px;color:#e0b552}
+#spCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+#splash .sp-half{position:relative;z-index:1;flex:1 1 0;min-width:0;border:none;background:transparent;font-family:inherit;color:#e8ecf3;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  transition:flex-grow .55s cubic-bezier(.2,.7,.2,1),background .45s}
+#splash .sp-stock{background:linear-gradient(135deg,rgba(229,56,77,.11),rgba(8,11,17,.15) 55%)}
+#splash .sp-coin{background:linear-gradient(225deg,rgba(224,181,82,.13),rgba(8,11,17,.15) 55%)}
+#splash .sp-half:hover{flex-grow:1.45}
+#splash .sp-stock:hover{background:linear-gradient(135deg,rgba(229,56,77,.26),rgba(8,11,17,.2) 60%)}
+#splash .sp-coin:hover{background:linear-gradient(225deg,rgba(224,181,82,.28),rgba(8,11,17,.2) 60%)}
+#splash .sp-half-in{position:relative;text-align:center;padding:20px;transition:transform .55s cubic-bezier(.2,.7,.2,1),opacity .5s}
+#splash .sp-half:hover .sp-half-in{transform:scale(1.07)}
+#splash .sp-ico{font-size:48px;line-height:1;filter:drop-shadow(0 6px 18px rgba(0,0,0,.5))}
+#splash .sp-t{font-size:clamp(34px,6vw,50px);font-weight:800;letter-spacing:-1.5px;margin-top:12px}
+#splash .sp-s{font-size:13px;color:#9aa6b6;margin-top:9px;line-height:1.5}
+#splash .sp-go{font-size:13px;font-weight:700;margin-top:22px;letter-spacing:.3px;color:#e0b552;opacity:.9}
 #splash .sp-stock .sp-go{color:#f0748a}
-#splash .sp-remember{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#8b96a7;cursor:pointer;user-select:none}
+#splash::before{content:"";position:absolute;left:50%;top:14%;bottom:14%;width:1px;z-index:2;transform:translateX(-50%);
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.2),transparent)}
+#splash .sp-center{position:absolute;left:0;right:0;top:8%;z-index:3;text-align:center;pointer-events:none}
+#splash .sp-brand{font-size:30px;font-weight:800;letter-spacing:.5px;text-shadow:0 4px 18px rgba(0,0,0,.6)}
+#splash .sp-tag{font-size:12.5px;color:#93a0b1;margin-top:6px}
+#splash .sp-remember{position:absolute;left:50%;transform:translateX(-50%);bottom:7%;z-index:3;
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#93a0b1;cursor:pointer;user-select:none;
+  background:rgba(8,11,17,.5);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:7px 14px;backdrop-filter:blur(4px)}
 #splash .sp-remember input{accent-color:#e0b552}
-@media(max-width:560px){#splash .sp-panels{grid-template-columns:1fr}#splash .sp-card{padding:30px 20px 24px}}
-/* 스플래시 등장 애니메이션 */
-#splash .sp-inner{position:relative;z-index:1}
-#splash::before{content:"";position:absolute;top:-8%;left:50%;transform:translateX(-50%);width:78%;height:58%;z-index:0;
-  background:radial-gradient(closest-side,rgba(224,181,82,.16),transparent 72%);filter:blur(34px);pointer-events:none;animation:spGlow 6.5s ease-in-out infinite}
-@keyframes spGlow{0%,100%{opacity:.45;transform:translateX(-50%) scale(1)}50%{opacity:.9;transform:translateX(-50%) scale(1.1)}}
-@keyframes spRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
-@keyframes spFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-@keyframes spPop{0%{transform:scale(1)}45%{transform:scale(1.035)}100%{transform:scale(1.02)}}
-#splash .sp-brand{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.05s}
-#splash .sp-tag{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.16s}
-#splash .sp-stock{animation:spRise .62s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.28s}
-#splash .sp-coin{animation:spRise .62s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.4s}
-#splash .sp-remember{animation:spRise .6s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.54s}
-#splash .sp-ico{animation:spFloat 3.6s ease-in-out infinite}
-#splash .sp-coin .sp-ico{animation-delay:.7s}
-#splash .sp-card.sp-picked{animation:spPop .32s ease forwards;border-color:#e0b552}
-#splash .sp-stock.sp-picked{border-color:#e5384d}
-@media(prefers-reduced-motion:reduce){#splash,#splash .sp-card,#splash::before,#splash .sp-brand,#splash .sp-tag,#splash .sp-ico,#splash .sp-remember{animation:none!important;transition:none!important}}
+@media(max-width:640px){#splash{flex-direction:column}#splash::before{left:14%;right:14%;top:50%;bottom:auto;width:auto;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)}#splash .sp-half:hover{flex-grow:1.2}#splash .sp-center{top:auto;top:2%}}
+/* 등장·앰비언트 애니메이션 */
+@keyframes spRise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes spPop{0%{transform:scale(1)}45%{transform:scale(1.06)}100%{transform:scale(1.04)}}
+#splash .sp-center{animation:spRise .7s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.05s}
+#splash .sp-stock .sp-half-in{animation:spRise .7s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.24s}
+#splash .sp-coin .sp-half-in{animation:spRise .7s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.36s}
+#splash .sp-remember{animation:spRise .7s cubic-bezier(.2,.7,.2,1) backwards;animation-delay:.5s}
+#splash .sp-ico{animation:spFloat 3.8s ease-in-out infinite}
+#splash .sp-coin .sp-ico{animation-delay:.9s}
+#splash .sp-half.sp-picked .sp-half-in{animation:spPop .34s ease forwards}
+@media(prefers-reduced-motion:reduce){#splash *{animation:none!important;transition:opacity .3s!important}}
 </style>
 </head>
 <body>
 
 <div id="splash">
-  <div class="sp-inner">
+  <canvas id="spCanvas" aria-hidden="true"></canvas>
+  <button class="sp-half sp-stock" onclick="enterMode('stock')" aria-label="주식으로 들어가기">
+    <div class="sp-half-in">
+      <div class="sp-ico">📈</div>
+      <div class="sp-t">주식</div>
+      <div class="sp-s">국내·미국 · 실시간 RADAR·수급·브리핑</div>
+      <div class="sp-go">들어가기 →</div>
+    </div>
+  </button>
+  <button class="sp-half sp-coin" onclick="enterMode('coin')" aria-label="코인으로 들어가기">
+    <div class="sp-half-in">
+      <div class="sp-ico">🪙</div>
+      <div class="sp-t">코인</div>
+      <div class="sp-s">바이낸스 실시간 · 청산맵·타점·진입환경</div>
+      <div class="sp-go">들어가기 →</div>
+    </div>
+  </button>
+  <div class="sp-center">
     <div class="sp-brand">🌰 밤톨이</div>
     <div class="sp-tag">실시간 주식·코인 분석 · 교육용</div>
-    <div class="sp-panels">
-      <button class="sp-card sp-stock" onclick="enterMode('stock')">
-        <div class="sp-ico">📈</div><div class="sp-t">주식</div>
-        <div class="sp-s">국내·미국 · 실시간 RADAR·수급·브리핑</div>
-        <div class="sp-go">들어가기 →</div>
-      </button>
-      <button class="sp-card sp-coin" onclick="enterMode('coin')">
-        <div class="sp-ico">🪙</div><div class="sp-t">코인</div>
-        <div class="sp-s">바이낸스 실시간 · 청산맵·타점·진입환경</div>
-        <div class="sp-go">들어가기 →</div>
-      </button>
-    </div>
-    <label class="sp-remember"><input type="checkbox" id="spRemember"> 다음부터 이 화면 건너뛰고 바로 열기</label>
   </div>
+  <label class="sp-remember"><input type="checkbox" id="spRemember"> 다음부터 이 화면 건너뛰고 바로 열기</label>
 </div>
 
 <nav class="nav">
@@ -684,7 +691,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=46"></script>
+<script src="app.js?v=47"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
