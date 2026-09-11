@@ -1319,6 +1319,7 @@ function openStock(code){
 function showView(v,noScroll){
   $$('.view').forEach(function(x){x.classList.remove('on');});
   var el=$('#v-'+v); if(el)el.classList.add('on');
+  var _brf=$('#brief'); if(_brf)_brf.style.display=(!coinMode&&v==='home')?'':'none'; // 오늘의 브리핑은 HOME에서만
   if(!coinMode){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal&&!useRealMkt)_db.style.display=''; }
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
   if(v!=='stock')stopDetailLive(); // 상세를 벗어나면 라이브 폴링 중단
