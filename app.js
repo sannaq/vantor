@@ -849,7 +849,8 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     hd.push('<span style="color:var(--sub)">질문에 <b>“평단 29만”</b>처럼 넣으면 평가익/손 기준 방향을 계산해줘요.</span>'); }
   var brief=_c2('🆕 신규 진입 시', ne)+_c2('💼 평단 보유 시 (대응 방향)', hd);
   var mini=(typeof _miniChartSVG==='function')?_miniChartSVG(r,t):'';
-  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+biasBox+mini+chips+lines+brief+checklist
+  var tfTag=(r._tfLabel)?'<div style="font-size:11.5px;color:var(--faint);margin-bottom:7px">📊 <b style="color:var(--sub)">'+nm+'</b> · <b style="color:var(--sub)">'+((typeof esc==='function')?esc(r._tfLabel):r._tfLabel)+' 봉</b> 기준 분석</div>':'';
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+tfTag+imgNote+biasBox+mini+chips+lines+brief+checklist
     +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
@@ -879,10 +880,13 @@ function mountAskBox(anchorSel,getR){ var a=document.querySelector(anchorSel); i
 window.mountAskBox=mountAskBox;
 /* ── 메인(홈) 차트 분석 도우미 — 종목 입력/사진 첨부해서 홈에서 바로 분석 ── */
 function _homeAskHTML(scope){ var ph=scope==='coin'?'코인 심볼 (예: BTC · ETH · SOL · 1000PEPE)':'종목명·코드 (예: 삼성전자 · 005930 · AAPL · TSLA)';
+  var TFS=scope==='coin'?[['1h','1시간'],['5m','5분'],['15m','15분'],['4h','4시간'],['1d','일봉']]:[['D','일봉'],['5','5분'],['15','15분'],['30','30분'],['60','60분']];
+  var tfRow='<div class="haTfs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px"><span style="font-size:11.5px;color:var(--faint);font-weight:700">봉</span>'+TFS.map(function(t,i){var on=i===0;return '<button class="haTf'+(on?' on':'')+'" data-tf="'+t[0]+'" data-lab="'+t[1]+'" style="background:'+(on?'var(--gold,#e0a83e)':'transparent')+';color:'+(on?'#1a1400':'var(--sub)')+';border:1px solid var(--line2);border-radius:16px;padding:4px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+t[1]+'</button>';}).join('')+'</div>';
   return '<div class="card" style="margin-bottom:16px"><div class="ch"><h2>🤖 차트 분석 도우미 <span style="font-weight:600;color:var(--faint);font-size:12px">종목 입력 · 사진 첨부 · 교육용 TA</span></h2></div>'
   +'<div class="pad" style="padding-top:10px"><div class="askbox2">'
   +'<div style="display:flex;gap:7px;flex-wrap:wrap"><input class="haSym" placeholder="'+ph+'" style="flex:1;min-width:150px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none">'
   +'<div style="display:flex;gap:7px;flex:2;min-width:230px"><button class="haClip" title="차트 사진 첨부" style="flex:0 0 auto;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;color:var(--sub);font-size:15px;cursor:pointer">📎</button><input class="haFile" type="file" accept="image/*" style="display:none"><input class="haQ" placeholder="예) 이 차트 어때? · 평단 4만인데 뭘 봐야 해? · 손절은 어디?" style="flex:1;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none"><button class="haGo" style="background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:0 18px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">분석</button></div></div>'
+  +tfRow
   +'<div class="haPrev" style="display:none;margin-top:8px"></div>'
   +'<div class="haChips" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">'+['지금 자리 어때?','지지·저항 어디?','추세 어떤 상태?','진입 본다면?','손절 기준은?'].map(function(c){return '<button class="haChip" style="background:transparent;border:1px solid var(--line2);border-radius:20px;padding:6px 13px;color:var(--sub);font-family:inherit;font-size:12.5px;cursor:pointer">'+c+'</button>';}).join('')+'</div>'
   +'<div class="haAns" style="margin-top:12px;font-size:13.5px;color:var(--sub);line-height:1.65">종목/코인을 입력하고 질문하면, 그 차트의 <b>지지·저항·추세·RSI·거래량</b>을 자동으로 읽어 <b>교육용 브리핑</b>을 보여줘요. 사진(📎)만 넣어도 공통 체크리스트를 드려요. <b>매매 지시는 아니에요.</b></div>'
@@ -892,10 +896,10 @@ function _homeStockItem(raw){ raw=(raw||'').trim(); if(!raw)return null; var t=r
   if(/^\d{6}$/.test(raw))return {c:raw,n:raw,ccy:'KRW',mk:'KR'};
   var part=pool.find(function(s){return (s.n||'').toLowerCase().indexOf(t)>=0||(s.c||'').toLowerCase().indexOf(t)>=0;}); if(part)return part;
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw))return {c:raw.toUpperCase(),n:raw.toUpperCase(),ccy:'USD',mk:'NAS'}; return null; }
-function homeResolve(scope,s){ if(scope==='coin'){ var sym=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,''); if(!sym)return Promise.resolve(null); var F='https://fapi.binance.com/fapi/v1/';
-    return Promise.all([ fetch(F+'klines?symbol='+sym+'USDT&interval=1h&limit=200').then(function(r){return r.json();}).catch(function(){return null;}), fetch(F+'ticker/24hr?symbol='+sym+'USDT').then(function(r){return r.json();}).catch(function(){return null;}) ]).then(function(a){ var kl=a[0],tk=a[1]; if(!Array.isArray(kl)||!kl.length)return null; var candles=kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}); var px=(tk&&tk.lastPrice)?+tk.lastPrice:candles[candles.length-1][4]; var ch=(tk&&tk.priceChangePercent!=null)?+tk.priceChangePercent:0; return {c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,_candles:candles}; }); }
-  var it=_homeStockItem(s); if(!it)return Promise.resolve(null); if(typeof proxyJson!=='function')return Promise.resolve(null); var isUS=((it.ccy||'').toUpperCase()==='USD'); var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(it.c)+(isUS?('&exch='+(typeof usExch==='function'?usExch(it.mk):'NAS')):'');
-  return proxyJson('/candles?'+base+'&tf=D&limit=200').then(function(j){ if(!j||!j.candles||j.candles.length<2)return null; var cs=j.candles,n=cs.length,px=+cs[n-1][4],prev=+cs[n-2][4]; return {c:it.c,n:it.n||it.c,mk:it.mk,ccy:isUS?'USD':'KRW',px:px,ch:prev?((px-prev)/prev*100):0,_candles:cs}; }).catch(function(){return null;}); }
+function homeResolve(scope,s,tf,lab){ if(scope==='coin'){ var sym=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,''); if(!sym)return Promise.resolve(null); var F='https://fapi.binance.com/fapi/v1/'; var itv=tf||'1h';
+    return Promise.all([ fetch(F+'klines?symbol='+sym+'USDT&interval='+itv+'&limit=200').then(function(r){return r.json();}).catch(function(){return null;}), fetch(F+'ticker/24hr?symbol='+sym+'USDT').then(function(r){return r.json();}).catch(function(){return null;}) ]).then(function(a){ var kl=a[0],tk=a[1]; if(!Array.isArray(kl)||!kl.length)return null; var candles=kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}); var px=(tk&&tk.lastPrice)?+tk.lastPrice:candles[candles.length-1][4]; var ch=(tk&&tk.priceChangePercent!=null)?+tk.priceChangePercent:0; return {c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,_candles:candles,_tf:itv,_tfLabel:lab||''}; }); }
+  var it=_homeStockItem(s); if(!it)return Promise.resolve(null); if(typeof proxyJson!=='function')return Promise.resolve(null); var isUS=((it.ccy||'').toUpperCase()==='USD'); var stf=tf||'D'; var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(it.c)+(isUS?('&exch='+(typeof usExch==='function'?usExch(it.mk):'NAS')):'');
+  return proxyJson('/candles?'+base+'&tf='+stf+'&limit=200').then(function(j){ if(!j||!j.candles||j.candles.length<2)return null; var cs=j.candles,n=cs.length,px=+cs[n-1][4],prev=+cs[n-2][4]; return {c:it.c,n:it.n||it.c,mk:it.mk,ccy:isUS?'USD':'KRW',px:px,ch:prev?((px-prev)/prev*100):0,_candles:cs,_tf:stf,_tfLabel:lab||''}; }).catch(function(){return null;}); }
 function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host)return; if(!host._filled){ host.innerHTML=_homeAskHTML(scope); host._filled=true; }
   var box=host.querySelector('.askbox2'); if(!box||box._wired)return; box._wired=true;
   var sym=box.querySelector('.haSym'), q=box.querySelector('.haQ'), ans=box.querySelector('.haAns'), clip=box.querySelector('.haClip'), file=box.querySelector('.haFile'), prev=box.querySelector('.haPrev');
@@ -905,10 +909,13 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
     var fallCcy=scope==='coin'?'USD':'KRW';
     if(box._img && typeof askVision==='function'){ ans.innerHTML='<span style="color:var(--faint)">🤖 AI가 차트 사진 읽는 중…</span>';
       var go=function(ctx){ askVision(box._img, qq||'이 차트 어때?', ctx).then(function(j){ if(j&&j.text){ ans.innerHTML=_visionHTML(j.text); } else { ans.innerHTML=(j&&j.error?_visionWarn(j.error):'')+answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); } }).catch(function(){ ans.innerHTML=answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); }); };
-      if(s){ homeResolve(scope,s).then(function(r){ go(r?_taContext(r):''); }).catch(function(){ go(''); }); } else go(''); return; }
+      if(s){ homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ go(r?_taContext(r):''); }).catch(function(){ go(''); }); } else go(''); return; }
     if(!s){ ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진(📎)을 첨부해 주세요.</span>'; return; }
-    ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' 분석 중…</span>';
-    homeResolve(scope,s).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', {}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+    ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' · '+((box._tfLabel||'')||'')+' 분석 중…</span>';
+    homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', {}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+  box._tf=(scope==='coin')?'1h':'D'; var _tfOn=box.querySelector('.haTf.on'); box._tfLabel=_tfOn?_tfOn.dataset.lab:'';
+  var _tfBtns=box.querySelectorAll('.haTf');
+  _tfBtns.forEach(function(b){ b.onclick=function(){ _tfBtns.forEach(function(x){ x.classList.remove('on'); x.style.background='transparent'; x.style.color='var(--sub)'; }); b.classList.add('on'); b.style.background='var(--gold,#e0a83e)'; b.style.color='#1a1400'; box._tf=b.dataset.tf; box._tfLabel=b.dataset.lab; if((sym.value||'').trim()||box._img)run(); }; });
   box.querySelector('.haGo').onclick=function(){ run(); };
   sym.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
   q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
