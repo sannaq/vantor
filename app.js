@@ -786,6 +786,20 @@ function _askIntent(q){ q=(q||'').replace(/\s/g,'');
   return 'general';
 }
 function _askCost(q,ccy){ if(!/평단|평균|단가|샀|산가|매입|매수가|산.?가격|물린/.test(q))return null; var m=q.replace(/,/g,'').match(/([0-9]+(?:\.[0-9]+)?)\s*(억|만|천|달러|불|\$)?/); if(!m)return null; var v=+m[1], u=m[2]; if(u==='억')v*=1e8; else if(u==='만')v*=1e4; else if(u==='천')v*=1e3; return v; }
+/* 미니 차트 SVG — 최근 캔들 + 지지·저항·현재가 라인 (답변에 이미지로 표시) */
+function _miniChartSVG(r,t){ var cs=r&&r._candles; if(!cs||cs.length<5)return ''; var N=Math.min(50,cs.length), sl=cs.slice(-N);
+  var W=340,H=150,PADL=6,PADR=46,PADT=8,PADB=8, cw=W-PADL-PADR, ch=H-PADT-PADB;
+  var lo=Infinity,hi=-Infinity,i; for(i=0;i<sl.length;i++){ var l=+sl[i][3],h=+sl[i][2]; if(l<lo)lo=l; if(h>hi)hi=h; }
+  lo=Math.min(lo,t.supBelow,t.px); hi=Math.max(hi,t.resAbove,t.px); var pad=(hi-lo)*0.06||1; lo-=pad; hi+=pad;
+  var span=(hi-lo)||1; function y(p){ return PADT+(hi-p)/span*ch; } var bw=cw/N; function x(i){ return PADL+i*bw+bw/2; }
+  var up='#f6465d', dn='#4a9eff'; if(r.mk==='COIN'){ up='#2ebd85'; dn='#f6465d'; }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:440px;height:auto;display:block;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;margin:2px 0 10px">';
+  for(i=0;i<sl.length;i++){ var o=+sl[i][1],hh=+sl[i][2],ll=+sl[i][3],c=+sl[i][4]; var col=c>=o?up:dn, cx=x(i), bwid=Math.max(1,bw*0.62); var yo=y(o),yc=y(c),top=Math.min(yo,yc),hgt=Math.max(1,Math.abs(yc-yo));
+    s+='<line x1="'+cx.toFixed(1)+'" y1="'+y(hh).toFixed(1)+'" x2="'+cx.toFixed(1)+'" y2="'+y(ll).toFixed(1)+'" stroke="'+col+'" stroke-width="1"/>';
+    s+='<rect x="'+(cx-bwid/2).toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bwid.toFixed(1)+'" height="'+hgt.toFixed(1)+'" fill="'+col+'"/>'; }
+  function hline(p,color,label){ if(p<lo||p>hi)return ''; var yy=y(p); return '<line x1="'+PADL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-PADR).toFixed(1)+'" y2="'+yy.toFixed(1)+'" stroke="'+color+'" stroke-width="1.2" stroke-dasharray="4 3"/><text x="'+(W-PADR+3)+'" y="'+(yy+3.2).toFixed(1)+'" fill="'+color+'" font-size="9.5" font-weight="800">'+label+'</text>'; }
+  s+=hline(t.resAbove,'#f6465d','저항'); s+=hline(t.px,'#e0b552','현재'); s+=hline(t.supBelow,'#4a9eff','지지');
+  return s+'</svg>'; }
 function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.ccy; var P=function(v){return fmtP(v,ccy);};
   var nm=(typeof esc==='function')?esc(r.n||r.c||''):(r.n||r.c||'');
   var imgNote=opts.img?'<div style="font-size:12px;line-height:1.6;background:rgba(224,181,82,.08);border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin-bottom:9px">📎 <b>첨부한 차트 사진</b>은 <b>AI 대화형(비전) 단계</b>에서 직접 읽어 분석해요. 지금(규칙기반)은 사진 속 차트를 읽지 못해서, 아래는 <b>지금 열려 있는 '+nm+' 실데이터</b> 기준 분석 + 어떤 차트든 공통으로 보는 체크리스트예요.</div>':'';
@@ -815,30 +829,27 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     +'<div><span style="color:#f6465d;font-weight:700">🔴 저항</span> <b>'+P(t.resAbove)+'</b> <span style="color:var(--sub)">(+'+dR.toFixed(1)+'%) · 돌파·리테스트 시 상방</span></div>'
     +'<div style="color:var(--sub)">· 현재가 <b style="color:var(--ink,#e8ecf3);font-size:15px">'+P(t.px)+'</b></div>'
     +'<div><span style="color:#4a9eff;font-weight:700">🔵 지지</span> <b>'+P(t.supBelow)+'</b> <span style="color:var(--sub)">(−'+dS.toFixed(1)+'%) · 종가 이탈 시 추세 훼손(무효화)</span></div></div>';
-  var title, items=[];
-  if(intent==='sell'){ title='🧭 매도·손절은 이렇게 봅니다';
-    items.push('<b>핵심</b> — ‘지금 팔아라’가 아니라 <b>무효화 라인</b>을 먼저 정하는 것');
-    items.push('직전 저점 <b>'+P(t.supBelow)+'</b> 종가 이탈 = 상승 논리 훼손(손절 기준)');
-    items.push('그 위 흔들림은 노이즈일 수 있음 — <b>채널 이탈 ≠ 하락 전환</b>');
-    items.push('목표 저항 <b>'+P(t.resAbove)+'</b> · 손절선 정하고 <b>손익비·비중(1~2%)</b>으로 판단');
-    if(cost!=null)items.push(t.px<cost?('현재가는 평단 '+P(cost)+' <b>아래(평가손)</b> — 물타기 전 지지 '+P(t.supBelow)+' 사수부터'):('현재가는 평단 '+P(cost)+' <b>위(평가익)</b> — 일부 익절·트레일링 스탑으로 이익 보호 관점')); }
-  else if(intent==='buy'){ title='🧭 진입을 본다면';
-    items.push('<b>핵심</b> — 지지 <b>'+P(t.supBelow)+'</b> 되돌림에서 <b>반등 캔들+거래량</b> 확인 구간');
-    items.push('저항 <b>'+P(t.resAbove)+'</b> 바로 아래 <b>추격매수</b>는 손익비 불리');
-    items.push('손절=지지 소폭 아래 · 목표=저항 → 손익비로 <b>수량 역산</b>');
-    if(t.rsi!=null&&t.rsi<=35)items.push('RSI 과매도 — 단기 반등 여지, 추세장선 오래갈 수도(맥락)');
-    if(t.arr==='역배열')items.push('<b>역배열</b> — ‘조용한 반전(구조 변화)’ 신호 먼저 확인'); }
-  else if(intent==='hold'){ title='🧭 버틸지 기준';
-    items.push('<b>핵심</b> — 기준은 무효화 라인 <b>'+P(t.supBelow)+'</b>');
-    items.push('이 위=추세 유지 시나리오 / <b>종가 이탈</b>=시나리오 훼손');
-    items.push('감정 아니라 <b>라인</b>으로. 위쪽 목표는 저항 <b>'+P(t.resAbove)+'</b>'); }
-  else { title='🧭 지금 자리';
-    items.push('<b>구조</b> — '+t.trend+' · '+(t.arr||'—'));
-    items.push('저항 <b>'+P(t.resAbove)+'</b> 종가 돌파 + 리테스트 지지 전환 → 상방');
-    items.push('지지 <b>'+P(t.supBelow)+'</b> 종가 이탈 → 추세 훼손');
-    items.push('그 사이는 박스권 · <b>넘고 안 돌아오나</b>(가짜돌파 경계)'); }
-  var brief='<div style="font-size:14px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:12px 14px"><div style="font-weight:800;font-size:14.5px;margin-bottom:8px">'+title+'</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.65">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
-  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+biasBox+chips+lines+brief+checklist
+  var _c2=function(title,items){ return '<div style="font-size:14px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:12px 14px;margin-top:9px"><div style="font-weight:800;font-size:14.5px;margin-bottom:8px">'+title+'</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.65">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>'; };
+  // 🆕 신규 진입 관점 (무포지션 기준)
+  var ne=[];
+  ne.push('관심 구간 — 지지 <b>'+P(t.supBelow)+'</b> 부근 눌림에서 <b>반등 캔들+거래량</b> 확인');
+  ne.push('추격 주의 — 저항 <b>'+P(t.resAbove)+'</b> 바로 아래 추격은 손익비 불리');
+  ne.push('손절=지지 소폭 아래 · 목표=저항 → <b>손익비로 수량 역산</b>(허용손실 ÷ (진입−손절))');
+  if(bScore>=1.5)ne.push('현재 <b class="up">매수 우호</b> — 지지 지지력 확인되면 분할 접근 고려(교육용)');
+  else if(bScore<=-1.5)ne.push('현재 <b class="down">조정 주의</b> — 반등이 저항서 막히는지 먼저 보고, 성급한 진입 주의');
+  else ne.push('현재 <b>중립·관망</b> — 저항 돌파 or 지지 반등 <b>확인 후</b> 대응이 안전');
+  // 💼 평단 보유 대응 (수익률·방향성)
+  var hd=[];
+  if(cost!=null){ var pnl=cost>0?((t.px-cost)/cost*100):0, pc=pnl>=0?'up':'down', pt=(pnl>=0?'+':'')+pnl.toFixed(1)+'%';
+    hd.push('평단 <b>'+P(cost)+'</b> · 현재 <b>'+P(t.px)+'</b> → 평가 <b class="'+pc+'">'+pt+'</b> ('+(pnl>=0?'평가익':'평가손')+' 구간)');
+    if(t.px>=cost){ hd.push('이익 보호 — 저항 <b>'+P(t.resAbove)+'</b> 부근 <b>분할 익절/트레일링 스탑</b> 관점'); hd.push('정리 기준 — 지지 <b>'+P(t.supBelow)+'</b> <b>종가 이탈</b> 시 상승 논리 훼손'); }
+    else { hd.push('물타기 전 — 지지 <b>'+P(t.supBelow)+'</b> <b>사수 여부부터</b> (이탈 상태면 추매는 리스크 확대)'); hd.push('손절선 — 무효화 라인 아래로 <b>미리 정해두기</b>(감정 아니라 라인으로)'); hd.push('반등 시 대응 — 저항 <b>'+P(t.resAbove)+'</b>에서 <b>비중 조절</b> 관점도 교육적으로 존재'); } }
+  else { hd.push('보유 중이라면 기준은 <b>무효화 라인 '+P(t.supBelow)+'</b> — <b>종가 이탈</b>이 정리 기준');
+    hd.push('저항 <b>'+P(t.resAbove)+'</b>에서 분할 익절/트레일링으로 <b>이익 보호</b> 관점');
+    hd.push('<span style="color:var(--sub)">질문에 <b>“평단 29만”</b>처럼 넣으면 평가익/손 기준 방향을 계산해줘요.</span>'); }
+  var brief=_c2('🆕 신규 진입 시', ne)+_c2('💼 평단 보유 시 (대응 방향)', hd);
+  var mini=(typeof _miniChartSVG==='function')?_miniChartSVG(r,t):'';
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+biasBox+mini+chips+lines+brief+checklist
     +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
