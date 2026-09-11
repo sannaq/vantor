@@ -804,7 +804,7 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var nm=(typeof esc==='function')?esc(r.n||r.c||''):(r.n||r.c||'');
   var imgNote=opts.img?'<div style="font-size:12px;line-height:1.6;background:rgba(224,181,82,.08);border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin-bottom:9px">📎 <b>첨부한 차트 사진</b>은 <b>AI 대화형(비전) 단계</b>에서 직접 읽어 분석해요. 지금(규칙기반)은 사진 속 차트를 읽지 못해서, 아래는 <b>지금 열려 있는 '+nm+' 실데이터</b> 기준 분석 + 어떤 차트든 공통으로 보는 체크리스트예요.</div>':'';
   var checklist=opts.img?'<div style="font-size:12px;line-height:1.7;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;margin-top:8px">📋 <b>차트 사진 볼 때 공통 체크</b><br>① <b>구조적 저점(무효화 라인)</b>이 어디인가 ② <b>지지·저항</b> 구간 ③ <b>추세·이평</b> 방향(정/역배열) ④ 움직임에 <b>거래량</b>이 실렸나 ⑤ 돌파면 <b>리테스트로 지지 전환</b>했나(가짜돌파 경계)</div>':'';
-  if(!t)return imgNote+'<div style="color:var(--faint);font-size:12.5px;padding:4px 0">캔들 데이터가 아직 부족해요. 잠시 후 다시 시도하거나 시간대(TF)를 바꿔보세요.</div>'+checklist;
+  if(!t){ var _minTf=(r._tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r._tf)>=0); var _hint=(r.mk!=='COIN'&&_minTf)?' — 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라 봉 수가 적어요. <b>일봉</b>으로 보거나 장중에 다시 시도해 주세요.':' 잠시 후 다시 시도하거나 다른 봉으로 바꿔보세요.'; return imgNote+'<div style="color:var(--faint);font-size:12.5px;padding:4px 0">캔들 데이터가 부족해요'+_hint+'</div>'+checklist; }
   var intent=_askIntent(q), cost=_askCost(q,ccy);
   var dR=((t.resAbove-t.px)/t.px*100), dS=((t.px-t.supBelow)/t.px*100);
   var tc=t.trend==='우상향'?'up':(t.trend==='우하향'?'down':''), ac=t.arr==='정배열'?'up':(t.arr==='역배열'?'down':'');
