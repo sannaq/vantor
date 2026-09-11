@@ -799,21 +799,43 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var chips='<div style="display:flex;gap:7px;flex-wrap:wrap;margin:8px 0">'
     +chip('추세',t.trend,tc)+chip('이평배열',t.arr||'—',ac)+chip('RSI(14)',t.rsi!=null?t.rsi.toFixed(0)+(t.rsi>=65?' 과매수':t.rsi<=35?' 과매도':''):'—',rc)
     +chip('거래량',t.volState,'')+chip('레인지 위치',t.pos+'%','')+'</div>';
-  var lines='<div style="font-size:12.5px;line-height:1.7;margin-bottom:8px">'
-    +'<div>🟥 <b>저항</b> <b>'+P(t.resAbove)+'</b> <span style="color:var(--faint)">(+'+dR.toFixed(1)+'%) — 돌파·리테스트 지지 전환 시 상방 연장 관점</span></div>'
-    +'<div>🟩 <b>지지</b> <b>'+P(t.supBelow)+'</b> <span style="color:var(--faint)">(−'+dS.toFixed(1)+'%) — 종가 이탈 시 추세 훼손(무효화 라인 후보)</span></div></div>';
-  var brief='';
-  if(intent==='sell'){ brief='<b>🧭 매도·손절 판단은 이렇게 봅니다</b><br>‘지금 팔아라’가 아니라 <b>무효화 라인</b>을 먼저 정하는 게 핵심이에요. 직전 구조적 저점 <b>'+P(t.supBelow)+'</b>을 <b>종가로</b> 깨면 상승 논리가 훼손된 것(리스크 관리 손절 기준). 그 위에서의 흔들림은 노이즈일 수 있어요 — <b>채널 이탈 ≠ 하락 전환</b>. 목표는 저항 '+P(t.resAbove)+'. 어디까지 틀린 것으로 볼지(손절선)를 정하고 <b>손익비·비중(1~2% 룰)</b>으로 판단하세요.';
-    if(cost!=null){ if(t.px<cost)brief+='<br>· 현재가는 평단 '+P(cost)+' <b>아래(평가손 구간)</b> — 물타기 전에 지지 '+P(t.supBelow)+' 사수 여부부터. 이미 이탈했다면 추매는 리스크 확대예요.'; else brief+='<br>· 현재가는 평단 '+P(cost)+' <b>위(평가익 구간)</b> — 일부 익절/트레일링 스탑으로 이익을 보호하는 관점도 교육적으로 존재해요.'; } }
-  else if(intent==='buy'){ brief='<b>🧭 진입을 본다면 이런 자리를 봅니다</b><br>지지 <b>'+P(t.supBelow)+'</b> 부근 되돌림(눌림)에서 <b>반등 캔들 + 거래량</b> 확인이 교과서적 관심 구간이에요. 저항 '+P(t.resAbove)+' 바로 아래 추격매수는 손익비가 나빠지기 쉬워요. 손절은 지지 소폭 아래(구조 이탈), 목표는 저항 — 이 손익비로 <b>수량을 역산</b>(허용손실÷진입-손절)하세요.';
-    if(t.rsi!=null&&t.rsi<=35)brief+='<br>· RSI 과매도라 단기 반등 여지는 있지만, 추세장에선 과매도가 오래 머물 수 있어요(맥락과 함께 보기).';
-    if(t.arr==='역배열')brief+='<br>· 이평 <b>역배열</b> 상태 — 아직 하락 구조라 ‘조용한 반전(저점에서 매물대 형성·구조 변화)’ 신호를 먼저 확인하는 게 안전해요.'; }
-  else if(intent==='hold'){ brief='<b>🧭 버틸지 판단의 기준</b><br>결국 <b>무효화 라인</b> <b>'+P(t.supBelow)+'</b>이에요. 이 위에선 추세 유지 시나리오, <b>종가 이탈</b>은 시나리오 훼손. 감정이 아니라 <b>라인</b>으로 정해두면 흔들림에 덜 휘둘려요. 위쪽 목표는 저항 '+P(t.resAbove)+'.'; }
-  else { brief='<b>🧭 지금 자리 읽기</b><br>현재 <b>'+t.trend+'·'+(t.arr||'—')+'</b> 구조예요. 위 저항 <b>'+P(t.resAbove)+'</b>을 종가로 뚫고 <b>리테스트에서 지지로 전환</b>하면 상방 연장 관점, 아래 지지 <b>'+P(t.supBelow)+'</b>을 종가로 깨면 추세 훼손 신호. 그 사이는 박스권 노이즈로 봅니다. <b>넘었다</b>가 아니라 <b>넘고 안 돌아오나</b>(가짜돌파 경계)를 확인하세요.'; }
-  return imgNote+chips+lines+'<div style="font-size:12.5px;line-height:1.75;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px">'+brief+'</div>'+checklist
-    +'<div style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5">⚠ 여러 근거를 겹쳐 보는 <b>교육용 기술적 분석</b>이에요. 매수·매도 지시나 수익 보장이 아니며, 최종 판단·방아쇠는 본인이 손절·비중과 함께 내리는 거예요.</div>';
+  var lines='<div style="font-size:12.5px;line-height:1.9;margin-bottom:9px">'
+    +'<div><span style="color:#f6465d">🔴 저항</span> <b>'+P(t.resAbove)+'</b> <span style="color:var(--faint)">(+'+dR.toFixed(1)+'%) · 돌파·리테스트 시 상방</span></div>'
+    +'<div style="color:var(--sub)">· 현재가 <b style="color:var(--ink,#e8ecf3)">'+P(t.px)+'</b></div>'
+    +'<div><span style="color:#4a9eff">🔵 지지</span> <b>'+P(t.supBelow)+'</b> <span style="color:var(--faint)">(−'+dS.toFixed(1)+'%) · 종가 이탈 시 추세 훼손(무효화)</span></div></div>';
+  var title, items=[];
+  if(intent==='sell'){ title='🧭 매도·손절은 이렇게 봅니다';
+    items.push('<b>핵심</b> — ‘지금 팔아라’가 아니라 <b>무효화 라인</b>을 먼저 정하는 것');
+    items.push('직전 저점 <b>'+P(t.supBelow)+'</b> 종가 이탈 = 상승 논리 훼손(손절 기준)');
+    items.push('그 위 흔들림은 노이즈일 수 있음 — <b>채널 이탈 ≠ 하락 전환</b>');
+    items.push('목표 저항 <b>'+P(t.resAbove)+'</b> · 손절선 정하고 <b>손익비·비중(1~2%)</b>으로 판단');
+    if(cost!=null)items.push(t.px<cost?('현재가는 평단 '+P(cost)+' <b>아래(평가손)</b> — 물타기 전 지지 '+P(t.supBelow)+' 사수부터'):('현재가는 평단 '+P(cost)+' <b>위(평가익)</b> — 일부 익절·트레일링 스탑으로 이익 보호 관점')); }
+  else if(intent==='buy'){ title='🧭 진입을 본다면';
+    items.push('<b>핵심</b> — 지지 <b>'+P(t.supBelow)+'</b> 되돌림에서 <b>반등 캔들+거래량</b> 확인 구간');
+    items.push('저항 <b>'+P(t.resAbove)+'</b> 바로 아래 <b>추격매수</b>는 손익비 불리');
+    items.push('손절=지지 소폭 아래 · 목표=저항 → 손익비로 <b>수량 역산</b>');
+    if(t.rsi!=null&&t.rsi<=35)items.push('RSI 과매도 — 단기 반등 여지, 추세장선 오래갈 수도(맥락)');
+    if(t.arr==='역배열')items.push('<b>역배열</b> — ‘조용한 반전(구조 변화)’ 신호 먼저 확인'); }
+  else if(intent==='hold'){ title='🧭 버틸지 기준';
+    items.push('<b>핵심</b> — 기준은 무효화 라인 <b>'+P(t.supBelow)+'</b>');
+    items.push('이 위=추세 유지 시나리오 / <b>종가 이탈</b>=시나리오 훼손');
+    items.push('감정 아니라 <b>라인</b>으로. 위쪽 목표는 저항 <b>'+P(t.resAbove)+'</b>'); }
+  else { title='🧭 지금 자리';
+    items.push('<b>구조</b> — '+t.trend+' · '+(t.arr||'—'));
+    items.push('저항 <b>'+P(t.resAbove)+'</b> 종가 돌파 + 리테스트 지지 전환 → 상방');
+    items.push('지지 <b>'+P(t.supBelow)+'</b> 종가 이탈 → 추세 훼손');
+    items.push('그 사이는 박스권 · <b>넘고 안 돌아오나</b>(가짜돌파 경계)'); }
+  var brief='<div style="font-size:12.5px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:11px 13px"><div style="font-weight:800;margin-bottom:7px">'+title+'</div><ul style="margin:0;padding-left:17px;display:flex;flex-direction:column;gap:5px;line-height:1.5">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+  return imgNote+chips+lines+brief+checklist
+    +'<div style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div>';
 }
 window.answerChartHTML=answerChartHTML;
+/* 규칙기반 지표를 LLM에 넘길 짧은 컨텍스트 문자열 */
+function _taContext(r){ try{ var t=_taRead(r); if(!t)return ''; var P=function(v){return fmtP(v,r.ccy);}; return (r.n||r.c||'')+' · 추세 '+t.trend+' · 이평 '+(t.arr||'—')+' · RSI '+(t.rsi!=null?t.rsi.toFixed(0):'—')+' · 저항 '+P(t.resAbove)+' · 지지 '+P(t.supBelow)+' · 레인지위치 '+t.pos+'%'; }catch(e){ return ''; } }
+/* 2단계: 첨부 사진을 Worker /vision(Claude 비전)으로 보내 대화체 답변 받기 */
+window.askVision=function(imgDataUrl,question,ctx){ var m=/^data:(image\/[a-zA-Z0-9.+-]+);base64,([\s\S]+)$/.exec(imgDataUrl||''); if(!m)return Promise.reject(new Error('img')); if(typeof PROXY==='undefined'||!PROXY)return Promise.reject(new Error('proxy')); var payload={media_type:m[1],data:m[2].replace(/\s+/g,''),question:question||'이 차트 어때?',context:ctx||''}; return fetch(PROXY+'/vision',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();}); };
+function _visionHTML(text){ var safe=(typeof esc==='function')?esc(text):text; safe=safe.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>'); return '<div style="font-size:12.5px;line-height:1.7;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:11px 13px"><div style="font-weight:800;margin-bottom:7px">🤖 AI 차트 읽기 <span style="font-weight:500;font-size:11px;color:var(--faint)">교육용 · 사진 기반</span></div>'+safe+'</div>'; }
+function _visionWarn(msg){ return '<div style="font-size:12px;color:var(--faint);margin-bottom:8px;line-height:1.5">⚠ AI 사진 분석을 아직 못 써요: '+((typeof esc==='function')?esc(msg):msg)+'<br>아래는 규칙기반 참고예요.</div>'; }
 function _askHTML(){ return '<div class="askbox" style="border:1px solid var(--line2);border-radius:14px;padding:13px 14px;margin-top:14px;background:var(--panel,#0b111a)">'
   +'<div style="display:flex;align-items:center;gap:8px;font-weight:800;font-size:13.5px;margin-bottom:9px">🤖 차트 분석 도우미 <span style="font-weight:500;font-size:11px;color:var(--faint)">교육용 TA · 매매지시 아님</span></div>'
   +'<div style="display:flex;gap:7px;align-items:center"><button class="askClip" title="차트 사진 첨부" style="flex:0 0 auto;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;color:var(--sub);font-family:inherit;font-size:15px;cursor:pointer">📎</button><input class="askFile" type="file" accept="image/*" style="display:none"><input class="askQ" placeholder="예) 이 차트 어때? · 평단 4만인데 뭘 봐야 해? · 손절은 어디?" style="flex:1;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none"><button class="askGo" style="background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:0 16px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">분석</button></div>'
@@ -824,7 +846,9 @@ function mountAskBox(anchorSel,getR){ var a=document.querySelector(anchorSel); i
   if(box._wired)return; box._wired=true; var inp=box.querySelector('.askQ'), ans=box.querySelector('.askAns'), clip=box.querySelector('.askClip'), file=box.querySelector('.askFile'), prev=box.querySelector('.askPrev');
   if(clip&&file){ clip.onclick=function(){ file.click(); };
     file.onchange=function(){ var f=file.files&&file.files[0]; if(!f)return; if(!/^image\//.test(f.type||'')){ prev.style.display='block'; prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지 파일만 첨부할 수 있어요.</span>'; return; } if(f.size>8e6){ prev.style.display='block'; prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지가 너무 커요(8MB 이하로).</span>'; return; } var rd=new FileReader(); rd.onload=function(){ box._img=rd.result; prev.style.display='block'; prev.innerHTML='<div style="display:inline-flex;align-items:center;gap:8px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:6px 8px"><img src="'+rd.result+'" style="height:44px;border-radius:6px;display:block"><span style="font-size:11.5px;color:var(--sub)">차트 사진 첨부됨 · 물어보면 함께 분석</span><button class="askImgX" title="첨부 제거" style="background:none;border:none;color:var(--faint);font-size:15px;cursor:pointer;padding:0 2px">✕</button></div>'; var x=prev.querySelector('.askImgX'); if(x)x.onclick=function(){ box._img=null; file.value=''; prev.style.display='none'; prev.innerHTML=''; }; }; rd.readAsDataURL(f); }; }
-  function run(q){ q=(q||inp.value||'').trim(); var r=getR&&getR(); if(!r){ ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">종목 데이터를 불러오는 중이에요. 잠시 후 다시.</div>'; return; } if(!q)q=box._img?'이 차트 어때?':'지금 자리 어때?'; ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">분석 중…</div>'; setTimeout(function(){ try{ ans.innerHTML=answerChartHTML(r,q,{img:!!box._img}); }catch(e){ ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">분석에 실패했어요. 다시 시도해 주세요.</div>'; } },40); }
+  function run(q){ q=(q||inp.value||'').trim(); var r=getR&&getR(); if(!r){ ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">종목 데이터를 불러오는 중이에요. 잠시 후 다시.</div>'; return; } if(!q)q=box._img?'이 차트 어때?':'지금 자리 어때?';
+    if(box._img && typeof askVision==='function'){ ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">🤖 AI가 차트 사진 읽는 중…</div>'; askVision(box._img,q,_taContext(r)).then(function(j){ if(j&&j.text){ ans.innerHTML=_visionHTML(j.text); } else { ans.innerHTML=(j&&j.error?_visionWarn(j.error):'')+answerChartHTML(r,q,{img:true}); } }).catch(function(){ ans.innerHTML=answerChartHTML(r,q,{img:true}); }); return; }
+    ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">분석 중…</div>'; setTimeout(function(){ try{ ans.innerHTML=answerChartHTML(r,q,{}); }catch(e){ ans.innerHTML='<div style="color:var(--faint);font-size:12.5px">분석에 실패했어요. 다시 시도해 주세요.</div>'; } },40); }
   box.querySelector('.askGo').onclick=function(){ run(); };
   inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
   box.querySelectorAll('.askChip').forEach(function(b){ b.onclick=function(){ inp.value=b.textContent; run(b.textContent); }; });
@@ -855,9 +879,13 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
   if(clip&&file){ clip.onclick=function(){file.click();};
     file.onchange=function(){ var f=file.files&&file.files[0]; if(!f)return; if(!/^image\//.test(f.type||'')){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지 파일만 첨부할 수 있어요.</span>';return;} if(f.size>8e6){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지가 너무 커요(8MB 이하).</span>';return;} var rd=new FileReader(); rd.onload=function(){ box._img=rd.result; prev.style.display='block'; prev.innerHTML='<div style="display:inline-flex;align-items:center;gap:8px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:6px 8px"><img src="'+rd.result+'" style="height:44px;border-radius:6px;display:block"><span style="font-size:11.5px;color:var(--sub)">차트 사진 첨부됨 · 물어보면 함께 분석</span><button class="haImgX" style="background:none;border:none;color:var(--faint);font-size:15px;cursor:pointer;padding:0 2px">✕</button></div>'; var x=prev.querySelector('.haImgX'); if(x)x.onclick=function(){box._img=null;file.value='';prev.style.display='none';prev.innerHTML='';}; }; rd.readAsDataURL(f); }; }
   function run(qq){ qq=(qq||q.value||'').trim(); var s=(sym.value||'').trim();
-    if(!s){ if(box._img){ ans.innerHTML=answerChartHTML({n:'',ccy:scope==='coin'?'USD':'KRW'}, qq||'이 차트 어때?', {img:true}); } else { ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진을 첨부해 주세요.</span>'; } return; }
+    var fallCcy=scope==='coin'?'USD':'KRW';
+    if(box._img && typeof askVision==='function'){ ans.innerHTML='<span style="color:var(--faint)">🤖 AI가 차트 사진 읽는 중…</span>';
+      var go=function(ctx){ askVision(box._img, qq||'이 차트 어때?', ctx).then(function(j){ if(j&&j.text){ ans.innerHTML=_visionHTML(j.text); } else { ans.innerHTML=(j&&j.error?_visionWarn(j.error):'')+answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); } }).catch(function(){ ans.innerHTML=answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); }); };
+      if(s){ homeResolve(scope,s).then(function(r){ go(r?_taContext(r):''); }).catch(function(){ go(''); }); } else go(''); return; }
+    if(!s){ ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진(📎)을 첨부해 주세요.</span>'; return; }
     ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' 분석 중…</span>';
-    homeResolve(scope,s).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||(box._img?'이 차트 어때?':'지금 자리 어때?'), {img:!!box._img}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+    homeResolve(scope,s).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', {}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
   box.querySelector('.haGo').onclick=function(){ run(); };
   sym.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
   q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
