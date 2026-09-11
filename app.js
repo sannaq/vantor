@@ -795,6 +795,18 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var dR=((t.resAbove-t.px)/t.px*100), dS=((t.px-t.supBelow)/t.px*100);
   var tc=t.trend==='우상향'?'up':(t.trend==='우하향'?'down':''), ac=t.arr==='정배열'?'up':(t.arr==='역배열'?'down':'');
   var rc=t.rsi==null?'':(t.rsi>=65?'down':(t.rsi<=35?'up':''));
+  // 📌 방향 관점(bias) — 근거 종합. 매매 지시가 아니라 '어디로 더 기울어 있나' 교육용 요약.
+  var bScore=0;
+  bScore+=(t.trend==='우상향'?1:(t.trend==='우하향'?-1:0));
+  bScore+=(t.arr==='정배열'?1:(t.arr==='역배열'?-1:0));
+  if(t.rsi!=null){ if(t.rsi<=35)bScore+=0.5; else if(t.rsi>=65)bScore-=0.5; }
+  if(t.pos>=80)bScore-=0.5; else if(t.pos<=20)bScore+=0.5;
+  if(dS<=1.5)bScore+=0.5; if(dR<=1.5)bScore-=0.5;
+  var bias,bcls,bcond;
+  if(bScore>=1.5){ bias='매수 우호'; bcls='up'; bcond='지지 '+P(t.supBelow)+' 위에서 눌림·반등 확인 관점 — 이 라인 이탈하면 무효.'; }
+  else if(bScore<=-1.5){ bias='조정 주의'; bcls='down'; bcond='저항 '+P(t.resAbove)+' 부담·되돌림 주의 — 돌파 후 지지 전환하면 관점 바뀜.'; }
+  else { bias='중립·관망'; bcls=''; bcond='박스권 — 저항 '+P(t.resAbove)+' 돌파 또는 지지 '+P(t.supBelow)+' 이탈이 방향키.'; }
+  var biasBox='<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:11px 13px;margin-bottom:9px"><span style="font-weight:800;font-size:14px">📌 방향 관점</span><span class="'+bcls+'" style="font-weight:800;font-size:16px">'+bias+'</span><span style="flex-basis:100%;color:var(--sub);font-size:12.5px;line-height:1.5">'+bcond+' <span style="color:var(--faint)">· 근거 종합 교육용 관점, 매매 신호 아님</span></span></div>';
   var chip=function(k,v,c){ return '<div style="background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:9px;padding:7px 11px;min-width:84px"><div style="font-size:11.5px;color:var(--sub)">'+k+'</div><div style="font-weight:800;font-size:15px" class="'+(c||'')+'">'+v+'</div></div>'; };
   var chips='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:9px 0">'
     +chip('추세',t.trend,tc)+chip('이평배열',t.arr||'—',ac)+chip('RSI(14)',t.rsi!=null?t.rsi.toFixed(0)+(t.rsi>=65?' 과매수':t.rsi<=35?' 과매도':''):'—',rc)
@@ -826,7 +838,7 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     items.push('지지 <b>'+P(t.supBelow)+'</b> 종가 이탈 → 추세 훼손');
     items.push('그 사이는 박스권 · <b>넘고 안 돌아오나</b>(가짜돌파 경계)'); }
   var brief='<div style="font-size:14px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:12px 14px"><div style="font-weight:800;font-size:14.5px;margin-bottom:8px">'+title+'</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.65">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
-  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+chips+lines+brief+checklist
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+biasBox+chips+lines+brief+checklist
     +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
