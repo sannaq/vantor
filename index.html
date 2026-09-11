@@ -543,6 +543,7 @@
   <div class="segmode"><button class="on" data-m="stock">주식</button><button data-m="coin">코인</button></div>
   <div class="menu" id="menu">
     <a data-v="home" class="on">HOME</a>
+    <a data-v="ai">🤖 분석</a>
     <a data-v="market">MARKET</a>
     <a data-v="radar">RADAR</a>
     <a data-v="stock">STOCK</a>
@@ -565,8 +566,13 @@
   <div class="idxstrip" id="idxstrip"></div>
 
   <!-- ===== HOME ===== -->
+  <div class="view" id="v-ai">
+    <div class="sec-title">🤖 차트 분석 도우미</div>
+    <p class="sec-sub">종목·코인을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p>
+    <div id="aiAsk"></div>
+  </div>
+
   <div class="view on" id="v-home">
-    <div id="homeAskStock"></div>
     <div class="row a">
       <div class="card">
         <div class="ch"><h2>🌊 MARKET FLOW</h2><div class="r"><span id="flowupd">–</span></div></div>
@@ -680,7 +686,6 @@
     <div class="sec-title">🪙 COIN · 실시간 코인 시장</div>
     <p class="sec-sub"><b>바이낸스 실시간</b> 데이터로 주요 코인을 봅니다. 코인을 누르면 <b>차트·타점·수급 상세를 이 화면에서 바로</b> 봅니다.</p>
     <div id="coinBody">
-      <div id="homeAskCoin"></div>
       <button onclick="openCoin('BTC')" style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#3a2c07;font-weight:800;font-size:13px;padding:10px 16px;border-radius:10px;margin-bottom:16px;border:none;cursor:pointer;font-family:inherit">🪙 BTC 상세 차트 바로 보기</button>
       <div id="coinMetrics" style="margin-bottom:16px"></div>
       <div class="row a">
@@ -712,7 +717,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=60"></script>
+<script src="app.js?v=61"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

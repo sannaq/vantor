@@ -795,14 +795,14 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var dR=((t.resAbove-t.px)/t.px*100), dS=((t.px-t.supBelow)/t.px*100);
   var tc=t.trend==='우상향'?'up':(t.trend==='우하향'?'down':''), ac=t.arr==='정배열'?'up':(t.arr==='역배열'?'down':'');
   var rc=t.rsi==null?'':(t.rsi>=65?'down':(t.rsi<=35?'up':''));
-  var chip=function(k,v,c){ return '<div style="background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:9px;padding:6px 9px;min-width:78px"><div style="font-size:10.5px;color:var(--faint)">'+k+'</div><div style="font-weight:800;font-size:12.5px" class="'+(c||'')+'">'+v+'</div></div>'; };
-  var chips='<div style="display:flex;gap:7px;flex-wrap:wrap;margin:8px 0">'
+  var chip=function(k,v,c){ return '<div style="background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:9px;padding:7px 11px;min-width:84px"><div style="font-size:11.5px;color:var(--sub)">'+k+'</div><div style="font-weight:800;font-size:15px" class="'+(c||'')+'">'+v+'</div></div>'; };
+  var chips='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:9px 0">'
     +chip('추세',t.trend,tc)+chip('이평배열',t.arr||'—',ac)+chip('RSI(14)',t.rsi!=null?t.rsi.toFixed(0)+(t.rsi>=65?' 과매수':t.rsi<=35?' 과매도':''):'—',rc)
     +chip('거래량',t.volState,'')+chip('레인지 위치',t.pos+'%','')+'</div>';
-  var lines='<div style="font-size:12.5px;line-height:1.9;margin-bottom:9px">'
-    +'<div><span style="color:#f6465d">🔴 저항</span> <b>'+P(t.resAbove)+'</b> <span style="color:var(--faint)">(+'+dR.toFixed(1)+'%) · 돌파·리테스트 시 상방</span></div>'
-    +'<div style="color:var(--sub)">· 현재가 <b style="color:var(--ink,#e8ecf3)">'+P(t.px)+'</b></div>'
-    +'<div><span style="color:#4a9eff">🔵 지지</span> <b>'+P(t.supBelow)+'</b> <span style="color:var(--faint)">(−'+dS.toFixed(1)+'%) · 종가 이탈 시 추세 훼손(무효화)</span></div></div>';
+  var lines='<div style="font-size:14px;line-height:2.0;margin-bottom:10px">'
+    +'<div><span style="color:#f6465d;font-weight:700">🔴 저항</span> <b>'+P(t.resAbove)+'</b> <span style="color:var(--sub)">(+'+dR.toFixed(1)+'%) · 돌파·리테스트 시 상방</span></div>'
+    +'<div style="color:var(--sub)">· 현재가 <b style="color:var(--ink,#e8ecf3);font-size:15px">'+P(t.px)+'</b></div>'
+    +'<div><span style="color:#4a9eff;font-weight:700">🔵 지지</span> <b>'+P(t.supBelow)+'</b> <span style="color:var(--sub)">(−'+dS.toFixed(1)+'%) · 종가 이탈 시 추세 훼손(무효화)</span></div></div>';
   var title, items=[];
   if(intent==='sell'){ title='🧭 매도·손절은 이렇게 봅니다';
     items.push('<b>핵심</b> — ‘지금 팔아라’가 아니라 <b>무효화 라인</b>을 먼저 정하는 것');
@@ -825,9 +825,9 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     items.push('저항 <b>'+P(t.resAbove)+'</b> 종가 돌파 + 리테스트 지지 전환 → 상방');
     items.push('지지 <b>'+P(t.supBelow)+'</b> 종가 이탈 → 추세 훼손');
     items.push('그 사이는 박스권 · <b>넘고 안 돌아오나</b>(가짜돌파 경계)'); }
-  var brief='<div style="font-size:12.5px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:11px 13px"><div style="font-weight:800;margin-bottom:7px">'+title+'</div><ul style="margin:0;padding-left:17px;display:flex;flex-direction:column;gap:5px;line-height:1.5">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
-  return imgNote+chips+lines+brief+checklist
-    +'<div style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div>';
+  var brief='<div style="font-size:14px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:12px 14px"><div style="font-weight:800;font-size:14.5px;margin-bottom:8px">'+title+'</div><ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;line-height:1.65">'+items.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+imgNote+chips+lines+brief+checklist
+    +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
 /* 규칙기반 지표를 LLM에 넘길 짧은 컨텍스트 문자열 */
@@ -861,8 +861,8 @@ function _homeAskHTML(scope){ var ph=scope==='coin'?'코인 심볼 (예: BTC · 
   +'<div style="display:flex;gap:7px;flex-wrap:wrap"><input class="haSym" placeholder="'+ph+'" style="flex:1;min-width:150px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none">'
   +'<div style="display:flex;gap:7px;flex:2;min-width:230px"><button class="haClip" title="차트 사진 첨부" style="flex:0 0 auto;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;color:var(--sub);font-size:15px;cursor:pointer">📎</button><input class="haFile" type="file" accept="image/*" style="display:none"><input class="haQ" placeholder="예) 이 차트 어때? · 평단 4만인데 뭘 봐야 해? · 손절은 어디?" style="flex:1;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none"><button class="haGo" style="background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:0 18px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">분석</button></div></div>'
   +'<div class="haPrev" style="display:none;margin-top:8px"></div>'
-  +'<div class="haChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">'+['지금 자리 어때?','지지·저항 어디?','추세 어떤 상태?','진입 본다면?','손절 기준은?'].map(function(c){return '<button class="haChip" style="background:transparent;border:1px solid var(--line2);border-radius:20px;padding:5px 11px;color:var(--sub);font-family:inherit;font-size:11.5px;cursor:pointer">'+c+'</button>';}).join('')+'</div>'
-  +'<div class="haAns" style="margin-top:11px;font-size:12.5px;color:var(--faint);line-height:1.6">종목/코인을 입력하고 질문하면, 그 차트의 <b>지지·저항·추세·RSI·거래량</b>을 자동으로 읽어 <b>교육용 브리핑</b>을 보여줘요. 사진(📎)만 넣어도 공통 체크리스트를 드려요. <b>매매 지시는 아니에요.</b></div>'
+  +'<div class="haChips" style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px">'+['지금 자리 어때?','지지·저항 어디?','추세 어떤 상태?','진입 본다면?','손절 기준은?'].map(function(c){return '<button class="haChip" style="background:transparent;border:1px solid var(--line2);border-radius:20px;padding:6px 13px;color:var(--sub);font-family:inherit;font-size:12.5px;cursor:pointer">'+c+'</button>';}).join('')+'</div>'
+  +'<div class="haAns" style="margin-top:12px;font-size:13.5px;color:var(--sub);line-height:1.65">종목/코인을 입력하고 질문하면, 그 차트의 <b>지지·저항·추세·RSI·거래량</b>을 자동으로 읽어 <b>교육용 브리핑</b>을 보여줘요. 사진(📎)만 넣어도 공통 체크리스트를 드려요. <b>매매 지시는 아니에요.</b></div>'
   +'</div></div></div>'; }
 function _homeStockItem(raw){ raw=(raw||'').trim(); if(!raw)return null; var t=raw.toLowerCase(); var pool=((typeof RADAR!=='undefined'&&RADAR)?RADAR:[]).concat((typeof ALLSTK!=='undefined'&&ALLSTK)?ALLSTK:((typeof STK!=='undefined'&&STK)?STK:[]));
   var ex=pool.find(function(s){return (s.c||'').toLowerCase()===t||(s.n||'').toLowerCase()===t;}); if(ex)return ex;
@@ -892,7 +892,7 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
   box.querySelectorAll('.haChip').forEach(function(b){ b.onclick=function(){ q.value=b.textContent; run(b.textContent); }; });
 }
 window.mountHomeAsk=mountHomeAsk;
-try{ mountHomeAsk('#homeAskStock','stock'); mountHomeAsk('#homeAskCoin','coin'); }catch(e){}
+try{ mountHomeAsk('#aiAsk','stock'); }catch(e){}
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
   var W=120,H=240,pad=20,cx=60,bw=44, rng=(h-l)||1;
@@ -1329,6 +1329,7 @@ function showView(v,noScroll){
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
   if(v==='market')renderHeatmap();
+  if(v==='ai'&&typeof mountHomeAsk==='function')mountHomeAsk('#aiAsk','stock');
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
 }
 let _stkScroll=0;
@@ -1513,6 +1514,7 @@ window.loadSectors=loadSectors;
 /* ===== 코인 모드 상단 메뉴(홈·RADAR·섹터·뉴스·관심·기초) ===== */
 var _stockMenuHTML=null;
 var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')">홈</a>'
+  +'<a class="cmenu-a" data-cs="ai" onclick="coinNav(\'ai\')">🤖 분석</a>'
   +'<a class="cmenu-a" data-cs="radar" onclick="coinNav(\'radar\')">RADAR</a>'
   +'<a class="cmenu-a" data-cs="sector" onclick="coinNav(\'sector\')">섹터</a>'
   +'<a class="cmenu-a" data-cs="news" onclick="coinNav(\'news\')">뉴스</a>'
@@ -1534,6 +1536,7 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
     else window.scrollTo({top:0,behavior:'smooth'});
     return; }
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
+  if(sec==='ai'){ sect.innerHTML='<div class="sec-title">🤖 차트 분석 도우미</div><p class="sec-sub">코인·종목을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p><div id="aiAskCoin"></div>'; if(typeof mountHomeAsk==='function')mountHomeAsk('#aiAskCoin','coin'); return; }
   if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
 };
 /* 관심 코인(즐겨찾기) */
@@ -2255,7 +2258,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); coinNav('home'); }
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
-  if(typeof mountHomeAsk==='function'){ try{ mountHomeAsk('#homeAskStock','stock'); mountHomeAsk('#homeAskCoin','coin'); }catch(e){} }
+  if(typeof mountHomeAsk==='function'){ try{ mountHomeAsk('#aiAsk','stock'); }catch(e){} }
 }
 /* 코인 모드 = VANTOR 터미널을 화면에 꽉 차게(full-bleed, 창 아닌 통째 임베드) */
 /* 코인 모드 = VANTOR 네이티브 코인 대시보드(주식과 동일 디자인) */
