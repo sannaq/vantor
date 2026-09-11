@@ -830,6 +830,41 @@ function mountAskBox(anchorSel,getR){ var a=document.querySelector(anchorSel); i
   box.querySelectorAll('.askChip').forEach(function(b){ b.onclick=function(){ inp.value=b.textContent; run(b.textContent); }; });
 }
 window.mountAskBox=mountAskBox;
+/* ── 메인(홈) 차트 분석 도우미 — 종목 입력/사진 첨부해서 홈에서 바로 분석 ── */
+function _homeAskHTML(scope){ var ph=scope==='coin'?'코인 심볼 (예: BTC · ETH · SOL · 1000PEPE)':'종목명·코드 (예: 삼성전자 · 005930 · AAPL · TSLA)';
+  return '<div class="card" style="margin-bottom:16px"><div class="ch"><h2>🤖 차트 분석 도우미 <span style="font-weight:600;color:var(--faint);font-size:12px">종목 입력 · 사진 첨부 · 교육용 TA</span></h2></div>'
+  +'<div class="pad" style="padding-top:10px"><div class="askbox2">'
+  +'<div style="display:flex;gap:7px;flex-wrap:wrap"><input class="haSym" placeholder="'+ph+'" style="flex:1;min-width:150px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none">'
+  +'<div style="display:flex;gap:7px;flex:2;min-width:230px"><button class="haClip" title="차트 사진 첨부" style="flex:0 0 auto;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;color:var(--sub);font-size:15px;cursor:pointer">📎</button><input class="haFile" type="file" accept="image/*" style="display:none"><input class="haQ" placeholder="예) 이 차트 어때? · 평단 4만인데 뭘 봐야 해? · 손절은 어디?" style="flex:1;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none"><button class="haGo" style="background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:0 18px;font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">분석</button></div></div>'
+  +'<div class="haPrev" style="display:none;margin-top:8px"></div>'
+  +'<div class="haChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:9px">'+['지금 자리 어때?','지지·저항 어디?','추세 어떤 상태?','진입 본다면?','손절 기준은?'].map(function(c){return '<button class="haChip" style="background:transparent;border:1px solid var(--line2);border-radius:20px;padding:5px 11px;color:var(--sub);font-family:inherit;font-size:11.5px;cursor:pointer">'+c+'</button>';}).join('')+'</div>'
+  +'<div class="haAns" style="margin-top:11px;font-size:12.5px;color:var(--faint);line-height:1.6">종목/코인을 입력하고 질문하면, 그 차트의 <b>지지·저항·추세·RSI·거래량</b>을 자동으로 읽어 <b>교육용 브리핑</b>을 보여줘요. 사진(📎)만 넣어도 공통 체크리스트를 드려요. <b>매매 지시는 아니에요.</b></div>'
+  +'</div></div></div>'; }
+function _homeStockItem(raw){ raw=(raw||'').trim(); if(!raw)return null; var t=raw.toLowerCase(); var pool=((typeof RADAR!=='undefined'&&RADAR)?RADAR:[]).concat((typeof ALLSTK!=='undefined'&&ALLSTK)?ALLSTK:((typeof STK!=='undefined'&&STK)?STK:[]));
+  var ex=pool.find(function(s){return (s.c||'').toLowerCase()===t||(s.n||'').toLowerCase()===t;}); if(ex)return ex;
+  if(/^\d{6}$/.test(raw))return {c:raw,n:raw,ccy:'KRW',mk:'KR'};
+  var part=pool.find(function(s){return (s.n||'').toLowerCase().indexOf(t)>=0||(s.c||'').toLowerCase().indexOf(t)>=0;}); if(part)return part;
+  if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw))return {c:raw.toUpperCase(),n:raw.toUpperCase(),ccy:'USD',mk:'NAS'}; return null; }
+function homeResolve(scope,s){ if(scope==='coin'){ var sym=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,''); if(!sym)return Promise.resolve(null); var F='https://fapi.binance.com/fapi/v1/';
+    return Promise.all([ fetch(F+'klines?symbol='+sym+'USDT&interval=1h&limit=200').then(function(r){return r.json();}).catch(function(){return null;}), fetch(F+'ticker/24hr?symbol='+sym+'USDT').then(function(r){return r.json();}).catch(function(){return null;}) ]).then(function(a){ var kl=a[0],tk=a[1]; if(!Array.isArray(kl)||!kl.length)return null; var candles=kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}); var px=(tk&&tk.lastPrice)?+tk.lastPrice:candles[candles.length-1][4]; var ch=(tk&&tk.priceChangePercent!=null)?+tk.priceChangePercent:0; return {c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,_candles:candles}; }); }
+  var it=_homeStockItem(s); if(!it)return Promise.resolve(null); if(typeof proxyJson!=='function')return Promise.resolve(null); var isUS=((it.ccy||'').toUpperCase()==='USD'); var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(it.c)+(isUS?('&exch='+(typeof usExch==='function'?usExch(it.mk):'NAS')):'');
+  return proxyJson('/candles?'+base+'&tf=D&limit=200').then(function(j){ if(!j||!j.candles||j.candles.length<2)return null; var cs=j.candles,n=cs.length,px=+cs[n-1][4],prev=+cs[n-2][4]; return {c:it.c,n:it.n||it.c,mk:it.mk,ccy:isUS?'USD':'KRW',px:px,ch:prev?((px-prev)/prev*100):0,_candles:cs}; }).catch(function(){return null;}); }
+function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host)return; if(!host._filled){ host.innerHTML=_homeAskHTML(scope); host._filled=true; }
+  var box=host.querySelector('.askbox2'); if(!box||box._wired)return; box._wired=true;
+  var sym=box.querySelector('.haSym'), q=box.querySelector('.haQ'), ans=box.querySelector('.haAns'), clip=box.querySelector('.haClip'), file=box.querySelector('.haFile'), prev=box.querySelector('.haPrev');
+  if(clip&&file){ clip.onclick=function(){file.click();};
+    file.onchange=function(){ var f=file.files&&file.files[0]; if(!f)return; if(!/^image\//.test(f.type||'')){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지 파일만 첨부할 수 있어요.</span>';return;} if(f.size>8e6){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지가 너무 커요(8MB 이하).</span>';return;} var rd=new FileReader(); rd.onload=function(){ box._img=rd.result; prev.style.display='block'; prev.innerHTML='<div style="display:inline-flex;align-items:center;gap:8px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:6px 8px"><img src="'+rd.result+'" style="height:44px;border-radius:6px;display:block"><span style="font-size:11.5px;color:var(--sub)">차트 사진 첨부됨 · 물어보면 함께 분석</span><button class="haImgX" style="background:none;border:none;color:var(--faint);font-size:15px;cursor:pointer;padding:0 2px">✕</button></div>'; var x=prev.querySelector('.haImgX'); if(x)x.onclick=function(){box._img=null;file.value='';prev.style.display='none';prev.innerHTML='';}; }; rd.readAsDataURL(f); }; }
+  function run(qq){ qq=(qq||q.value||'').trim(); var s=(sym.value||'').trim();
+    if(!s){ if(box._img){ ans.innerHTML=answerChartHTML({n:'',ccy:scope==='coin'?'USD':'KRW'}, qq||'이 차트 어때?', {img:true}); } else { ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진을 첨부해 주세요.</span>'; } return; }
+    ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' 분석 중…</span>';
+    homeResolve(scope,s).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||(box._img?'이 차트 어때?':'지금 자리 어때?'), {img:!!box._img}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+  box.querySelector('.haGo').onclick=function(){ run(); };
+  sym.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+  q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
+  box.querySelectorAll('.haChip').forEach(function(b){ b.onclick=function(){ q.value=b.textContent; run(b.textContent); }; });
+}
+window.mountHomeAsk=mountHomeAsk;
+try{ mountHomeAsk('#homeAskStock','stock'); mountHomeAsk('#homeAskCoin','coin'); }catch(e){}
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
   var W=120,H=240,pad=20,cx=60,bw=44, rng=(h-l)||1;
@@ -2191,6 +2226,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); coinNav('home'); }
   else { $('#v-home').classList.add('on'); $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v==='home');}); }
   window.scrollTo({top:0,behavior:'smooth'});
+  if(typeof mountHomeAsk==='function'){ try{ mountHomeAsk('#homeAskStock','stock'); mountHomeAsk('#homeAskCoin','coin'); }catch(e){} }
 }
 /* 코인 모드 = VANTOR 터미널을 화면에 꽉 차게(full-bleed, 창 아닌 통째 임베드) */
 /* 코인 모드 = VANTOR 네이티브 코인 대시보드(주식과 동일 디자인) */
