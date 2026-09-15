@@ -932,7 +932,7 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
       if(s){ homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ var co=_costOpts(r); var ctx=(r?_taContext(r):''); if(co.cost)ctx+=(ctx?' · ':'')+'내 평단 '+co.cost; go(ctx); }).catch(function(){ go(''); }); } else go(''); return; }
     if(!s){ ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진(📎)을 첨부해 주세요.</span>'; return; }
     ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' · '+((box._tfLabel||'')||'')+' 분석 중…</span>';
-    homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } if(r.__nodata){ var _min=r.tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r.tf)>=0; ans.innerHTML='<span style="color:var(--faint)"><b>'+((typeof esc==='function')?esc(r.n):r.n)+'</b> · '+(box._tfLabel||r.tf)+'봉 데이터가 없어요.'+((_min&&r.mk!=='COIN')?' 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라, <b>일봉</b>으로 보거나 장중(09:00~15:30)에 다시 시도해 주세요.':' 잠시 후 다시 시도해 주세요.')+'</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', _costOpts(r)); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+    homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } if(r.__nodata){ var _min=r.tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r.tf)>=0; ans.innerHTML='<span style="color:var(--faint)"><b>'+((typeof esc==='function')?esc(r.n):r.n)+'</b> · '+(box._tfLabel||r.tf)+'봉 데이터가 없어요.'+((_min&&r.mk!=='COIN')?' 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라, <b>일봉</b>으로 보거나 장중(09:00~15:30)에 다시 시도해 주세요.':' 잠시 후 다시 시도해 주세요.')+'</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', _costOpts(r)); if(typeof _appendFollowup==='function')_appendFollowup(ans,box,r); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
   box._tf=(scope==='coin')?'1h':'D'; var _tfOn=box.querySelector('.haTf.on'); box._tfLabel=_tfOn?_tfOn.dataset.lab:'';
   var _tfBtns=box.querySelectorAll('.haTf');
   _tfBtns.forEach(function(b){ b.onclick=function(){ _tfBtns.forEach(function(x){ x.classList.remove('on'); x.style.background='transparent'; x.style.color='var(--sub)'; }); b.classList.add('on'); b.style.background='var(--gold,#e0a83e)'; b.style.color='#1a1400'; box._tf=b.dataset.tf; box._tfLabel=b.dataset.lab; if((sym.value||'').trim()||box._img)run(); }; });
@@ -969,6 +969,50 @@ function runScan(scope,tf,res){ var list=scope==='coin'?((typeof _coinFav==='fun
   }
 }
 window.mountScan=mountScan; window.runScan=runScan;
+/* ── 💬 이어묻기 (분석 답변에 후속 대화, Gemini 텍스트) ── */
+window.askText=function(q,ctx){ if(typeof PROXY==='undefined'||!PROXY)return Promise.reject(new Error('proxy')); return fetch(PROXY+'/vision',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question:q||'',context:ctx||''})}).then(function(r){return r.json();}); };
+function _appendFollowup(ansEl,box,r){ if(!ansEl||!r||!r._candles)return; box._fuR=r; box._fuThread=[];
+  var wrap=document.createElement('div'); wrap.style.marginTop='10px';
+  wrap.innerHTML='<div class="fuThread" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div><div style="display:flex;gap:7px"><input class="fuIn" placeholder="💬 이어서 질문 (예: 그럼 손절은? · 왜 조정 주의야?)" style="flex:1;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none"><button class="fuGo" style="background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:0 15px;color:var(--ink,#e8ecf3);font-family:inherit;font-weight:800;font-size:13px;cursor:pointer">보내기</button></div>';
+  ansEl.appendChild(wrap);
+  var thread=wrap.querySelector('.fuThread'), inp=wrap.querySelector('.fuIn'), go=wrap.querySelector('.fuGo');
+  function bubble(role,html){ var d=document.createElement('div'); d.style.cssText='font-size:12.5px;line-height:1.6;padding:9px 12px;border-radius:10px;border:1px solid var(--line2);'+(role==='u'?'background:rgba(224,181,82,.10);align-self:flex-end;max-width:92%':'background:var(--panel2,#0f151f)'); d.innerHTML=html; thread.appendChild(d); return d; }
+  function send(){ var q=(inp.value||'').trim(); if(!q)return; inp.value=''; bubble('u',(typeof esc==='function')?esc(q):q); var load=bubble('a','<span style="color:var(--faint)">…</span>');
+    var base=(typeof _taContext==='function')?_taContext(box._fuR):''; var hist=box._fuThread.map(function(t){return (t.role==='u'?'Q: ':'A: ')+t.text;}).join('\n'); var ctx='교육용 TA 대화. '+base+(hist?('\n이전 대화:\n'+hist):'');
+    box._fuThread.push({role:'u',text:q}); if(box._fuThread.length>8)box._fuThread=box._fuThread.slice(-8);
+    askText(q,ctx).then(function(j){ if(j&&j.text){ load.innerHTML=((typeof esc==='function')?esc(j.text):j.text).replace(/\n/g,'<br>'); box._fuThread.push({role:'a',text:j.text}); } else { load.innerHTML='<span style="color:var(--faint)">'+((j&&j.error)?('답변 실패: '+((typeof esc==='function')?esc(j.error):j.error)):'답변을 받지 못했어요(잠시 후 다시)')+'</span>'; } }).catch(function(){ load.innerHTML='<span style="color:var(--faint)">연결 실패 — 잠시 후 다시</span>'; }); }
+  go.onclick=send; inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); send(); } });
+}
+/* ── ❓ 첫 사용 가이드/도움말 ── */
+window.openHelp=function(){ var bg=document.createElement('div'); bg.className='modal-bg';
+  var S=function(icon,t,b){ return '<div style="padding:9px 0;border-top:1px solid var(--line2)"><div style="font-weight:800;font-size:13.5px">'+icon+' '+t+'</div><div style="font-size:12.5px;color:var(--sub);line-height:1.6;margin-top:3px">'+b+'</div></div>'; };
+  bg.innerHTML='<div class="modal" style="max-width:480px;max-height:82vh;overflow:auto"><h3>❓ VANTOR 가이드</h3><div class="msub">교육용 분석 도구예요. <b>매수/매도 지시가 아니라</b> "왜·어디를 보나"를 스스로 판단하는 근거를 모아줘요.</div><div style="padding:2px 20px 8px">'
+    +S('🤖','차트 분석 도우미','상단 <b>🤖 분석</b> 탭. 종목·코인 입력(또는 📎 차트 사진)+질문 → 방향 관점·지지/저항·과거 통계·신규진입/평단 관점. <b>내 평단</b> 넣으면 기억되고, 답 아래에서 <b>이어묻기</b>도 돼요.')
+    +S('📡','방향 스캔','<b>관심</b> 화면 상단. 관심종목 전체의 <b>방향 관점</b>을 한 표에.')
+    +S('📊','과거 통계(백테스트)','분석에 나오는 "이 조건 과거 N봉 뒤 승률" — 그럴듯한 신호도 <b>실제로 맞았는지</b> 정직하게 보여줘요.')
+    +S('🔥','청산맵','코인 메뉴. 레버리지 청산가가 몰린 <b>자석 구간</b> 추정(휠 확대·슈퍼바이셀). 추정 모델이에요.')
+    +S('📓','매매일지','코인 상세에서 진입 기록·복기 → <b>내 매매 패턴</b>(손절 습관·손익비·연속손실)을 자동 점검.')
+    +S('☁️','기기 간 동기화','우상단 ☁️. 코드 하나로 여러 PC·폰에서 관심종목·일지·평단 공유(계정 불필요).')
+    +'</div><div class="mfoot"><button class="mbtn pri" id="hlClose">시작하기</button></div></div>';
+  document.body.appendChild(bg); function close(){bg.remove();} bg.addEventListener('click',function(e){if(e.target===bg)close();}); bg.querySelector('#hlClose').onclick=close;
+  try{localStorage.setItem('aurSeenHelp','1');}catch(e){} };
+/* ── 🧪 자가진단 (핵심 순수함수 회귀 테스트) — #selftest 또는 콘솔 _selftest() ── */
+window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.push((cond?'✓':'✗')+' '+name); cond?ok++:fail++; }
+  var cs=[],px=100; for(var i=0;i<120;i++){ px+=Math.sin(i/9)*1.2+(i>60?0.35:-0.05); var o=px-0.4,h=px+0.9,l=px-0.9,c=px; cs.push([i*3600000,o,h,l,c,1000+i]); }
+  var r={c:'TEST',n:'TEST',mk:'COIN',ccy:'USD',px:cs[cs.length-1][4],_candles:cs};
+  var t=(typeof _taRead==='function')?_taRead(r):null;
+  A('_taRead 반환', !!t);
+  if(t){ A('추세 값 유효', ['우상향','우하향','횡보'].indexOf(t.trend)>=0); A('저항>지지', t.resAbove>t.supBelow); A('RSI 0~100', t.rsi==null||(t.rsi>=0&&t.rsi<=100)); A('레인지위치 0~100', t.pos>=0&&t.pos<=100); }
+  var b=(typeof _biasOf==='function'&&t)?_biasOf(t):null; A('_biasOf 라벨', !!b&&['매수 우호','중립·관망','조정 주의'].indexOf(b.label)>=0);
+  var st=(typeof _condStats==='function'&&t)?_condStats(r,t):null; A('_condStats 반환', !!st);
+  A('_askCost 만원 파싱', (typeof _askCost==='function')&&_askCost('평단 4만',' USD')===40000);
+  A('_askCost 없으면 null', (typeof _askCost==='function')&&_askCost('지금 어때','USD')===null);
+  A('_homeStockItem 코드', (typeof _homeStockItem==='function')&&(_homeStockItem('005930')||{}).c==='005930');
+  A('answerChartHTML 문자열', (typeof answerChartHTML==='function')&&typeof answerChartHTML(r,'지금 자리 어때?',{})==='string');
+  A('fmtP 통화', (typeof fmtP==='function')&&fmtP(1234,'USD').indexOf('$')===0);
+  var msg=out.join('\n')+'\n\n'+ok+' 통과 · '+fail+' 실패';
+  try{console.log('%c[VANTOR 자가진단]\n'+msg, fail?'color:#f6465d':'color:#2ebd85');}catch(e){}
+  return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
 var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings'];
@@ -2985,3 +3029,9 @@ window.openChartFs=function(){ if(typeof CHART==='undefined'||!CHART||!CHART.r)r
   setTimeout(_drawFs,70); setTimeout(_drawFs,250); }; // 레이아웃 안정 후 재그림
 window.closeChartFs=function(){ var fs=document.getElementById('chartFs'); if(!fs)return; fs.style.display='none';
   var src=fs._srcCv; if(src&&typeof drawStockChart==='function'&&typeof CHART!=='undefined'&&CHART&&CHART.r){ drawStockChart(src,CHART.r); } };
+/* 부팅: 첫 방문 가이드(1회) + #selftest 자가진단 */
+(function(){ try{
+  if(location.hash==='#selftest'&&typeof _selftest==='function'){ setTimeout(function(){ var r=_selftest(); var b=document.createElement('div'); b.style.cssText='position:fixed;left:10px;bottom:10px;z-index:3000;background:'+(r.fail?'#3a1720':'#12261b')+';border:1px solid '+(r.fail?'#f6465d':'#2ebd85')+';color:#e8ecf3;font:12px/1.5 monospace;padding:10px 12px;border-radius:8px;max-width:280px;white-space:pre-wrap'; b.textContent='🧪 자가진단 '+r.ok+' 통과 · '+r.fail+' 실패\n'+r.details.join('\n'); b.onclick=function(){b.remove();}; document.body.appendChild(b); },1500); }
+  var seen=false; try{seen=localStorage.getItem('aurSeenHelp')==='1';}catch(e){}
+  if(!seen&&typeof openHelp==='function'){ setTimeout(function(){ if(document.querySelector('#splash')&&getComputedStyle(document.querySelector('#splash')).display!=='none')return; openHelp(); },900); }
+}catch(e){} })();
