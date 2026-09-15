@@ -812,7 +812,8 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var imgNote=opts.img?'<div style="font-size:12px;line-height:1.6;background:rgba(224,181,82,.08);border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin-bottom:9px">📎 <b>첨부한 차트 사진</b>은 <b>AI 대화형(비전) 단계</b>에서 직접 읽어 분석해요. 지금(규칙기반)은 사진 속 차트를 읽지 못해서, 아래는 <b>지금 열려 있는 '+nm+' 실데이터</b> 기준 분석 + 어떤 차트든 공통으로 보는 체크리스트예요.</div>':'';
   var checklist=opts.img?'<div style="font-size:12px;line-height:1.7;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;margin-top:8px">📋 <b>차트 사진 볼 때 공통 체크</b><br>① <b>구조적 저점(무효화 라인)</b>이 어디인가 ② <b>지지·저항</b> 구간 ③ <b>추세·이평</b> 방향(정/역배열) ④ 움직임에 <b>거래량</b>이 실렸나 ⑤ 돌파면 <b>리테스트로 지지 전환</b>했나(가짜돌파 경계)</div>':'';
   if(!t){ var _minTf=(r._tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r._tf)>=0); var _hint=(r.mk!=='COIN'&&_minTf)?' — 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라 봉 수가 적어요. <b>일봉</b>으로 보거나 장중에 다시 시도해 주세요.':' 잠시 후 다시 시도하거나 다른 봉으로 바꿔보세요.'; return imgNote+'<div style="color:var(--faint);font-size:12.5px;padding:4px 0">캔들 데이터가 부족해요'+_hint+'</div>'+checklist; }
-  var intent=_askIntent(q), cost=_askCost(q,ccy);
+  var intent=_askIntent(q), cost=_askCost(q,ccy), costMine=false;
+  if(cost==null && opts.cost!=null && opts.cost>0){ cost=opts.cost; costMine=!!opts.costMine; }
   var dR=((t.resAbove-t.px)/t.px*100), dS=((t.px-t.supBelow)/t.px*100);
   var tc=t.trend==='우상향'?'up':(t.trend==='우하향'?'down':''), ac=t.arr==='정배열'?'up':(t.arr==='역배열'?'down':'');
   var rc=t.rsi==null?'':(t.rsi>=65?'down':(t.rsi<=35?'up':''));
@@ -848,7 +849,7 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   // 💼 평단 보유 대응 (수익률·방향성)
   var hd=[];
   if(cost!=null){ var pnl=cost>0?((t.px-cost)/cost*100):0, pc=pnl>=0?'up':'down', pt=(pnl>=0?'+':'')+pnl.toFixed(1)+'%';
-    hd.push('평단 <b>'+P(cost)+'</b> · 현재 <b>'+P(t.px)+'</b> → 평가 <b class="'+pc+'">'+pt+'</b> ('+(pnl>=0?'평가익':'평가손')+' 구간)');
+    hd.push('평단 <b>'+P(cost)+'</b>'+(costMine?' <span style="color:var(--faint);font-size:11px">(내 보유·기억됨)</span>':'')+' · 현재 <b>'+P(t.px)+'</b> → 평가 <b class="'+pc+'">'+pt+'</b> ('+(pnl>=0?'평가익':'평가손')+' 구간)');
     if(t.px>=cost){ hd.push('이익 보호 — 저항 <b>'+P(t.resAbove)+'</b> 부근 <b>분할 익절/트레일링 스탑</b> 관점'); hd.push('정리 기준 — 지지 <b>'+P(t.supBelow)+'</b> <b>종가 이탈</b> 시 상승 논리 훼손'); }
     else { hd.push('물타기 전 — 지지 <b>'+P(t.supBelow)+'</b> <b>사수 여부부터</b> (이탈 상태면 추매는 리스크 확대)'); hd.push('손절선 — 무효화 라인 아래로 <b>미리 정해두기</b>(감정 아니라 라인으로)'); hd.push('반등 시 대응 — 저항 <b>'+P(t.resAbove)+'</b>에서 <b>비중 조절</b> 관점도 교육적으로 존재'); } }
   else { hd.push('보유 중이라면 기준은 <b>무효화 라인 '+P(t.supBelow)+'</b> — <b>종가 이탈</b>이 정리 기준');
@@ -892,7 +893,7 @@ window.mountAskBox=mountAskBox;
 /* ── 메인(홈) 차트 분석 도우미 — 종목 입력/사진 첨부해서 홈에서 바로 분석 ── */
 function _homeAskHTML(scope){ var ph=scope==='coin'?'코인 심볼 (예: BTC · ETH · SOL · 1000PEPE)':'종목명·코드 (예: 삼성전자 · 005930 · AAPL · TSLA)';
   var TFS=scope==='coin'?[['1h','1시간'],['5m','5분'],['15m','15분'],['4h','4시간'],['1d','일봉']]:[['D','일봉'],['5','5분'],['15','15분'],['30','30분'],['60','60분']];
-  var tfRow='<div class="haTfs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px"><span style="font-size:11.5px;color:var(--faint);font-weight:700">봉</span>'+TFS.map(function(t,i){var on=i===0;return '<button class="haTf'+(on?' on':'')+'" data-tf="'+t[0]+'" data-lab="'+t[1]+'" style="background:'+(on?'var(--gold,#e0a83e)':'transparent')+';color:'+(on?'#1a1400':'var(--sub)')+';border:1px solid var(--line2);border-radius:16px;padding:4px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+t[1]+'</button>';}).join('')+'</div>';
+  var tfRow='<div class="haTfs" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px"><span style="font-size:11.5px;color:var(--faint);font-weight:700">봉</span>'+TFS.map(function(t,i){var on=i===0;return '<button class="haTf'+(on?' on':'')+'" data-tf="'+t[0]+'" data-lab="'+t[1]+'" style="background:'+(on?'var(--gold,#e0a83e)':'transparent')+';color:'+(on?'#1a1400':'var(--sub)')+';border:1px solid var(--line2);border-radius:16px;padding:4px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+t[1]+'</button>';}).join('')+'<span style="font-size:11.5px;color:var(--faint);font-weight:700;margin-left:6px">내 평단</span><input class="haAvg" inputmode="decimal" placeholder="선택·기억됨" title="내 평균단가 — 한 번 넣으면 이 종목에 자동 반영·동기화" style="width:110px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:16px;padding:4px 11px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:12px;outline:none"></div>';
   return '<div class="card" style="margin-bottom:16px"><div class="ch"><h2>🤖 차트 분석 도우미 <span style="font-weight:600;color:var(--faint);font-size:12px">종목 입력 · 사진 첨부 · 교육용 TA</span></h2></div>'
   +'<div class="pad" style="padding-top:10px"><div class="askbox2">'
   +'<div style="display:flex;gap:7px;flex-wrap:wrap"><input class="haSym" placeholder="'+ph+'" style="flex:1;min-width:150px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;color:var(--ink,#e8ecf3);font-family:inherit;font-size:13px;outline:none">'
@@ -913,21 +914,24 @@ function homeResolve(scope,s,tf,lab){ if(scope==='coin'){ var sym=(s||'').toUppe
   return proxyJson('/candles?'+base+'&tf='+stf+'&limit=200').then(function(j){ if(!j||!j.candles||j.candles.length<2)return {__nodata:true,n:it.n||it.c,tf:stf,mk:it.mk}; var cs=j.candles,n=cs.length,px=+cs[n-1][4],prev=+cs[n-2][4]; return {c:it.c,n:it.n||it.c,mk:it.mk,ccy:isUS?'USD':'KRW',px:px,ch:prev?((px-prev)/prev*100):0,_candles:cs,_tf:stf,_tfLabel:lab||''}; }).catch(function(){return {__nodata:true,n:it.n||it.c,tf:stf,mk:it.mk};}); }
 function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host)return; if(!host._filled){ host.innerHTML=_homeAskHTML(scope); host._filled=true; }
   var box=host.querySelector('.askbox2'); if(!box||box._wired)return; box._wired=true;
-  var sym=box.querySelector('.haSym'), q=box.querySelector('.haQ'), ans=box.querySelector('.haAns'), clip=box.querySelector('.haClip'), file=box.querySelector('.haFile'), prev=box.querySelector('.haPrev');
+  var sym=box.querySelector('.haSym'), q=box.querySelector('.haQ'), ans=box.querySelector('.haAns'), clip=box.querySelector('.haClip'), file=box.querySelector('.haFile'), prev=box.querySelector('.haPrev'), avgEl=box.querySelector('.haAvg');
+  function _typedAvg(){ return parseFloat((((avgEl&&avgEl.value)||'')+'').replace(/[,\s]/g,''))||0; }
+  function _costOpts(r){ var key=((r&&r.c)||sym.value||'').toUpperCase(); var ta=_typedAvg(); if(ta>0){ if(typeof _setHolding==='function')_setHolding(key,ta); return {cost:ta,costMine:true}; } var h=(typeof _getHolding==='function')?_getHolding(key):null; if(h&&h.avg>0){ if(avgEl&&!avgEl.value)avgEl.value=h.avg; return {cost:h.avg,costMine:true}; } return {}; }
   if(clip&&file){ clip.onclick=function(){file.click();};
     file.onchange=function(){ var f=file.files&&file.files[0]; if(!f)return; if(!/^image\//.test(f.type||'')){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지 파일만 첨부할 수 있어요.</span>';return;} if(f.size>8e6){prev.style.display='block';prev.innerHTML='<span style="color:var(--faint);font-size:12px">이미지가 너무 커요(8MB 이하).</span>';return;} var rd=new FileReader(); rd.onload=function(){ box._img=rd.result; prev.style.display='block'; prev.innerHTML='<div style="display:inline-flex;align-items:center;gap:8px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:6px 8px"><img src="'+rd.result+'" style="height:44px;border-radius:6px;display:block"><span style="font-size:11.5px;color:var(--sub)">차트 사진 첨부됨 · 물어보면 함께 분석</span><button class="haImgX" style="background:none;border:none;color:var(--faint);font-size:15px;cursor:pointer;padding:0 2px">✕</button></div>'; var x=prev.querySelector('.haImgX'); if(x)x.onclick=function(){box._img=null;file.value='';prev.style.display='none';prev.innerHTML='';}; }; rd.readAsDataURL(f); }; }
   function run(qq){ qq=(qq||q.value||'').trim(); var s=(sym.value||'').trim();
     var fallCcy=scope==='coin'?'USD':'KRW';
     if(box._img && typeof askVision==='function'){ ans.innerHTML='<span style="color:var(--faint)">🤖 AI가 차트 사진 읽는 중…</span>';
       var go=function(ctx){ askVision(box._img, qq||'이 차트 어때?', ctx).then(function(j){ if(j&&j.text){ ans.innerHTML=_visionHTML(j.text); } else { ans.innerHTML=(j&&j.error?_visionWarn(j.error):'')+answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); } }).catch(function(){ ans.innerHTML=answerChartHTML({n:'',ccy:fallCcy}, qq||'이 차트 어때?', {img:true}); }); };
-      if(s){ homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ go(r?_taContext(r):''); }).catch(function(){ go(''); }); } else go(''); return; }
+      if(s){ homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ var co=_costOpts(r); var ctx=(r?_taContext(r):''); if(co.cost)ctx+=(ctx?' · ':'')+'내 평단 '+co.cost; go(ctx); }).catch(function(){ go(''); }); } else go(''); return; }
     if(!s){ ans.innerHTML='<span style="color:var(--faint)">종목/코인을 입력하거나 사진(📎)을 첨부해 주세요.</span>'; return; }
     ans.innerHTML='<span style="color:var(--faint)">'+((typeof esc==='function')?esc(s):s)+' · '+((box._tfLabel||'')||'')+' 분석 중…</span>';
-    homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } if(r.__nodata){ var _min=r.tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r.tf)>=0; ans.innerHTML='<span style="color:var(--faint)"><b>'+((typeof esc==='function')?esc(r.n):r.n)+'</b> · '+(box._tfLabel||r.tf)+'봉 데이터가 없어요.'+((_min&&r.mk!=='COIN')?' 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라, <b>일봉</b>으로 보거나 장중(09:00~15:30)에 다시 시도해 주세요.':' 잠시 후 다시 시도해 주세요.')+'</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', {}); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
+    homeResolve(scope,s,box._tf,box._tfLabel).then(function(r){ if(!r){ ans.innerHTML='<span style="color:var(--faint)">‘'+((typeof esc==='function')?esc(s):s)+'’를 찾지 못했어요. '+(scope==='coin'?'심볼(예: BTC, SOL)로':'코드(예: 005930)나 정확한 종목명으로')+' 다시 시도해 주세요.</span>'; return; } if(r.__nodata){ var _min=r.tf&&['1m','5m','15m','30m','1h','4h','1','3','5','10','15','30','60'].indexOf(r.tf)>=0; ans.innerHTML='<span style="color:var(--faint)"><b>'+((typeof esc==='function')?esc(r.n):r.n)+'</b> · '+(box._tfLabel||r.tf)+'봉 데이터가 없어요.'+((_min&&r.mk!=='COIN')?' 국내·해외 <b>분봉</b>은 <b>장중·당일 위주</b>라, <b>일봉</b>으로 보거나 장중(09:00~15:30)에 다시 시도해 주세요.':' 잠시 후 다시 시도해 주세요.')+'</span>'; return; } ans.innerHTML=answerChartHTML(r, qq||'지금 자리 어때?', _costOpts(r)); }).catch(function(){ ans.innerHTML='<span style="color:var(--faint)">데이터를 불러오지 못했어요. 잠시 후 다시.</span>'; }); }
   box._tf=(scope==='coin')?'1h':'D'; var _tfOn=box.querySelector('.haTf.on'); box._tfLabel=_tfOn?_tfOn.dataset.lab:'';
   var _tfBtns=box.querySelectorAll('.haTf');
   _tfBtns.forEach(function(b){ b.onclick=function(){ _tfBtns.forEach(function(x){ x.classList.remove('on'); x.style.background='transparent'; x.style.color='var(--sub)'; }); b.classList.add('on'); b.style.background='var(--gold,#e0a83e)'; b.style.color='#1a1400'; box._tf=b.dataset.tf; box._tfLabel=b.dataset.lab; if((sym.value||'').trim()||box._img)run(); }; });
   box.querySelector('.haGo').onclick=function(){ run(); };
+  if(avgEl){ avgEl.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } }); avgEl.addEventListener('change',function(){ if((sym.value||'').trim())run(); }); }
   sym.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
   q.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); run(); } });
   box.querySelectorAll('.haChip').forEach(function(b){ b.onclick=function(){ q.value=b.textContent; run(b.textContent); }; });
@@ -936,7 +940,12 @@ window.mountHomeAsk=mountHomeAsk;
 try{ mountHomeAsk('#aiAsk','stock'); }catch(e){}
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings'];
+/* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
+function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
+function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
+function _setHolding(key,avg,qty){ if(!key||!(avg>0))return; try{ var m=_holdings(); m[String(key).toUpperCase()]={avg:+avg,qty:(qty>0?+qty:(m[String(key).toUpperCase()]||{}).qty||0),ts:Date.now()}; localStorage.setItem('aurHoldings',JSON.stringify(m)); }catch(e){} }
+window._getHolding=_getHolding; window._setHolding=_setHolding;
 function _syncCode(){ try{return localStorage.getItem('aurSyncCode')||'';}catch(e){return '';} }
 function _syncCollect(){ var d={}; _SYNC_KEYS.forEach(function(k){ try{ var v=localStorage.getItem(k); if(v!=null)d[k]=v; }catch(e){} }); return {ver:1,ts:Date.now(),data:d}; }
 function _syncHash(b){ try{return JSON.stringify(b.data);}catch(e){return '';} }
