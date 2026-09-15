@@ -800,6 +800,13 @@ function _miniChartSVG(r,t){ var cs=r&&r._candles; if(!cs||cs.length<5)return ''
   function hline(p,color,label){ if(p<lo||p>hi)return ''; var yy=y(p); return '<line x1="'+PADL+'" y1="'+yy.toFixed(1)+'" x2="'+(W-PADR).toFixed(1)+'" y2="'+yy.toFixed(1)+'" stroke="'+color+'" stroke-width="1.2" stroke-dasharray="4 3"/><text x="'+(W-PADR+3)+'" y="'+(yy+3.2).toFixed(1)+'" fill="'+color+'" font-size="9.5" font-weight="800">'+label+'</text>'; }
   s+=hline(t.resAbove,'#f6465d','저항'); s+=hline(t.px,'#e0b552','현재'); s+=hline(t.supBelow,'#4a9eff','지지');
   return s+'</svg>'; }
+/* 백테스트: 현재와 같은 '이평 배열' 구간이 과거에 N봉 뒤 어떻게 됐나(적중률·평균수익) — 검증용 */
+function _condStats(r,t){ var cs=r&&r._candles; if(!cs||cs.length<45)return null; var cl=[],i; for(i=0;i<cs.length;i++)cl.push(+cs[i][4]); var n=cl.length, fwd=10;
+  function ma(e,p){ if(e-p+1<0)return null; var s=0,j; for(j=e-p+1;j<=e;j++)s+=cl[j]; return s/p; }
+  var regime=t.arr||'혼조', wins=0,tot=0,sum=0;
+  for(i=25;i<n-fwd;i++){ var m5=ma(i,5),m20=ma(i,20); if(m5==null||m20==null)continue; var st=(m5>m20*1.001)?'정배열':((m5<m20*0.999)?'역배열':'혼조'); if(st!==regime)continue; var ret=(cl[i+fwd]-cl[i])/cl[i]*100; tot++; sum+=ret; var w=(regime==='정배열')?(ret>0):(regime==='역배열')?(ret<0):(Math.abs(ret)<1); if(w)wins++; }
+  if(tot<8)return {n:tot,fwd:fwd,regime:regime,low:true,win:null};
+  return {n:tot,fwd:fwd,regime:regime,win:Math.round(wins/tot*100),avg:sum/tot,low:tot<15}; }
 function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.ccy; var P=function(v){return fmtP(v,ccy);};
   var nm=(typeof esc==='function')?esc(r.n||r.c||''):(r.n||r.c||'');
   var imgNote=opts.img?'<div style="font-size:12px;line-height:1.6;background:rgba(224,181,82,.08);border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin-bottom:9px">📎 <b>첨부한 차트 사진</b>은 <b>AI 대화형(비전) 단계</b>에서 직접 읽어 분석해요. 지금(규칙기반)은 사진 속 차트를 읽지 못해서, 아래는 <b>지금 열려 있는 '+nm+' 실데이터</b> 기준 분석 + 어떤 차트든 공통으로 보는 체크리스트예요.</div>':'';
@@ -849,8 +856,12 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     hd.push('<span style="color:var(--sub)">질문에 <b>“평단 29만”</b>처럼 넣으면 평가익/손 기준 방향을 계산해줘요.</span>'); }
   var brief=_c2('🆕 신규 진입 시', ne)+_c2('💼 평단 보유 시 (대응 방향)', hd);
   var mini=(typeof _miniChartSVG==='function')?_miniChartSVG(r,t):'';
+  var stat=(typeof _condStats==='function')?_condStats(r,t):null, statBox='';
+  if(stat){ var reg=stat.regime||'혼조', dirWord=(reg==='정배열')?'상승':(reg==='역배열')?'하락':'횡보', ac=(reg==='정배열')?'up':(reg==='역배열'?'down':'');
+    if(stat.win==null){ statBox='<div style="font-size:12px;color:var(--faint);background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;margin-bottom:9px">📊 <b>과거 통계</b> — 이 봉·이 종목 <b>'+reg+'</b> 구간 표본 '+stat.n+'회로 <b>부족</b>(신뢰도 낮음). 더 긴 봉으로 보면 표본이 늘어요.</div>'; }
+    else { statBox='<div style="font-size:12.5px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;margin-bottom:9px"><b>📊 이 조건의 과거 통계</b> <span style="color:var(--faint);font-size:11px">· 검증용</span><br>이 종목·봉의 <b>'+reg+'</b> 구간(표본 <b>'+stat.n+'</b>회) → <b>'+stat.fwd+'봉 뒤</b> '+dirWord+' <b>'+stat.win+'%</b> · 평균 <b class="'+ac+'">'+(stat.avg>=0?'+':'')+stat.avg.toFixed(1)+'%</b>'+(stat.low?' <span style="color:var(--faint)">(표본 적어 참고만)</span>':'')+'<div style="color:var(--faint);font-size:11px;margin-top:4px;line-height:1.5">과거 데이터 기반 <b>사후 통계</b> — 미래 수익을 보장하지 않아요.</div></div>'; } }
   var tfTag=(r._tfLabel)?'<div style="font-size:11.5px;color:var(--faint);margin-bottom:7px">📊 <b style="color:var(--sub)">'+nm+'</b> · <b style="color:var(--sub)">'+((typeof esc==='function')?esc(r._tfLabel):r._tfLabel)+' 봉</b> 기준 분석</div>':'';
-  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+tfTag+imgNote+biasBox+mini+chips+lines+brief+checklist
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+tfTag+imgNote+biasBox+statBox+mini+chips+lines+brief+checklist
     +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
