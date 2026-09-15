@@ -862,7 +862,8 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
     if(stat.win==null){ statBox='<div style="font-size:12px;color:var(--faint);background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;margin-bottom:9px">📊 <b>과거 통계</b> — 이 봉·이 종목 <b>'+reg+'</b> 구간 표본 '+stat.n+'회로 <b>부족</b>(신뢰도 낮음). 더 긴 봉으로 보면 표본이 늘어요.</div>'; }
     else { statBox='<div style="font-size:12.5px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:10px 12px;margin-bottom:9px"><b>📊 이 조건의 과거 통계</b> <span style="color:var(--faint);font-size:11px">· 검증용</span><br>이 종목·봉의 <b>'+reg+'</b> 구간(표본 <b>'+stat.n+'</b>회) → <b>'+stat.fwd+'봉 뒤</b> '+dirWord+' <b>'+stat.win+'%</b> · 평균 <b class="'+ac+'">'+(stat.avg>=0?'+':'')+stat.avg.toFixed(1)+'%</b>'+(stat.low?' <span style="color:var(--faint)">(표본 적어 참고만)</span>':'')+'<div style="color:var(--faint);font-size:11px;margin-top:4px;line-height:1.5">과거 데이터 기반 <b>사후 통계</b> — 미래 수익을 보장하지 않아요.</div></div>'; } }
   var tfTag=(r._tfLabel)?'<div style="font-size:11.5px;color:var(--faint);margin-bottom:7px">📊 <b style="color:var(--sub)">'+nm+'</b> · <b style="color:var(--sub)">'+((typeof esc==='function')?esc(r._tfLabel):r._tfLabel)+' 봉</b> 기준 분석</div>':'';
-  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+tfTag+imgNote+biasBox+statBox+mini+chips+lines+brief+checklist
+  var jnTag=''; try{ if(typeof _cjLoad==='function'&&r.c){ var _mine=_cjLoad().filter(function(x){return (x.sym||'').toUpperCase()===String(r.c).toUpperCase()&&x.status==='closed'&&x.pnl!=null;}); if(_mine.length>=2){ var _w=_mine.filter(function(x){return x.pnl>0;}).length, _sp=_mine.reduce(function(s,x){return s+x.pnl;},0); jnTag='<div style="font-size:12px;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;margin-bottom:9px">📓 <b>내 과거 매매</b> — '+nm+' <b>'+_mine.length+'건</b> · 승률 <b>'+Math.round(_w/_mine.length*100)+'%</b> · 누적 <b class="'+(_sp>=0?'up':'down')+'">'+(_sp>=0?'+':'')+_sp.toFixed(1)+'%</b> <span style="color:var(--faint)">(일지 기준 · 참고용)</span></div>'; } } }catch(e){}
+  return '<div style="color:var(--ink,#e8ecf3);font-size:13.5px">'+tfTag+jnTag+imgNote+biasBox+statBox+mini+chips+lines+brief+checklist
     +'<div style="font-size:11.5px;color:var(--sub);margin-top:9px;line-height:1.55">⚠ <b>교육용 기술적 분석</b> · 매매 지시나 수익 보장이 아니에요. 최종 판단은 손절·비중과 함께 본인이.</div></div>';
 }
 window.answerChartHTML=answerChartHTML;
@@ -2309,14 +2310,28 @@ window.coinCloseTrade=function(id){ var t=_cjLoad(), it=t.find(function(x){retur
   it.pnl=it.dir==='long'?(ex-it.en)/it.en*100:(it.en-ex)/it.en*100; it.status='closed'; it.exitP=ex;
   var ls=prompt('이번 매매에서 배운 점 (복기 · 선택)'); it.lesson=(ls||'').trim(); _cjSave(t); renderCoinJournal(); };
 window.coinDelTrade=function(id){ if(!confirm('이 기록을 삭제할까요?'))return; _cjSave(_cjLoad().filter(function(x){return x.id!==id;})); renderCoinJournal(); };
+/* 📊 매매일지 인사이트 — 내 성향 자기점검(교육용, 매매지시 아님) */
+function _journalInsights(trades){ var cl=(trades||[]).filter(function(x){return x.status==='closed'&&x.pnl!=null;}); if(cl.length<3)return null; var out=[];
+  function wr(a){ return a.length?a.filter(function(x){return x.pnl>0;}).length/a.length*100:null; }
+  var L=cl.filter(function(x){return x.dir==='long';}), S=cl.filter(function(x){return x.dir==='short';});
+  if(L.length>=2&&S.length>=2){ var wl=wr(L),ws=wr(S); if(Math.abs(wl-ws)>=20)out.push('<b>'+(wl>ws?'롱':'숏')+'</b>에서 승률이 높아요(롱 '+wl.toFixed(0)+'% · 숏 '+ws.toFixed(0)+'%). 약한 쪽은 진입 조건을 더 깐깐하게.'); }
+  var noStop=cl.filter(function(x){return !x.st;});
+  if(noStop.length>=2){ var avgNo=noStop.reduce(function(s,x){return s+x.pnl;},0)/noStop.length; out.push('<b>손절 없이</b> 들어간 매매 '+noStop.length+'건 평균 '+(avgNo>=0?'+':'')+avgNo.toFixed(1)+'%'+(avgNo<0?' — 손절 미설정이 손실로 이어지는 패턴.':'.')); }
+  var wins=cl.filter(function(x){return x.pnl>0;}), loss=cl.filter(function(x){return x.pnl<0;});
+  if(wins.length&&loss.length){ var aw=wins.reduce(function(s,x){return s+x.pnl;},0)/wins.length, al=Math.abs(loss.reduce(function(s,x){return s+x.pnl;},0)/loss.length); out.push('평균 이익 <b class="up">+'+aw.toFixed(1)+'%</b> vs 평균 손실 <b class="down">−'+al.toFixed(1)+'%</b>'+(al>aw*1.2?' — <b>손실이 더 커요</b>. 손절을 더 빨리(손익비 관리).':' — 손익비 양호 👍')); }
+  var streak=0,mx=0,i; for(i=0;i<cl.length;i++){ if(cl[i].pnl<0){streak++;if(streak>mx)mx=streak;}else streak=0; }
+  if(mx>=3)out.push('<b>연속 손실 최대 '+mx+'회</b> 기록 — 연속 손실 땐 <b>사이즈 축소·휴식</b>이 정석.');
+  var les=cl.filter(function(x){return x.lesson;}).length; out.push('복기(배운 점) 기록 <b>'+les+'/'+cl.length+'</b>건'+(les<cl.length*0.5?' — <b>복기율</b>을 높이면 실력이 빨리 늘어요.':' — 복기 습관 좋아요 👍'));
+  return out.slice(0,5); }
 function renderCoinJournal(){ var el=$('#cJournal'); if(!el)return; var t=_cjLoad(), closed=t.filter(function(x){return x.status==='closed';});
+  var _ins=_journalInsights(t), _insHtml=(_ins&&_ins.length)?('<div style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">📊 내 매매 패턴 <span class="muted" style="font-weight:400;font-size:11px">· 교육용 자기점검</span></div><ul style="margin:0;padding-left:17px;font-size:12.5px;line-height:1.6;display:flex;flex-direction:column;gap:5px">'+_ins.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>'):'';
   var wins=closed.filter(function(x){return x.pnl>0;}).length, wr=closed.length?wins/closed.length*100:0, sumPnl=closed.reduce(function(s,x){return s+(x.pnl||0);},0);
   var rs=closed.map(function(x){ if(!x.st)return null; var risk=Math.abs(x.en-x.st)/x.en*100; return risk?x.pnl/risk:null; }).filter(function(v){return v!=null;});
   var sumR=rs.reduce(function(s,v){return s+v;},0);
   var sc=function(k,v,c){return '<div style="flex:1;min-width:70px;text-align:center;padding:8px 4px;background:var(--panel2);border:1px solid var(--line);border-radius:9px"><div class="muted" style="font-size:10.5px;font-weight:700">'+k+'</div><div class="'+(c||'')+'" style="font-size:15px;font-weight:800;margin-top:2px">'+v+'</div></div>';};
   var stats='<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+sc('총 기록',t.length+'건')+sc('청산',closed.length+'건')+sc('승률',closed.length?wr.toFixed(0)+'%':'—',closed.length?(wr>=50?'up':'down'):'')+sc('누적 손익',(sumPnl>=0?'+':'')+sumPnl.toFixed(1)+'%',closed.length?(sumPnl>=0?'up':'down'):'')+sc('누적 R',(sumR>=0?'+':'')+sumR.toFixed(1)+'R',rs.length?(sumR>=0?'up':'down'):'')+'</div>';
   if(!t.length){ el.innerHTML=stats+'<div class="muted" style="font-size:12px;padding:4px 0">아직 기록이 없어요. 위 🧮 계산기의 <b>📓 이 설정 일지에 기록</b>을 눌러 진입 근거를 남기고, 청산 후 복기하세요.</div>'; return; }
-  el.innerHTML=stats+t.map(function(x){ var dc=x.dir==='long'?'up':'down', dn=x.dir==='long'?'롱':'숏';
+  el.innerHTML=stats+_insHtml+t.map(function(x){ var dc=x.dir==='long'?'up':'down', dn=x.dir==='long'?'롱':'숏';
     var head='<div style="display:flex;justify-content:space-between;align-items:center;font-weight:700"><span><b class="'+dc+'">'+dn+'</b> '+esc(x.sym)+'</span>'+(x.status==='closed'?'<span class="num '+(x.pnl>=0?'up':'down')+'">'+(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%</span>':'<span style="font-size:11px;color:var(--gold);font-weight:800">진행중</span>')+'</div>';
     var lv='진입 '+x.en+(x.st?' · 손절 '+x.st:'')+(x.tg?' · 목표 '+(+x.tg).toFixed(4):'')+(x.exitP?' · 청산 '+x.exitP:'');
     var memo=x.memo?'<div class="muted" style="font-size:11.5px;margin-top:4px">📝 '+esc(x.memo)+'</div>':'';
