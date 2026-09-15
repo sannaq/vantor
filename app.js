@@ -219,6 +219,7 @@ async function renderWatch(){
     }).join('')+'</tbody></table>';
   $$('#watchPanel .rowbtn').forEach(function(tr){ tr.onclick=function(){ openStock(tr.dataset.c); }; });
   if($('#watchupd'))$('#watchupd').textContent='· '+nowHM()+' · '+WATCH.length+'종목';
+  if(typeof mountScan==='function')mountScan(el,'stock');
 }
 /* ETF/ETN 판별 — 한국 ETF는 예외 없이 운용사 브랜드가 종목명 맨 앞에 붙는다.
    레버리지·인버스도 여기서 걸러진다(사용자가 토글로 제외 선택 시). */
@@ -807,6 +808,15 @@ function _condStats(r,t){ var cs=r&&r._candles; if(!cs||cs.length<45)return null
   for(i=25;i<n-fwd;i++){ var m5=ma(i,5),m20=ma(i,20); if(m5==null||m20==null)continue; var st=(m5>m20*1.001)?'정배열':((m5<m20*0.999)?'역배열':'혼조'); if(st!==regime)continue; var ret=(cl[i+fwd]-cl[i])/cl[i]*100; tot++; sum+=ret; var w=(regime==='정배열')?(ret>0):(regime==='역배열')?(ret<0):(Math.abs(ret)<1); if(w)wins++; }
   if(tot<8)return {n:tot,fwd:fwd,regime:regime,low:true,win:null};
   return {n:tot,fwd:fwd,regime:regime,win:Math.round(wins/tot*100),avg:sum/tot,low:tot<15}; }
+/* 📌 방향 관점(bias) 계산 — 분석·스캔 공용. 근거 종합 교육용 요약(신호 아님) */
+function _biasOf(t){ if(!t)return null; var dR=((t.resAbove-t.px)/t.px*100), dS=((t.px-t.supBelow)/t.px*100), s=0;
+  s+=(t.trend==='우상향'?1:(t.trend==='우하향'?-1:0));
+  s+=(t.arr==='정배열'?1:(t.arr==='역배열'?-1:0));
+  if(t.rsi!=null){ if(t.rsi<=35)s+=0.5; else if(t.rsi>=65)s-=0.5; }
+  if(t.pos>=80)s-=0.5; else if(t.pos<=20)s+=0.5;
+  if(dS<=1.5)s+=0.5; if(dR<=1.5)s-=0.5;
+  var label,cls; if(s>=1.5){label='매수 우호';cls='up';} else if(s<=-1.5){label='조정 주의';cls='down';} else {label='중립·관망';cls='';}
+  return {score:s,label:label,cls:cls,dR:dR,dS:dS}; }
 function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.ccy; var P=function(v){return fmtP(v,ccy);};
   var nm=(typeof esc==='function')?esc(r.n||r.c||''):(r.n||r.c||'');
   var imgNote=opts.img?'<div style="font-size:12px;line-height:1.6;background:rgba(224,181,82,.08);border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin-bottom:9px">📎 <b>첨부한 차트 사진</b>은 <b>AI 대화형(비전) 단계</b>에서 직접 읽어 분석해요. 지금(규칙기반)은 사진 속 차트를 읽지 못해서, 아래는 <b>지금 열려 있는 '+nm+' 실데이터</b> 기준 분석 + 어떤 차트든 공통으로 보는 체크리스트예요.</div>':'';
@@ -818,12 +828,7 @@ function answerChartHTML(r,q,opts){ opts=opts||{}; var t=_taRead(r); var ccy=r.c
   var tc=t.trend==='우상향'?'up':(t.trend==='우하향'?'down':''), ac=t.arr==='정배열'?'up':(t.arr==='역배열'?'down':'');
   var rc=t.rsi==null?'':(t.rsi>=65?'down':(t.rsi<=35?'up':''));
   // 📌 방향 관점(bias) — 근거 종합. 매매 지시가 아니라 '어디로 더 기울어 있나' 교육용 요약.
-  var bScore=0;
-  bScore+=(t.trend==='우상향'?1:(t.trend==='우하향'?-1:0));
-  bScore+=(t.arr==='정배열'?1:(t.arr==='역배열'?-1:0));
-  if(t.rsi!=null){ if(t.rsi<=35)bScore+=0.5; else if(t.rsi>=65)bScore-=0.5; }
-  if(t.pos>=80)bScore-=0.5; else if(t.pos<=20)bScore+=0.5;
-  if(dS<=1.5)bScore+=0.5; if(dR<=1.5)bScore-=0.5;
+  var _bo=_biasOf(t), bScore=_bo.score;
   var bias,bcls,bcond;
   if(bScore>=1.5){ bias='매수 우호'; bcls='up'; bcond='지지 '+P(t.supBelow)+' 위에서 눌림·반등 확인 관점 — 이 라인 이탈하면 무효.'; }
   else if(bScore<=-1.5){ bias='조정 주의'; bcls='down'; bcond='저항 '+P(t.resAbove)+' 부담·되돌림 주의 — 돌파 후 지지 전환하면 관점 바뀜.'; }
@@ -939,6 +944,31 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
 }
 window.mountHomeAsk=mountHomeAsk;
 try{ mountHomeAsk('#aiAsk','stock'); }catch(e){}
+/* ── 📡 관심종목 방향 스캔 (관심종목들 방향 관점 한눈에) ── */
+function mountScan(host,scope){ if(!host||host.querySelector('.scGo'))return; var TFS=scope==='coin'?[['1h','1시간'],['15m','15분'],['4h','4시간'],['1d','일봉']]:[['D','일봉'],['15','15분'],['60','60분']];
+  var wrap=document.createElement('div'); wrap.className='card'; wrap.style.marginBottom='14px';
+  wrap.innerHTML='<div class="ch"><h2>📡 방향 스캔 <span style="font-weight:600;color:var(--faint);font-size:12px">관심종목 방향 관점 한눈에 · 교육용</span></h2></div>'
+    +'<div class="pad" style="padding-top:10px"><div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px"><span style="font-size:11.5px;color:var(--faint);font-weight:700">봉</span>'+TFS.map(function(t,i){return '<button class="scTf'+(i===0?' on':'')+'" data-tf="'+t[0]+'" style="background:'+(i===0?'var(--gold,#e0a83e)':'transparent')+';color:'+(i===0?'#1a1400':'var(--sub)')+';border:1px solid var(--line2);border-radius:16px;padding:4px 12px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+t[1]+'</button>';}).join('')+'<button class="scGo" style="margin-left:auto;background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:6px 18px;font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer">스캔</button></div><div class="scRes" style="font-size:12.5px;color:var(--sub)">‘스캔’을 누르면 관심종목의 <b>방향 관점</b>을 한 번에 계산해요.</div></div>';
+  var anchor=host.querySelector('.sec-sub'); if(anchor&&anchor.parentNode===host){ host.insertBefore(wrap,anchor.nextSibling); } else { host.insertBefore(wrap,host.firstChild); }
+  var tf=TFS[0][0], tfBtns=wrap.querySelectorAll('.scTf');
+  tfBtns.forEach(function(b){ b.onclick=function(){ tfBtns.forEach(function(x){x.classList.remove('on');x.style.background='transparent';x.style.color='var(--sub)';}); b.classList.add('on');b.style.background='var(--gold,#e0a83e)';b.style.color='#1a1400'; tf=b.dataset.tf; }; });
+  var res=wrap.querySelector('.scRes'); wrap.querySelector('.scGo').onclick=function(){ runScan(scope,tf,res); };
+}
+function runScan(scope,tf,res){ var list=scope==='coin'?((typeof _coinFav==='function')?_coinFav():[]):((typeof WATCH!=='undefined'&&WATCH)?WATCH.slice():[]);
+  if(!list.length){ res.innerHTML='<span style="color:var(--faint)">관심종목이 없어요. 목록·상세·RADAR에서 ☆(코인은 ★)로 담아보세요.</span>'; return; }
+  list=list.slice(0,24); res.innerHTML='<span style="color:var(--faint)">'+list.length+'종목 스캔 중…</span>';
+  function chunk(a,n){var o=[];for(var k=0;k<a.length;k+=n)o.push(a.slice(k,k+n));return o;} var chunks=chunk(list,6), done=[];
+  (function next(ci){ if(ci>=chunks.length){ render(); return; }
+    Promise.all(chunks[ci].map(function(sym){ return homeResolve(scope,sym,tf,'').then(function(r){ if(!r||r.__nodata||!r._candles)return {sym:sym,err:1}; var t=_taRead(r); if(!t)return {sym:sym,err:1}; return {sym:(r.n||sym),t:t,b:_biasOf(t),px:t.px,ccy:r.ccy}; }).catch(function(){return {sym:sym,err:1};}); }))
+    .then(function(rc){ done=done.concat(rc); res.innerHTML='<span style="color:var(--faint)">'+done.length+'/'+list.length+' 스캔…</span>'; next(ci+1); }); })(0);
+  function render(){ var ok=done.filter(function(x){return !x.err&&x.b;}); ok.sort(function(a,b){return b.b.score-a.b.score;}); var P=function(v,ccy){return fmtP(v,ccy);};
+    var head='<div style="display:flex;font-size:11px;color:var(--faint);font-weight:700;padding:5px 9px;gap:8px"><span style="flex:1">종목</span><span style="width:72px;text-align:center">방향 관점</span><span style="width:52px;text-align:right">추세</span><span style="width:40px;text-align:right">RSI</span><span style="width:66px;text-align:right">현재가</span></div>';
+    var rows=ok.map(function(x){ return '<div style="display:flex;align-items:center;gap:8px;padding:8px 9px;border-top:1px solid var(--line2)"><span style="flex:1;font-weight:700;font-size:13px">'+esc(x.sym)+'</span><span class="'+x.b.cls+'" style="width:72px;text-align:center;font-weight:800;font-size:12.5px">'+x.b.label+'</span><span class="'+(x.t.trend==='우상향'?'up':x.t.trend==='우하향'?'down':'')+'" style="width:52px;text-align:right;font-size:12px">'+x.t.trend+'</span><span style="width:40px;text-align:right;font-size:12px">'+(x.t.rsi!=null?x.t.rsi.toFixed(0):'—')+'</span><span style="width:66px;text-align:right;font-weight:700;font-size:12px">'+P(x.px,x.ccy)+'</span></div>'; }).join('');
+    var nUp=ok.filter(function(x){return x.b.cls==='up';}).length, nDn=ok.filter(function(x){return x.b.cls==='down';}).length, errs=done.filter(function(x){return x.err;}).length;
+    res.innerHTML='<div style="font-size:12px;color:var(--sub);margin-bottom:6px">매수 우호 <b class="up">'+nUp+'</b> · 중립 <b>'+(ok.length-nUp-nDn)+'</b> · 조정 주의 <b class="down">'+nDn+'</b> <span style="color:var(--faint)">(방향 관점순 정렬)</span></div><div style="border:1px solid var(--line2);border-radius:10px;overflow:hidden">'+head+rows+'</div>'+(errs?'<div style="font-size:11px;color:var(--faint);margin-top:6px">'+errs+'종목 데이터 없음(분봉·장마감 등)</div>':'')+'<div style="font-size:11px;color:var(--faint);margin-top:6px">📌 방향 관점 = 근거 종합 교육용 요약 · 매매 신호 아님</div>';
+  }
+}
+window.mountScan=mountScan; window.runScan=runScan;
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
 var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings'];
@@ -1640,7 +1670,8 @@ async function renderCoinWatch(el){ var f=_coinFav();
     var rows=f.map(function(sym){ var t=mp[sym+'USDT']; if(!t)return ''; var ch=+t.priceChangePercent, col=cCol(ch);
       return '<div class="rowbtn" style="display:flex;justify-content:space-between;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line2);cursor:pointer" onclick="openCoin(\''+esc(sym)+'\')"><span><span class="cfav on" data-sym="'+esc(sym)+'" onclick="toggleCoinFav(\''+esc(sym)+'\',event)" style="cursor:pointer;color:#f5b301">★</span> <b>'+esc(sym)+'</b></span><span style="display:flex;gap:14px;align-items:center"><span class="num">'+coinPx(+t.lastPrice)+'</span><span class="num" style="color:'+col+';font-weight:700;min-width:66px;text-align:right">'+(ch>=0?'▲ +':'▼ ')+Math.abs(ch).toFixed(2)+'%</span></span></div>';
     }).join(''); var le=$('#cwList'); if(le)le.innerHTML=rows||'<div class="muted" style="font-size:12px">해당 코인 시세가 없어요</div>';
-  }catch(e){ var le2=$('#cwList'); if(le2)le2.innerHTML='<div class="muted" style="font-size:12px">불러오지 못했어요</div>'; } }
+  }catch(e){ var le2=$('#cwList'); if(le2)le2.innerHTML='<div class="muted" style="font-size:12px">불러오지 못했어요</div>'; }
+  if(typeof mountScan==='function')mountScan(el,'coin'); }
 window.renderCoinWatch=renderCoinWatch;
 /* 코인 뉴스 & 트렌딩 */
 async function renderCoinNews(el){
