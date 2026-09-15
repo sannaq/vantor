@@ -552,7 +552,7 @@
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="내 계정">👤</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="기기 간 동기화" onclick="openSync()">☁️</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
 </nav>
 
 <div class="wrap">
@@ -717,7 +717,7 @@
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
 
-<script src="app.js?v=68"></script>
+<script src="app.js?v=69"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

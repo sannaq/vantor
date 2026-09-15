@@ -934,6 +934,42 @@ function mountHomeAsk(sel,scope){ var host=document.querySelector(sel); if(!host
 }
 window.mountHomeAsk=mountHomeAsk;
 try{ mountHomeAsk('#aiAsk','stock'); }catch(e){}
+/* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
+var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk'];
+function _syncCode(){ try{return localStorage.getItem('aurSyncCode')||'';}catch(e){return '';} }
+function _syncCollect(){ var d={}; _SYNC_KEYS.forEach(function(k){ try{ var v=localStorage.getItem(k); if(v!=null)d[k]=v; }catch(e){} }); return {ver:1,ts:Date.now(),data:d}; }
+function _syncHash(b){ try{return JSON.stringify(b.data);}catch(e){return '';} }
+var _syncLast='';
+function syncPush(cb){ var code=_syncCode(); if(!code||!_SYNC_URL){cb&&cb(null);return;} var blob=_syncCollect(); _syncLast=_syncHash(blob);
+  fetch(_SYNC_URL+'?key='+encodeURIComponent(code),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(blob)}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){try{localStorage.setItem('aurSyncTs',String(j.ts||Date.now()));}catch(e){}} cb&&cb(j); }).catch(function(){ cb&&cb(null); }); }
+function syncApply(blob){ if(!blob||!blob.data)return 0; var n=0; _SYNC_KEYS.forEach(function(k){ if(blob.data[k]!=null){ try{localStorage.setItem(k,blob.data[k]);n++;}catch(e){} } }); return n; }
+function syncPull(code,cb){ code=code||_syncCode(); if(!code){cb&&cb(null);return;} fetch(_SYNC_URL+'?key='+encodeURIComponent(code)).then(function(r){return r.json();}).then(function(j){cb&&cb(j);}).catch(function(){cb&&cb(null);}); }
+function _newSyncCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; function seg(){var s='';for(var i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;} return 'VANTOR-'+seg()+'-'+seg()+'-'+seg(); }
+setInterval(function(){ if(!_syncCode())return; if(_syncHash(_syncCollect())!==_syncLast)syncPush(); },20000);
+window.addEventListener('beforeunload',function(){ var code=_syncCode(); if(!code)return; try{ var blob=_syncCollect(); if(_syncHash(blob)!==_syncLast&&navigator.sendBeacon){ navigator.sendBeacon(_SYNC_URL+'?key='+encodeURIComponent(code), new Blob([JSON.stringify(blob)],{type:'application/json'})); } }catch(e){} });
+window.openSync=function(){ var code=_syncCode(); var bg=document.createElement('div'); bg.className='modal-bg';
+  var ts=''; try{var t=+localStorage.getItem('aurSyncTs');if(t)ts=new Date(t).toLocaleString('ko-KR');}catch(e){}
+  var inCss='flex:1;font-family:monospace;font-size:14px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--ink);outline:none';
+  var body;
+  if(code){ body='<div class="msub">이 기기는 아래 코드로 동기화 중이에요. <b style="color:var(--down)">코드를 아는 사람은 내 관심종목·일지에 접근할 수 있으니 남과 공유 금지.</b></div>'
+    +'<div style="padding:0 20px"><div style="display:flex;gap:8px;align-items:center;margin:10px 0"><input id="syCode" readonly value="'+code+'" style="'+inCss+';font-weight:800;letter-spacing:1px"><button class="mbtn" id="syCopy">복사</button></div>'
+    +(ts?'<div style="font-size:12px;color:var(--faint)">마지막 업로드 '+ts+'</div>':'')
+    +'<div style="margin-top:14px;font-size:12.5px;color:var(--sub)">다른 기기에서 <b>같은 코드</b>를 입력하면 이 설정을 그대로 불러와요.</div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><input id="syIn" placeholder="다른 코드로 불러오기" style="'+inCss+'"><button class="mbtn" id="syLoad">불러오기</button></div></div>'; }
+  else { body='<div class="msub">계정·비밀번호 없이 <b>코드 하나</b>로 여러 기기에서 관심종목·매매일지·설정을 공유해요.</div>'
+    +'<div style="padding:0 20px"><button class="mbtn pri" id="syNew" style="width:100%;margin-bottom:12px">☁️ 동기화 코드 만들기</button>'
+    +'<div style="font-size:12.5px;color:var(--sub);margin-bottom:6px">이미 코드가 있나요?</div>'
+    +'<div style="display:flex;gap:8px"><input id="syIn" placeholder="예: VANTOR-ABCD-EFGH-JKLM" style="'+inCss+'"><button class="mbtn" id="syLoad">불러오기</button></div></div>'; }
+  bg.innerHTML='<div class="modal" style="max-width:440px"><h3>☁️ 기기 간 동기화</h3>'+body+'<div id="syMsg" style="padding:8px 20px 2px;font-size:12px;color:var(--faint);min-height:16px"></div><div class="mfoot"><button class="mbtn" id="syClose">닫기</button></div></div>';
+  document.body.appendChild(bg); function close(){bg.remove();}
+  bg.addEventListener('click',function(e){if(e.target===bg)close();});
+  var Q=function(s){return bg.querySelector(s);}; Q('#syClose').onclick=close;
+  var msg=Q('#syMsg'); function say(t,c){msg.innerHTML=t;msg.style.color=c||'var(--faint)';}
+  var cp=Q('#syCopy'); if(cp)cp.onclick=function(){ try{navigator.clipboard.writeText(code);say('복사됐어요 ✓','var(--up)');}catch(e){var i=Q('#syCode');i.select();try{document.execCommand('copy');}catch(_){}say('복사됨');} };
+  var nw=Q('#syNew'); if(nw)nw.onclick=function(){ var c=_newSyncCode(); try{localStorage.setItem('aurSyncCode',c);}catch(e){} say('코드 생성 · 업로드 중…'); syncPush(function(j){ if(j&&j.ok){ close(); openSync(); } else say('업로드 실패 — 잠시 후 다시','var(--down)'); }); };
+  var ld=Q('#syLoad'); if(ld)ld.onclick=function(){ var c=(Q('#syIn').value||'').trim().toUpperCase(); if(!/^[A-Z0-9-]{8,64}$/.test(c)){say('코드 형식을 확인하세요','var(--down)');return;} say(c+' 불러오는 중…'); syncPull(c,function(j){ if(j&&j.ok&&j.found&&j.data){ var n=syncApply(j.data); try{localStorage.setItem('aurSyncCode',c);}catch(e){} say(n+'개 항목 불러옴 · 새로고침…','var(--up)'); setTimeout(function(){location.reload();},800); } else if(j&&j.ok&&!j.found){ say('그 코드에 저장된 데이터가 없어요','var(--down)'); } else { say('불러오기 실패 — 코드를 확인하세요','var(--down)'); } }); };
+};
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
   var W=120,H=240,pad=20,cx=60,bw=44, rng=(h-l)||1;
