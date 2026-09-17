@@ -1682,6 +1682,7 @@ var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')"
   +'<a class="cmenu-a" data-cs="watch" onclick="coinNav(\'watch\')">관심</a>'
   +'<a class="cmenu-a" data-cs="learn" onclick="coinNav(\'learn\')">기초</a>'
   +'<a class="cmenu-a" data-cs="bt" onclick="coinNav(\'bt\')">📼 백테스트</a>'
+  +'<a class="cmenu-a" data-cs="flow" onclick="coinNav(\'flow\')">💥 흐름</a>'
   +'<a class="cmenu-a" data-cs="liq" onclick="coinNav(\'liq\')">🔥 청산맵</a>';
 function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
   if(on){ if(_stockMenuHTML===null)_stockMenuHTML=menu.innerHTML; menu.innerHTML=_COIN_MENU; menu.style.display='flex'; }
@@ -1689,7 +1690,7 @@ function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
 function _ensureCoinSection(){ var s=$('#coinSection'); if(!s){ var host=$('#coinHost'); if(!host)return null; s=document.createElement('div'); s.id='coinSection'; s.style.display='none'; host.parentNode.insertBefore(s,host); } return s; }
 window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect=_ensureCoinSection(); if(!sect)return;
   if(sec==='liq'){ if(typeof openLiqMap==='function')openLiqMap(_coinCur||'BTC'); return; }
-  if(typeof stopLiq==='function')stopLiq(); // 다른 섹션으로 가면 청산맵 엔진 정리
+  if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); // 다른 섹션으로 가면 엔진 정리
   $$('#menu .cmenu-a').forEach(function(a){ a.classList.toggle('on',a.dataset.cs===sec); });
   if(host){host.style.display='none';host.innerHTML='';}
   if(sec==='home'||sec==='radar'||sec==='sector'){ if(body)body.style.display=''; sect.style.display='none';
@@ -1700,6 +1701,7 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
   if(sec==='ai'){ sect.innerHTML='<div class="sec-title">🤖 차트 분석 도우미</div><p class="sec-sub">코인·종목을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p><div id="aiAskCoin"></div>'; if(typeof mountHomeAsk==='function')mountHomeAsk('#aiAskCoin','coin'); return; }
   if(sec==='bt'){ if(typeof renderBacktestReplay==='function')renderBacktestReplay(sect); return; }
+  if(sec==='flow'){ if(typeof renderFlowMarkers==='function')renderFlowMarkers(sect); return; }
   if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
 };
 /* 관심 코인(즐겨찾기) */
@@ -1922,6 +1924,59 @@ function renderBacktestReplay(el){ var sym=(_coinCur||'BTC');
   run();
 }
 window.renderBacktestReplay=renderBacktestReplay;
+/* ── 💥 대량 흐름 마커 (실시간 큰손 진입/청산을 캔들 차트에 · 관찰용 · 신호 아님) ── */
+var _flowEng=null;
+function stopFlow(){ if(_flowEng&&_flowEng.stop){try{_flowEng.stop();}catch(e){}} _flowEng=null; }
+window.stopFlow=stopFlow;
+function renderFlowMarkers(el){ var sym=(_coinCur||'BTC');
+  el.innerHTML='<div class="sec-title">💥 대량 흐름 마커 <span style="color:var(--faint);font-weight:500;font-size:12px">· 실시간 큰손 진입·청산 · 관찰용(신호 아님)</span></div>'
+    +'<p class="sec-sub"><b>대량 체결</b>(공격적 매수=롱 진입 / 매도=숏 진입)과 <b>청산</b>을 캔들에 마커로 표시해요. 바이낸스는 <b>실시간</b>만 줘서 <b>켜둔 동안 쌓여요</b>(과거 이력 없음).</p>'
+    +'<div class="card"><div class="pad"><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'
+    +'<input id="flSym" value="'+esc(sym)+'" style="width:110px;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:8px 11px;color:var(--ink);font-family:inherit;font-size:13px;outline:none">'
+    +'<span style="font-size:11.5px;color:var(--faint);font-weight:700">최소 규모</span><select id="flThr" style="background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:6px 9px;color:var(--ink);font-family:inherit;font-size:12px"><option value="100000">1.3억↑</option><option value="300000" selected>4억↑</option><option value="700000">9억↑</option><option value="1500000">20억↑</option></select>'
+    +'<span style="font-size:11px;color:#8b96a7">● <span id="flLive">연결 중…</span></span></div>'
+    +'<canvas id="flCv" style="width:100%;height:300px;display:block"></canvas>'
+    +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:11.5px;color:var(--faint)"><span style="color:#2ebd85">▲ 롱 진입(대량 매수)</span><span style="color:#f6465d">▼ 숏 진입(대량 매도)</span><span style="color:#e0b552">✕ 청산</span></div>'
+    +'<div style="font-weight:800;font-size:12.5px;margin-top:12px">🔴 실시간 대량 체결·청산</div><div id="flFeed" style="max-height:220px;overflow:auto;margin-top:6px"></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:8px;line-height:1.5">⚠ 큰손 흐름 <b>관찰</b>이에요. "롱 진입 많다=사라"가 아니라, 대량 매수/매도가 <b>어디서</b> 나오는지 보는 거예요. 청산은 반대 압력 신호일 수 있어요(롱 청산=하방·숏 청산=상방).</div>'
+    +'</div></div>';
+  stopFlow(); _flowEng=_makeFlowEngine(sym); _flowEng.start();
+  el.querySelector('#flSym').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); var s=(this.value||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,''); stopFlow(); _flowEng=_makeFlowEngine(s); _flowEng.start(); } });
+  el.querySelector('#flThr').onchange=function(){ if(_flowEng&&_flowEng.setThr)_flowEng.setThr(+this.value); };
+}
+window.renderFlowMarkers=renderFlowMarkers;
+function _makeFlowEngine(sym){ var $=function(s){return document.querySelector(s);};
+  var st={sym:(sym||'BTC').toUpperCase(),candles:[],price:0,markers:[],thr:300000,feed:[],ws1:null,ws2:null};
+  var stopped=false,timers=[],dirty=true,cv,ctx,W=0,H=0,DPR=Math.min(2,window.devicePixelRatio||1),PADL=6,PADR=64,PADT=30,PADB=18;
+  function fmtKR(usd){ var k=usd*1380; if(k>=1e12)return (k/1e12).toFixed(1)+'조'; if(k>=1e8)return (k/1e8).toFixed(k>=1e9?0:1)+'억'; if(k>=1e4)return Math.round(k/1e4)+'만'; return Math.round(k)+''; }
+  function fmtPx(v){ if(v>=1000)return v.toLocaleString('en-US',{maximumFractionDigits:1}); if(v>=1)return v.toFixed(3); return v.toFixed(5); }
+  function loadK(){ return fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+st.sym+'USDT&interval=1m&limit=90').then(function(r){return r.json();}).then(function(a){ if(Array.isArray(a)&&a.length){ st.candles=a.map(function(k){return {t:k[0],o:+k[1],h:+k[2],l:+k[3],c:+k[4]};}); st.price=st.candles[st.candles.length-1].c; dirty=true; } }).catch(function(){}); }
+  function addMark(p,usd,side,type){ st.markers.push({t:Date.now(),p:p,usd:usd,side:side,type:type}); if(st.markers.length>60)st.markers.shift(); st.feed.unshift({t:Date.now(),p:p,usd:usd,side:side,type:type}); if(st.feed.length>50)st.feed.pop(); st.price=p; dirty=true; renderFeed(); }
+  function renderFeed(){ var el=$('#flFeed'); if(!el)return; el.innerHTML=st.feed.map(function(f){ var lab=f.type==='liq'?((f.side==='long'?'롱':'숏')+' 청산'):((f.side==='long'?'롱':'숏')+' 진입'); var col=f.type==='liq'?'#e0b552':(f.side==='long'?'#2ebd85':'#f6465d'); var tm=new Date(f.t); return '<div style="display:flex;justify-content:space-between;gap:8px;padding:6px 2px;border-bottom:1px solid var(--line2);font-size:12px"><span style="color:'+col+';font-weight:700">'+lab+'</span><span class="muted">'+fmtPx(f.p)+'</span><span style="font-weight:800;color:'+col+'">'+fmtKR(f.usd)+'원</span><span class="muted" style="font-size:10.5px">'+('0'+tm.getHours()).slice(-2)+':'+('0'+tm.getMinutes()).slice(-2)+':'+('0'+tm.getSeconds()).slice(-2)+'</span></div>'; }).join('')||'<div class="muted" style="font-size:12px;padding:8px 2px">대량 체결·청산 대기 중… (큰 거래가 나오면 여기 표시)</div>'; }
+  function connect(){ var lo=st.sym.toLowerCase()+'usdt';
+    try{ st.ws1=new WebSocket('wss://fstream.binance.com/ws/'+lo+'@aggTrade'); st.ws1.onopen=function(){ var l=$('#flLive'); if(l)l.textContent='실시간 연결됨'; }; st.ws1.onmessage=function(e){ var m; try{m=JSON.parse(e.data);}catch(x){return;} var p=+m.p,q=+m.q; if(!(p>0)||!(q>0))return; var usd=p*q; if(usd>=st.thr)addMark(p,usd,m.m?'short':'long','entry'); }; }catch(e){}
+    try{ st.ws2=new WebSocket('wss://fstream.binance.com/ws/'+lo+'@forceOrder'); st.ws2.onmessage=function(e){ var m; try{m=JSON.parse(e.data);}catch(x){return;} var o=m.o||m; if(!o||!o.p)return; var p=+o.p,q=+(o.q||o.l||0),usd=p*q; if(usd>=Math.max(50000,st.thr*0.5))addMark(p,usd,o.S==='SELL'?'long':'short','liq'); }; }catch(e){}
+  }
+  function resize(){ if(!cv)return; var r=cv.getBoundingClientRect(); if(r.width<20)return; W=r.width;H=r.height; cv.width=W*DPR;cv.height=H*DPR; ctx.setTransform(DPR,0,0,DPR,0,0); dirty=true; }
+  function draw(){ if(stopped)return; if(!dirty){ requestAnimationFrame(draw); return; } dirty=false; ctx.clearRect(0,0,W,H); var cs=st.candles; if(!cs.length){ requestAnimationFrame(draw); return; }
+    var lo=Infinity,hi=-Infinity,i; for(i=0;i<cs.length;i++){ if(cs[i].l<lo)lo=cs[i].l; if(cs[i].h>hi)hi=cs[i].h; } for(i=0;i<st.markers.length;i++){ if(st.markers[i].p<lo)lo=st.markers[i].p; if(st.markers[i].p>hi)hi=st.markers[i].p; } var pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad; var span=(hi-lo)||1;
+    var cl=PADL,cr=W-PADR,cw=cr-cl,ct=PADT,cb=H-PADB,chh=cb-ct; function y(p){ return ct+(hi-p)/span*chh; }
+    var t0=cs[0].t, tN=Date.now(); function xT(t){ return cl+(t-t0)/((tN-t0)||1)*cw; }
+    var n=cs.length,bw=cw/ (n+2);
+    for(i=0;i<n;i++){ var c=cs[i],cx=xT(c.t),up=c.c>=c.o,col=up?'#2ebd85':'#f6465d',bwid=Math.max(1,bw*0.6),yo=y(c.o),yc=y(c.c),top=Math.min(yo,yc),hg=Math.max(1,Math.abs(yc-yo)); ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1; ctx.beginPath();ctx.moveTo(cx,y(c.h));ctx.lineTo(cx,y(c.l));ctx.stroke(); ctx.fillRect(cx-bwid/2,top,bwid,hg); }
+    // price line
+    if(st.price){ var yp=y(st.price); ctx.strokeStyle='rgba(224,181,82,0.8)';ctx.setLineDash([2,3]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cl,yp);ctx.lineTo(cr,yp);ctx.stroke();ctx.setLineDash([]); ctx.fillStyle='#e0b552';ctx.fillRect(cr,yp-8,PADR,16);ctx.fillStyle='#1a1400';ctx.font='700 10px sans-serif';ctx.textAlign='left';ctx.fillText(fmtPx(st.price),cr+4,yp+3);ctx.textAlign='start'; }
+    // markers
+    ctx.textAlign='center'; st.markers.forEach(function(mk){ var mx=xT(mk.t); if(mx<cl)mx=cl; if(mx>cr)mx=cr; var my=y(mk.p); if(mk.type==='liq'){ ctx.fillStyle='#e0b552'; ctx.font='800 12px sans-serif'; ctx.fillText('✕',mx,my+4); ctx.font='700 8px sans-serif'; ctx.fillText(fmtKR(mk.usd),mx,my-8); } else if(mk.side==='long'){ ctx.fillStyle='#2ebd85'; ctx.font='800 13px sans-serif'; ctx.fillText('▲',mx,my+16); ctx.font='800 8.5px sans-serif'; ctx.fillText('롱 '+fmtKR(mk.usd),mx,my+27); } else { ctx.fillStyle='#f6465d'; ctx.font='800 13px sans-serif'; ctx.fillText('▼',mx,my-10); ctx.font='800 8.5px sans-serif'; ctx.fillText('숏 '+fmtKR(mk.usd),mx,my-20); } });
+    ctx.textAlign='start';
+    ctx.fillStyle='#5a6576';ctx.font='10px sans-serif';ctx.textAlign='left'; for(var g=0;g<=4;g++){ var pp=hi-(hi-lo)*g/4, yy=ct+chh*g/4; ctx.strokeStyle='rgba(33,42,56,0.4)';ctx.beginPath();ctx.moveTo(cl,yy);ctx.lineTo(cr,yy);ctx.stroke(); ctx.fillStyle='#5a6576';ctx.fillText(fmtPx(pp),cr+4,yy+3); } ctx.textAlign='start';
+    requestAnimationFrame(draw); }
+  function start(){ cv=$('#flCv'); if(!cv)return; ctx=cv.getContext('2d'); renderFeed(); resize(); [60,200,500,1200].forEach(function(ms){ timers.push(setTimeout(resize,ms)); });
+    loadK(); connect(); requestAnimationFrame(draw);
+    timers.push(setInterval(function(){ loadK(); },30000)); timers.push(setInterval(function(){ dirty=true; },1000)); window.addEventListener('resize',resize); }
+  function stop(){ stopped=true; [st.ws1,st.ws2].forEach(function(w){ if(w){try{w.onclose=null;w.close();}catch(e){}} }); timers.forEach(function(t){clearTimeout(t);clearInterval(t);}); timers=[]; }
+  function setThr(v){ st.thr=+v||300000; }
+  return { start:start, stop:stop, setThr:setThr }; }
 window._toggleLacc=function(btn){ var it=btn.closest('.lacc'); if(!it)return; it.classList.toggle('open'); var x=btn.querySelector('.lacc-x'); if(x)x.textContent=it.classList.contains('open')?'−':'＋'; };
 window._toggleAllLacc=function(btn){ var root=btn.closest('#coinSection')||document, accs=root.querySelectorAll('.lacc'); var anyClosed=[].some.call(accs,function(a){return !a.classList.contains('open');});
   accs.forEach(function(a){ a.classList.toggle('open',anyClosed); var x=a.querySelector('.lacc-x'); if(x)x.textContent=anyClosed?'−':'＋'; }); btn.textContent=anyClosed?'전체 접기':'전체 펼치기'; };
@@ -2088,7 +2143,7 @@ var _coinCur=null;
 async function openCoin(sym){
   sym=(sym||'BTC').toUpperCase().replace(/USDT$/,''); _coinCur=sym;
   var host=$('#coinHost'), body=$('#coinBody'); if(!host)return;
-  host.style.display='block'; if(body)body.style.display='none'; var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(typeof stopLiq==='function')stopLiq(); window.scrollTo({top:0,behavior:'smooth'});
+  host.style.display='block'; if(body)body.style.display='none'; var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); window.scrollTo({top:0,behavior:'smooth'});
   host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;padding:0;margin-bottom:10px;cursor:pointer">◀ 코인 목록</button><div style="padding:30px;color:var(--faint)">'+esc(sym)+' 불러오는 중…</div>';
   var s=sym+'USDT', F='https://fapi.binance.com/fapi/v1/', D='https://fapi.binance.com/futures/data/';
   var TF=window._coinTF||'1h'; window._coinTF=TF;
@@ -2159,7 +2214,7 @@ async function openCoin(sym){
     if(typeof _startFundCd==='function')_startFundCd();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof _stopChartTips==='function')_stopChartTips(); if(typeof _stopFundCd==='function')_stopFundCd(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
+function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); if(typeof _stopChartTips==='function')_stopChartTips(); if(typeof _stopFundCd==='function')_stopFundCd(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
 /* 💡 차트 팁 — 차트 볼 때 도움 팁 회전(클릭 시 다음) */
 var CHART_TIPS=[
