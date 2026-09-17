@@ -1681,6 +1681,7 @@ var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')"
   +'<a class="cmenu-a" data-cs="news" onclick="coinNav(\'news\')">뉴스</a>'
   +'<a class="cmenu-a" data-cs="watch" onclick="coinNav(\'watch\')">관심</a>'
   +'<a class="cmenu-a" data-cs="learn" onclick="coinNav(\'learn\')">기초</a>'
+  +'<a class="cmenu-a" data-cs="bt" onclick="coinNav(\'bt\')">📼 백테스트</a>'
   +'<a class="cmenu-a" data-cs="liq" onclick="coinNav(\'liq\')">🔥 청산맵</a>';
 function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
   if(on){ if(_stockMenuHTML===null)_stockMenuHTML=menu.innerHTML; menu.innerHTML=_COIN_MENU; menu.style.display='flex'; }
@@ -1698,6 +1699,7 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
     return; }
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
   if(sec==='ai'){ sect.innerHTML='<div class="sec-title">🤖 차트 분석 도우미</div><p class="sec-sub">코인·종목을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p><div id="aiAskCoin"></div>'; if(typeof mountHomeAsk==='function')mountHomeAsk('#aiAskCoin','coin'); return; }
+  if(sec==='bt'){ if(typeof renderBacktestReplay==='function')renderBacktestReplay(sect); return; }
   if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
 };
 /* 관심 코인(즐겨찾기) */
@@ -1873,6 +1875,52 @@ function renderCoinLearn(el){
   el.innerHTML=html;
 }
 window.renderCoinLearn=renderCoinLearn;
+/* ── 📼 백테스트 리플레이 (과거 시뮬 · 교육용 · 매매신호 아님) ── */
+function _btRun(cs,rule){ var cl=cs.map(function(k){return +k[4];}), n=cl.length, tr=[], pos=null;
+  function ma(i,p){ if(i-p+1<0)return null; var s=0,j; for(j=i-p+1;j<=i;j++)s+=cl[j]; return s/p; }
+  for(var i=25;i<n;i++){ var sig=0;
+    if(rule==='rsi'){ var r=_cRsi(cl.slice(0,i+1),14), rp=_cRsi(cl.slice(0,i),14); if(r==null||rp==null)continue; if(rp<30&&r>=30)sig=1; else if(rp>70&&r<=70)sig=-1; }
+    else { var m5=ma(i,5),m20=ma(i,20),m5p=ma(i-1,5),m20p=ma(i-1,20); if(m5==null||m20==null||m5p==null||m20p==null)continue; if(m5>m20&&m5p<=m20p)sig=1; else if(m5<m20&&m5p>=m20p)sig=-1; }
+    if(sig!==0){ if(pos&&pos.dir!==sig){ var ex=cl[i], pnl=pos.dir===1?(ex-pos.entryP)/pos.entryP*100:(pos.entryP-ex)/pos.entryP*100; tr.push({dir:pos.dir,iE:pos.iEntry,iX:i,entryP:pos.entryP,exitP:ex,pnl:pnl}); pos=null; }
+      if(!pos)pos={dir:sig,iEntry:i,entryP:cl[i]}; } }
+  if(pos){ var ex2=cl[n-1], pnl2=pos.dir===1?(ex2-pos.entryP)/pos.entryP*100:(pos.entryP-ex2)/pos.entryP*100; tr.push({dir:pos.dir,iE:pos.iEntry,iX:n-1,entryP:pos.entryP,exitP:ex2,pnl:pnl2,open:true}); }
+  return tr; }
+function _btSVG(cs,tr){ var N=cs.length; if(N<5)return ''; var W=680,H=340,PADL=6,PADR=52,PADT=22,PADB=18, cw=W-PADL-PADR, ch=H-PADT-PADB;
+  var lo=Infinity,hi=-Infinity,i; for(i=0;i<N;i++){var l=+cs[i][3],h=+cs[i][2]; if(l<lo)lo=l; if(h>hi)hi=h;} var pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad; var span=(hi-lo)||1;
+  function y(p){return PADT+(hi-p)/span*ch;} var bw=cw/N; function x(i){return PADL+i*bw+bw/2;} var up='#2ebd85',dn='#f6465d';
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:10px">';
+  for(i=0;i<N;i++){ var o=+cs[i][1],hh=+cs[i][2],ll=+cs[i][3],c=+cs[i][4]; var col=c>=o?up:dn,cx=x(i),bwid=Math.max(1,bw*0.6),yo=y(o),yc=y(c),top=Math.min(yo,yc),hgt=Math.max(1,Math.abs(yc-yo)); s+='<line x1="'+cx.toFixed(1)+'" y1="'+y(hh).toFixed(1)+'" x2="'+cx.toFixed(1)+'" y2="'+y(ll).toFixed(1)+'" stroke="'+col+'" stroke-width="0.8"/><rect x="'+(cx-bwid/2).toFixed(1)+'" y="'+top.toFixed(1)+'" width="'+bwid.toFixed(1)+'" height="'+hgt.toFixed(1)+'" fill="'+col+'"/>'; }
+  tr.forEach(function(t){ var xe=x(t.iE),xx=x(t.iX),ye=y(t.entryP),yx=y(t.exitP),pc=t.pnl>=0?up:dn;
+    s+='<line x1="'+xe.toFixed(1)+'" y1="'+ye.toFixed(1)+'" x2="'+xx.toFixed(1)+'" y2="'+yx.toFixed(1)+'" stroke="'+pc+'" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>';
+    if(t.dir===1)s+='<text x="'+xe.toFixed(1)+'" y="'+(y(+cs[t.iE][3])+13).toFixed(1)+'" fill="'+up+'" font-size="12" font-weight="800" text-anchor="middle">▲</text>'; else s+='<text x="'+xe.toFixed(1)+'" y="'+(y(+cs[t.iE][2])-5).toFixed(1)+'" fill="'+dn+'" font-size="12" font-weight="800" text-anchor="middle">▼</text>';
+    s+='<circle cx="'+xx.toFixed(1)+'" cy="'+yx.toFixed(1)+'" r="2.6" fill="'+pc+'"/><text x="'+xx.toFixed(1)+'" y="'+(yx-6).toFixed(1)+'" fill="'+pc+'" font-size="9.5" font-weight="800" text-anchor="middle">'+(t.pnl>=0?'+':'')+t.pnl.toFixed(1)+'%</text>'; });
+  return s+'</svg>'; }
+function _btStatsHTML(tr,ruleLab){ var n=tr.length; if(!n)return '<div class="muted" style="font-size:12px">이 구간에선 규칙에 걸린 거래가 없어요.</div>';
+  var wins=tr.filter(function(x){return x.pnl>0;}).length, wr=wins/n*100, sum=tr.reduce(function(s,x){return s+x.pnl;},0), pnls=tr.map(function(x){return x.pnl;}), best=Math.max.apply(null,pnls), worst=Math.min.apply(null,pnls);
+  var sc=function(k,v,c){return '<div style="flex:1;min-width:64px;text-align:center;padding:8px 4px;background:var(--panel2);border:1px solid var(--line);border-radius:9px"><div class="muted" style="font-size:10.5px;font-weight:700">'+k+'</div><div class="'+(c||'')+'" style="font-size:15px;font-weight:800;margin-top:2px">'+v+'</div></div>';};
+  var verdict= n<6?'<span class="muted">표본 부족('+n+'회) — 신뢰도 낮음</span>':(sum>0&&wr>=50?'<span class="up">이 구간·이 규칙은 가정상 <b>플러스</b>였음</span>':'<span class="down">이 구간·이 규칙은 가정상 <b>안 통했음</b></span>');
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+sc('거래',n+'회')+sc('승률',wr.toFixed(0)+'%',wr>=50?'up':'down')+sc('누적',(sum>=0?'+':'')+sum.toFixed(1)+'%',sum>=0?'up':'down')+sc('최고',(best>=0?'+':'')+best.toFixed(1)+'%','up')+sc('최악',worst.toFixed(1)+'%','down')+'</div>'
+    +'<div style="font-size:12.5px;color:var(--sub);margin-bottom:6px">📊 '+ruleLab+' · '+verdict+'</div>'
+    +'<div style="font-size:11px;color:var(--faint);line-height:1.5">⚠ <b>과거 데이터 가정</b>(수수료·슬리피지·펀딩 제외) · <b>실제 매매 신호가 아니에요</b>. 과거가 미래를 보장하지 않습니다. 내 전략이 "이 구간에서" 어땠는지 <b>검증·복기</b>용이에요.</div>'; }
+function renderBacktestReplay(el){ var sym=(_coinCur||'BTC');
+  var TFS=[['1h','1시간'],['15m','15분'],['4h','4시간'],['1d','일봉']];
+  var h='<div class="sec-title">📼 백테스트 리플레이 <span style="color:var(--faint);font-weight:500;font-size:12px">· 과거 시뮬레이션(가정) · 신호 아님</span></div>'
+    +'<p class="sec-sub"><b>과거 데이터</b>에 규칙을 돌려 어디서 진입·청산했고 <b>가상으로</b> 얼마였는지 봐요. TradingView 전략은 그대로 못 가져오지만, <b>규칙만 알려주면</b> 여기 똑같이 재현할 수 있어요.</p>'
+    +'<div class="card"><div class="pad"><div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-bottom:10px">'
+    +'<input id="btSym" value="'+esc(sym)+'" placeholder="심볼" style="width:110px;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:8px 11px;color:var(--ink);font-family:inherit;font-size:13px;outline:none">'
+    +'<span style="font-size:11.5px;color:var(--faint);font-weight:700">봉</span>'+TFS.map(function(t,i){return '<button class="btTf'+(i===0?' on':'')+'" data-tf="'+t[0]+'" style="background:'+(i===0?'var(--gold,#e0a83e)':'transparent')+';color:'+(i===0?'#1a1400':'var(--sub)')+';border:1px solid var(--line2);border-radius:16px;padding:4px 11px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer">'+t[1]+'</button>';}).join('')
+    +'<span style="font-size:11.5px;color:var(--faint);font-weight:700;margin-left:4px">규칙</span><select id="btRule" style="background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:6px 9px;color:var(--ink);font-family:inherit;font-size:12px;outline:none"><option value="ma">이평 크로스(추세추종)</option><option value="rsi">RSI 반전(역추세)</option></select>'
+    +'<button id="btGo" style="margin-left:auto;background:var(--gold,#e0a83e);color:#1a1400;border:none;border-radius:10px;padding:7px 18px;font-family:inherit;font-weight:800;font-size:12.5px;cursor:pointer">▶ 실행</button></div>'
+    +'<div id="btChart"><div class="muted" style="font-size:12px">‘실행’을 누르면 최근 120봉에 규칙을 돌려요.</div></div><div id="btStats" style="margin-top:10px"></div></div></div>';
+  el.innerHTML=h; el._btTf='1h';
+  var tfBtns=el.querySelectorAll('.btTf'); tfBtns.forEach(function(b){ b.onclick=function(){ tfBtns.forEach(function(x){x.classList.remove('on');x.style.background='transparent';x.style.color='var(--sub)';}); b.classList.add('on');b.style.background='var(--gold,#e0a83e)';b.style.color='#1a1400'; el._btTf=b.dataset.tf; }; });
+  function run(){ var sym2=((el.querySelector('#btSym').value||'BTC').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,'')), tf=el._btTf||'1h', rule=el.querySelector('#btRule').value, ruleLab=el.querySelector('#btRule').selectedOptions[0].text+' · '+esc(sym2)+' '+tf; var ch=el.querySelector('#btChart'), st=el.querySelector('#btStats');
+    ch.innerHTML='<div class="muted" style="font-size:12px">불러오는 중…</div>'; st.innerHTML='';
+    fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym2+'USDT&interval='+tf+'&limit=200').then(function(r){return r.json();}).then(function(kl){ if(!Array.isArray(kl)||kl.length<40){ ch.innerHTML='<div class="muted" style="font-size:12px">데이터가 부족해요(심볼 확인).</div>'; return; } var cs=kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}); var view=cs.slice(-120); var tr=_btRun(view,rule); ch.innerHTML=_btSVG(view,tr); st.innerHTML=_btStatsHTML(tr,ruleLab); }).catch(function(){ ch.innerHTML='<div class="muted" style="font-size:12px">불러오지 못했어요.</div>'; }); }
+  el.querySelector('#btGo').onclick=run; el.querySelector('#btSym').addEventListener('keydown',function(e){ if(e.key==='Enter'){e.preventDefault();run();} }); el.querySelector('#btRule').onchange=run;
+  run();
+}
+window.renderBacktestReplay=renderBacktestReplay;
 window._toggleLacc=function(btn){ var it=btn.closest('.lacc'); if(!it)return; it.classList.toggle('open'); var x=btn.querySelector('.lacc-x'); if(x)x.textContent=it.classList.contains('open')?'−':'＋'; };
 window._toggleAllLacc=function(btn){ var root=btn.closest('#coinSection')||document, accs=root.querySelectorAll('.lacc'); var anyClosed=[].some.call(accs,function(a){return !a.classList.contains('open');});
   accs.forEach(function(a){ a.classList.toggle('open',anyClosed); var x=a.querySelector('.lacc-x'); if(x)x.textContent=anyClosed?'−':'＋'; }); btn.textContent=anyClosed?'전체 접기':'전체 펼치기'; };
