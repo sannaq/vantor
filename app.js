@@ -540,7 +540,7 @@ function _smcStructure(data){ var n=data.length, sw=_smcSwings(data,2), ev=[], s
     if(lastH&&c>lastH.p){ ev.push({i:i,p:lastH.p,dir:'bull',kind:trend===-1?'CHoCH':'BOS',fromI:lastH.i}); trend=1; lastH=null; }
     else if(lastL&&c<lastL.p){ ev.push({i:i,p:lastL.p,dir:'bear',kind:trend===1?'CHoCH':'BOS',fromI:lastL.i}); trend=-1; lastL=null; } }
   return ev; }
-function _smcLiquidity(data){ var sw=_smcSwings(data,3),n=data.length,i; var mx=-Infinity,mn=Infinity; for(i=0;i<n;i++){ if(data[i][1]>mx)mx=data[i][1]; if(data[i][2]<mn)mn=data[i][2]; } var tol=(mx-mn)*0.004||1; var out=[];
+function _smcLiquidity(data){ var sw=_smcSwings(data,2),n=data.length,i; var mx=-Infinity,mn=Infinity; for(i=0;i<n;i++){ if(data[i][1]>mx)mx=data[i][1]; if(data[i][2]<mn)mn=data[i][2]; } var tol=(mx-mn)*0.006||1; var out=[];
   function cl(list,type){ var used={},a,b; for(a=0;a<list.length;a++){ if(used[a])continue; var grp=[list[a]]; for(b=a+1;b<list.length;b++){ if(!used[b]&&Math.abs(list[b].p-list[a].p)<=tol){ grp.push(list[b]); used[b]=1; } } if(grp.length>=2){ var avg=0,i0=grp[0].i; grp.forEach(function(g){avg+=g.p;}); out.push({p:avg/grp.length,i0:i0,type:type}); } } }
   cl(sw.sh,'buy'); cl(sw.sl,'sell'); return out; }
 function drawStockChart(cv,r){
