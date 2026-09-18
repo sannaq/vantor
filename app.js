@@ -555,12 +555,13 @@ function drawStockChart(cv,r){
   var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
   var seed=parseInt(r.c,10)||1234; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
   var n, data, last, real=false;
-  if(r._candles&&r._candles.length>1){ // 프록시 /candles 실데이터: [ms,o,h,l,c,v]
-    var _len=r._candles.length;
+  var _SRC=(window._replayOn&&r.mk==='COIN'&&window._replayCut!=null&&r._candles)?r._candles.slice(0,window._replayCut+1):r._candles; // 바 리플레이: 커서까지만 노출
+  if(_SRC&&_SRC.length>1){ // 프록시 /candles 실데이터: [ms,o,h,l,c,v]
+    var _len=_SRC.length;
     var _visN=window._chartZoom?Math.max(20,Math.min(_len,window._chartZoom)):90; // 휠 줌 반영(코인·주식 공용)
     var _pan=window._chartPan?Math.max(0,Math.min(_len-_visN,window._chartPan)):0; // 드래그 팬(과거로 이동)
     var _end=_len-_pan, _start=Math.max(0,_end-_visN);
-    data=r._candles.slice(_start,_end).map(function(k){ return [k[1],k[2],k[3],k[4],k[5]||0,k[0]]; }); // +ms
+    data=_SRC.slice(_start,_end).map(function(k){ return [k[1],k[2],k[3],k[4],k[5]||0,k[0]]; }); // +ms
     n=data.length; last=data[n-1][3]; real=true;
   }else{                               // 폴백: 데모 합성 캔들
     n=48; data=[]; var p=r.px*0.94, t0=Date.now();
@@ -2218,7 +2219,7 @@ async function openCoin(sym){
     var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374'],['fvg','FVG','#26c6da'],['bos','BOS/CHoCH','#ec40a6'],['liq','유동성','#ffa726'],['kz','킬존','#7e57c2']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var drawbar='<div class="drawbar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:2px 0 6px"><span class="muted" style="font-weight:700;font-size:11px">✏️ 그림 ›</span>'+[['move','🖱 이동'],['trend','／ 추세선'],['hline','― 수평선'],['box','▭ 박스']].map(function(t){return '<button class="tf drawbtn'+(t[0]==='move'?' on':'')+'" data-tool="'+t[0]+'" onclick="setDrawTool(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf" onclick="undoDraw()" style="padding:4px 10px;font-size:12px">↩ 취소</button><button class="tf" onclick="clearDraws()" style="padding:4px 10px;font-size:12px">🗑 전체</button></div>';
-    var typebar='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:0 0 10px"><span class="muted" style="font-weight:700;font-size:11px">차트 ›</span>'+[['candle','캔들'],['heikin','하이킨아시'],['line','라인']].map(function(t){return '<button class="tf ctypebtn'+((window._chartType||'candle')===t[0]?' on':'')+'" data-ct="'+t[0]+'" onclick="setChartType(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf'+(window._chartLog?' on':'')+'" id="ctLogBtn" onclick="toggleChartLog()" style="padding:4px 10px;font-size:12px" title="로그 스케일">log</button></div>';
+    var typebar='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:0 0 10px"><span class="muted" style="font-weight:700;font-size:11px">차트 ›</span>'+[['candle','캔들'],['heikin','하이킨아시'],['line','라인']].map(function(t){return '<button class="tf ctypebtn'+((window._chartType||'candle')===t[0]?' on':'')+'" data-ct="'+t[0]+'" onclick="setChartType(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf'+(window._chartLog?' on':'')+'" id="ctLogBtn" onclick="toggleChartLog()" style="padding:4px 10px;font-size:12px" title="로그 스케일">log</button><button class="tf" onclick="replayStart()" style="padding:4px 10px;font-size:12px" title="과거 한 봉씩 재생">🎬 리플레이</button></div><div id="replayCtl"></div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
     var _fav=(typeof isCoinFav==='function'&&isCoinFav(sym));
     var mark=(fund&&fund.markPrice)?+fund.markPrice:px; window._fundNextTime=(fund&&fund.nextFundingTime)?+fund.nextFundingTime:0; window._coinFundingPct=fr;
@@ -2246,6 +2247,7 @@ async function openCoin(sym){
       +'<div id="cJournal" class="flowcard"></div>';
     window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
     var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); if(typeof _attachDraw==='function')_attachDraw(cv,function(){return window._coinR;}); }
+    window._replayOn=false; window._replayCut=null; if(window._replayTimer){clearInterval(window._replayTimer);window._replayTimer=null;}
     if(typeof startCoinLive==='function')startCoinLive(sym,TF);
     window._drawTool='move';
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
@@ -2551,6 +2553,15 @@ window.startCoinLive=startCoinLive;
 /* ── C. 차트 종류(캔들/하이킨아시/라인) + 로그 스케일 ── */
 window.setChartType=function(t){ window._chartType=t; try{localStorage.setItem('coinChartType',t);}catch(e){} document.querySelectorAll('.ctypebtn').forEach(function(b){b.classList.toggle('on',b.dataset.ct===t);}); var cv=document.querySelector('#coinChartCv'); if(cv&&window._coinR&&typeof drawStockChart==='function')drawStockChart(cv,window._coinR); };
 window.toggleChartLog=function(){ window._chartLog=!window._chartLog; try{localStorage.setItem('coinChartLog',window._chartLog?'1':'0');}catch(e){} var b=document.querySelector('#ctLogBtn'); if(b)b.classList.toggle('on',window._chartLog); var cv=document.querySelector('#coinChartCv'); if(cv&&window._coinR&&typeof drawStockChart==='function')drawStockChart(cv,window._coinR); };
+/* ── 4. 바 리플레이 (과거를 한 봉씩 재생 · 하인드사이트 없이 연습) ── */
+function _replayRender(){ var r=window._coinR; if(!r)return; var cv=document.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r); }
+function _replayBar(){ var el=document.querySelector('#replayCtl'); if(!el)return; if(!window._replayOn){ el.innerHTML=''; return; } var r=window._coinR, max=(r&&r._candles?r._candles.length-1:0), cur=window._replayCut||0; var dt=(r&&r._candles&&r._candles[cur])?new Date(r._candles[cur][0]):null; var dl=dt?((dt.getMonth()+1)+'/'+dt.getDate()+' '+('0'+dt.getHours()).slice(-2)+':'+('0'+dt.getMinutes()).slice(-2)):''; var playing=!!window._replayTimer;
+  el.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;margin:0 0 10px"><b style="font-size:12.5px">🎬 리플레이</b><button class="tf" onclick="replayStep(-1)" style="padding:4px 10px;font-size:12px">◀ 이전</button><button class="tf" onclick="replayPlay()" style="padding:4px 10px;font-size:12px">'+(playing?'⏸ 정지':'▶ 재생')+'</button><button class="tf" onclick="replayStep(1)" style="padding:4px 10px;font-size:12px">다음 ▶</button><span class="muted" style="font-size:12px">'+(cur+1)+' / '+(max+1)+' · '+dl+'</span><button class="tf" onclick="replayEnd()" style="margin-left:auto;padding:4px 10px;font-size:12px">✕ 종료</button></div><div class="muted" style="font-size:11px;margin:-4px 0 8px;line-height:1.5">과거의 그 시점까지만 보여줘요 — 다음에 어떻게 될지 <b>가리고</b> 판단 연습(하인드사이트 없이).</div>'; }
+window.replayStart=function(){ var r=window._coinR; if(!r||!r._candles||r._candles.length<40)return; window._replayOn=true; window._replayCut=Math.max(25,r._candles.length-60); window._chartPan=0; if(typeof stopCoinLive==='function')stopCoinLive(); _replayRender(); _replayBar(); };
+window.replayStep=function(d){ var r=window._coinR; if(!r||!window._replayOn||!r._candles)return; var max=r._candles.length-1; window._replayCut=Math.max(25,Math.min(max,(window._replayCut==null?max:window._replayCut)+d)); _replayRender(); _replayBar(); if(window._replayCut>=max&&window._replayTimer)window.replayPause(); };
+window.replayPlay=function(){ if(window._replayTimer){ window.replayPause(); return; } window._replayTimer=setInterval(function(){ window.replayStep(1); },700); _replayBar(); };
+window.replayPause=function(){ if(window._replayTimer){ clearInterval(window._replayTimer); window._replayTimer=null; } _replayBar(); };
+window.replayEnd=function(){ window.replayPause(); window._replayOn=false; window._replayCut=null; var r=window._coinR; if(r&&r.c&&typeof startCoinLive==='function')startCoinLive(r.c,window._coinTF||'1h'); _replayRender(); _replayBar(); };
 /* 📓 매매 일지 (localStorage, 종목 공용) */
 function _cjLoad(){ try{return JSON.parse(localStorage.getItem('coinTrades')||'[]');}catch(e){return [];} }
 function _cjSave(t){ try{localStorage.setItem('coinTrades',JSON.stringify(t));}catch(e){} }
