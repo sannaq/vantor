@@ -547,6 +547,8 @@ function _smcSweeps(data){ var sw=_smcSwings(data,2),n=data.length,out=[],j; // 
   sw.sh.forEach(function(s){ for(j=s.i+1;j<n;j++){ if(data[j][1]>s.p&&data[j][3]<s.p){ out.push({i:j,p:s.p,type:'bear'}); break; } if(data[j][3]>s.p)break; } });
   sw.sl.forEach(function(s){ for(j=s.i+1;j<n;j++){ if(data[j][2]<s.p&&data[j][3]>s.p){ out.push({i:j,p:s.p,type:'bull'}); break; } if(data[j][3]<s.p)break; } });
   return out; }
+function _htfOf(tf){ return {'1m':'15m','5m':'1h','15m':'1h','30m':'4h','1h':'4h','4h':'1d','1d':'1w'}[tf]||'4h'; }
+function _loadHTF(sym,baseTf){ var htf=_htfOf(baseTf); return fetch('https://fapi.binance.com/fapi/v1/klines?symbol='+sym+'USDT&interval='+htf+'&limit=120').then(function(r){return r.json();}).then(function(a){ return (Array.isArray(a)&&a.length)?{tf:htf,candles:a.map(function(k){return [+k[1],+k[2],+k[3],+k[4],+k[5]||0,k[0]];})}:null; }).catch(function(){return null;}); }
 function drawStockChart(cv,r){
   if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect();
   cv.width=Math.round(rect.width*2); cv.height=cv.classList.contains('chartbig')?Math.max(360,Math.round((rect.height||520)*2)):520; // 확대(전체화면)는 실제 높이로
@@ -2322,7 +2324,12 @@ function _cMoney(v){v=+v||0;return '$'+v.toLocaleString('en-US',{maximumFraction
 function _cAmt(v){v=+v||0;if(v>=1e12)return (v/1e12).toFixed(2)+'T';if(v>=1e9)return (v/1e9).toFixed(2)+'B';if(v>=1e6)return (v/1e6).toFixed(2)+'M';if(v>=1e3)return (v/1e3).toFixed(1)+'K';return v.toFixed(0);}
 var _cTakerWin=[],_cTakerB=0,_cTakerS=0,_cTakerSym=null,_cTakerWS=null,_cTakerLast=0;
 function _updateCoinTaker(force){var now=Date.now(),cut=now-90000;while(_cTakerWin.length&&_cTakerWin[0].t<cut){var o=_cTakerWin.shift();_cTakerB-=o.b;_cTakerS-=o.s;}if(!force&&now-_cTakerLast<700)return;_cTakerLast=now;var el=document.getElementById('cLivetaker');if(!el)return;var b=_cTakerB,s=_cTakerS,cnt=_cTakerWin.length,tot=b+s;if(tot<=0)return;var bp=b/tot*100;var gf=el.querySelector('.gf');if(gf)gf.style.width=bp.toFixed(1)+'%';var gl=el.querySelector('.gl');if(gl)gl.textContent='매수 '+bp.toFixed(1)+'%';var gr=el.querySelector('.gr');if(gr)gr.textContent='매도 '+(100-bp).toFixed(1)+'%';var amt=document.getElementById('cLiveamt');if(amt)amt.innerHTML='매수 <b class="up">$'+_cAmt(b)+'</b> · 매도 <b class="down">$'+_cAmt(s)+'</b> · '+cnt+'건 <span class="muted">(최근 90초 공격적 체결)</span>';}
-function _openCoinTaker(bn){if(_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;}if(_cTakerSym!==bn){_cTakerWin=[];_cTakerB=0;_cTakerS=0;_cTakerSym=bn;}try{_cTakerWS=new WebSocket('wss://fstream.binance.com/ws/'+bn.toLowerCase()+'@aggTrade');_cTakerWS.onmessage=function(ev){try{var m=JSON.parse(ev.data);var p=+m.p;if(!p)return;var qv=(+m.q||0)*p;if(qv<=0)return;var isBuy=(m.m===false);_cTakerWin.push({t:(m.T||Date.now()),b:isBuy?qv:0,s:isBuy?0:qv});if(isBuy)_cTakerB+=qv;else _cTakerS+=qv;_updateCoinTaker(false);}catch(e){}};}catch(e){}}
+function _openCoinTaker(bn){if(_cTakerWS){try{_cTakerWS.onclose=null;_cTakerWS.close()}catch(e){}_cTakerWS=null;}if(_cTakerSym!==bn){_cTakerWin=[];_cTakerB=0;_cTakerS=0;_cTakerSym=bn;}try{var ws=new WebSocket('wss://fstream.binance.com/ws/'+bn.toLowerCase()+'@aggTrade');_cTakerWS=ws;
+  ws.onopen=function(){ var amt=document.getElementById('cLiveamt'); if(amt&&/대기 중/.test(amt.textContent))amt.innerHTML='실시간 연결됨 · 체결 대기 중… <span class="muted">(최근 90초 공격적 체결)</span>'; };
+  ws.onmessage=function(ev){try{var m=JSON.parse(ev.data);var p=+m.p;if(!p)return;var qv=(+m.q||0)*p;if(qv<=0)return;var isBuy=(m.m===false);_cTakerWin.push({t:(m.T||Date.now()),b:isBuy?qv:0,s:isBuy?0:qv});if(isBuy)_cTakerB+=qv;else _cTakerS+=qv;_updateCoinTaker(false);}catch(e){}};
+  ws.onclose=function(){ if(_cTakerWS===ws&&_cTakerSym===bn){ setTimeout(function(){ if(_cTakerSym===bn&&(!_cTakerWS||_cTakerWS.readyState>1))_openCoinTaker(bn); },2500); } };
+  ws.onerror=function(){ try{ws.close();}catch(e){} };
+}catch(e){}}
 var _cLev=25;try{var _csl=+localStorage.getItem('oxlev');if(_csl)_cLev=_csl;}catch(e){}
 window.setCLev=function(n){_cLev=n;try{localStorage.setItem('oxlev',n);}catch(e){}renderCoinLev();coinCalcPos();};
 function renderCoinLev(){var el=document.getElementById('cLevblk');if(!el)return;var sg=window._csig,d=sg?_cDecOf(sg.entry):2,mx=75;var steps=[5,10,20,25,50,75].filter(function(v){return v<=Math.max(mx,_cLev);});var btns=steps.map(function(v){return '<button class="tf'+(v===_cLev?' on':'')+'" onclick="setCLev('+v+')">'+v+'x</button>';}).join('');var body='';
