@@ -703,6 +703,16 @@ function drawStockChart(cv,r){
     ctx.fillStyle=m[1]; ctx.fillText(t,lx,6); lx+=ctx.measureText(t).width+16; });
   // 거래량 라벨
   ctx.fillStyle=sub;ctx.font='500 15px system-ui,sans-serif';ctx.fillText('거래량',8,volT+1);
+  // ── 사용자 그림(추세선·수평선·박스) + 드래그 미리보기 ──
+  (function(){ function xT(t){ return (n<2)?padL:(padL+(t-data[0][5])/((data[n-1][5]-data[0][5])||1)*(plotR-padL)); }
+    function shape(d,prev){ ctx.save(); ctx.strokeStyle=d.color||'#e0b552'; ctx.fillStyle=d.color||'#e0b552'; ctx.lineWidth=2; if(prev)ctx.globalAlpha=0.85;
+      if(d.type==='hline'){ var yy=y(d.p); if(yy>=padT&&yy<=priceB){ ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(plotR,yy);ctx.stroke(); ctx.font='700 14px system-ui,sans-serif';ctx.textBaseline='bottom';ctx.textAlign='left'; ctx.fillText(r.ccy==='USD'?('$'+(+d.p).toFixed(2)):Math.round(d.p).toLocaleString('en-US'),padL+3,yy-2); ctx.textBaseline='middle'; } }
+      else if(d.type==='trend'){ ctx.beginPath();ctx.moveTo(xT(d.t1),y(d.p1));ctx.lineTo(xT(d.t2),y(d.p2));ctx.stroke(); }
+      else if(d.type==='box'){ var x1=xT(d.t1),x2=xT(d.t2),Y1=y(d.p1),Y2=y(d.p2),bx=Math.min(x1,x2),by=Math.min(Y1,Y2),bw2=Math.abs(x2-x1),bh2=Math.abs(Y2-Y1); ctx.setLineDash([5,3]); ctx.strokeRect(bx,by,bw2,bh2); ctx.setLineDash([]); ctx.globalAlpha=(prev?0.5:1)*0.07; ctx.fillRect(bx,by,bw2,bh2); ctx.globalAlpha=1; }
+      ctx.restore(); }
+    if(typeof _symDraws==='function'){ (_symDraws(r.c)||[]).forEach(function(d){ shape(d,false); }); }
+    if(window._drawPreview&&window._drawPreview.cv===cv){ shape(window._drawPreview,true); }
+  })();
   // 크로스헤어가 참조할 기하 상태 저장
   CHART={cv:cv,r:r,data:data,n:n,padL:padL,plotR:plotR,padT:padT,priceB:priceB,volT:volT,volB:volB,RM:RM,hi:hi,lo:lo,emas:emas,W:W,H:H,MA:MA,cw:cw,up:up,dn:dn,sub:sub,line:line,tf:_chartTF};
 }
@@ -750,9 +760,9 @@ function drawCrosshair(idx){
 function hideCrosshair(){ var tip=document.querySelector('#chartTip'); if(tip)tip.style.display='none'; if(CHART)drawStockChart(CHART.cv,CHART.r); }
 function attachChartCrosshair(cv){
   if(!cv||cv._chAttached) return; cv._chAttached=true;
-  cv.addEventListener('mousemove',function(e){ if(window._chartPanning)return; var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
+  cv.addEventListener('mousemove',function(e){ if(window._chartPanning)return; if(window._drawTool&&window._drawTool!=='move')return; var i=crosshairIdx(e.clientX); if(i>=0)drawCrosshair(i); });
   cv.addEventListener('mouseleave',hideCrosshair);
-  cv.addEventListener('click',function(e){ if(window._chartJustPanned){window._chartJustPanned=false;return;} var i=crosshairIdx(e.clientX); if(i>=0)showCandleDetail(i); });
+  cv.addEventListener('click',function(e){ if(window._chartJustPanned){window._chartJustPanned=false;return;} if(window._drawTool&&window._drawTool!=='move')return; var i=crosshairIdx(e.clientX); if(i>=0)showCandleDetail(i); });
   cv.style.cursor='pointer';
   cv.addEventListener('touchstart',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i);} } },{passive:true});
   cv.addEventListener('touchmove',function(e){ if(e.touches[0]){var i=crosshairIdx(e.touches[0].clientX); if(i>=0){drawCrosshair(i); e.preventDefault();} } },{passive:false});
@@ -1037,7 +1047,7 @@ window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.
   return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw'];
 /* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
 function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
 function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
@@ -2199,6 +2209,7 @@ async function openCoin(sym){
     var tfRow='<div class="tfrow" id="cTfRow" style="display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 7px">'+['1m','5m','15m','30m','1h','4h','1d'].map(function(t){return '<button class="tf'+(t===TF?' on':'')+'" onclick="setCoinTF(\''+t+'\')">'+TFLAB[t]+'</button>';}).join('')+'<button class="tf" onclick="openChartFs()" title="차트 크게 보기" style="margin-left:auto">⛶ 확대</button></div>';
     var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374'],['fvg','FVG','#26c6da'],['bos','BOS/CHoCH','#ec40a6'],['liq','유동성','#ffa726'],['kz','킬존','#7e57c2']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
+    var drawbar='<div class="drawbar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:2px 0 6px"><span class="muted" style="font-weight:700;font-size:11px">✏️ 그림 ›</span>'+[['move','🖱 이동'],['trend','／ 추세선'],['hline','― 수평선'],['box','▭ 박스']].map(function(t){return '<button class="tf drawbtn'+(t[0]==='move'?' on':'')+'" data-tool="'+t[0]+'" onclick="setDrawTool(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf" onclick="undoDraw()" style="padding:4px 10px;font-size:12px">↩ 취소</button><button class="tf" onclick="clearDraws()" style="padding:4px 10px;font-size:12px">🗑 전체</button></div>';
     var alertBox='<div class="lqcard" style="margin-top:12px"><div class="lqh">🔔 가격 알림</div><div class="alrow"><select id="cAlDir"><option value="above">이상</option><option value="below">이하</option></select><input id="cAlPrice" type="number" inputmode="decimal" placeholder="목표 가격"><button class="tf" onclick="addCoinAlert()">＋ 추가</button></div><div id="cAlList" style="margin-top:8px"></div><div class="muted" style="font-size:11px;margin-top:6px;line-height:1.5">이 탭이 켜져 있을 때 목표가 도달하면 알림이 뜹니다.</div></div>';
     var _fav=(typeof isCoinFav==='function'&&isCoinFav(sym));
     var mark=(fund&&fund.markPrice)?+fund.markPrice:px; window._fundNextTime=(fund&&fund.nextFundingTime)?+fund.nextFundingTime:0; window._coinFundingPct=fr;
@@ -2213,7 +2224,7 @@ async function openCoin(sym){
         +'<div class="cpxwrap"><div id="cDetPx">'+_coinPxHtml(px,ch)+'</div></div></div>'
       +'<div class="metrics" id="cDetMet">'+_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la)+'</div>'
       +infoBar
-      +tfRow+legend
+      +tfRow+legend+drawbar
       +'<canvas class="schart" id="coinChartCv"></canvas>'
       +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
       +'<div id="cChartTip" style="margin:9px 2px 0;font-size:12.5px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--gold) 10%,var(--panel2));border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);border-radius:10px;padding:9px 12px;line-height:1.55;cursor:pointer" title="클릭하면 다음 팁" onclick="_nextChartTip()"></div>'
@@ -2225,7 +2236,8 @@ async function openCoin(sym){
       +'<div class="sect">📓 매매 일지 <span style="font-weight:400;color:var(--faint);font-size:11px;text-transform:none">· 진입 근거 남기고 복기</span></div>'
       +'<div id="cJournal" class="flowcard"></div>';
     window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
-    var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); }
+    var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); if(typeof _attachDraw==='function')_attachDraw(cv,function(){return window._coinR;}); }
+    window._drawTool='move';
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
     if(typeof mountAskBox==='function')mountAskBox('#coinFlow', function(){ return window._coinR; });
     if(typeof coinDepth==='function')coinDepth(sym);
@@ -2488,7 +2500,7 @@ function _attachChartZoom(cv){
     if(_chRegion(cv,e)==='y'){ var ns=_clamp((window._chartYScale||1)*(e.deltaY<0?1.1:0.9),0.25,10); window._chartYScale=ns; _chRedraw(cv); return; } // 가격축 위 휠=세로 스케일
     var cur=window._chartZoom||90, factor=e.deltaY<0?0.85:1.18, nz=_clamp(Math.round(cur*factor),20,len); if(nz===cur)return; window._chartZoom=nz; _chRedraw(cv);
   }, {passive:false});
-  cv.addEventListener('mousedown', function(e){ if(e.button!==0&&e.button!==1)return; if(e.button===1)e.preventDefault();
+  cv.addEventListener('mousedown', function(e){ if(e.button!==0&&e.button!==1)return; if(window._drawTool&&window._drawTool!=='move'&&e.button===0)return; if(e.button===1)e.preventDefault();
     var rg=_chRegion(cv,e); if(rg!=='y'&&!_chLen())return;
     _chDrag.active=true; _chDrag.moved=false; _chDrag.mode=(rg==='y'?'yscale':rg==='x'?'xzoom':'pan'); _chDrag.sx=e.clientX; _chDrag.sy=e.clientY; _chDrag.sPan=window._chartPan||0; _chDrag.sZoom=window._chartZoom||90; _chDrag.sYS=window._chartYScale||1; _chDrag.cv=cv;
     cv.style.cursor=(rg==='y'?'ns-resize':rg==='x'?'ew-resize':'grabbing'); });
@@ -2497,6 +2509,22 @@ function _attachChartZoom(cv){
   cv.addEventListener('dblclick', function(){ window._chartYScale=1; window._chartPan=0; _chRedraw(cv); }); // 더블클릭=세로/팬 리셋
 }
 window._attachCoinWheel=_attachChartZoom; window._attachChartZoom=_attachChartZoom;
+/* ── ✏️ 차트 그림 도구 (추세선·수평선·박스, 저장·동기화 · 가격/시간 좌표로 저장돼 줌·TF 바뀌어도 유지) ── */
+function _draws(){ try{return JSON.parse(localStorage.getItem('aurDraw')||'{}')||{};}catch(e){return {};} }
+function _drawsSave(m){ try{localStorage.setItem('aurDraw',JSON.stringify(m));}catch(e){} }
+function _symDraws(sym){ return (_draws()[sym])||[]; }
+function _addDraw(sym,d){ if(!sym)return; var m=_draws(); (m[sym]=m[sym]||[]).push(d); if(m[sym].length>80)m[sym].shift(); _drawsSave(m); }
+window.setDrawTool=function(t){ window._drawTool=(window._drawTool===t)?'move':t; var host=document.querySelector('#coinHost')||document; host.querySelectorAll('.drawbtn').forEach(function(b){ b.classList.toggle('on', b.dataset.tool===window._drawTool); }); var cv=document.querySelector('#coinChartCv'); if(cv)cv.style.cursor=(window._drawTool&&window._drawTool!=='move')?'crosshair':'grab'; };
+window.undoDraw=function(){ var r=window._coinR; if(!r)return; var m=_draws(); if(m[r.c]&&m[r.c].length){ m[r.c].pop(); _drawsSave(m); var cv=document.querySelector('#coinChartCv'); if(cv)drawStockChart(cv,r); } };
+window.clearDraws=function(){ var r=window._coinR; if(!r)return; if(!confirm('이 종목의 그림을 모두 지울까요?'))return; var m=_draws(); delete m[r.c]; _drawsSave(m); var cv=document.querySelector('#coinChartCv'); if(cv)drawStockChart(cv,r); };
+function _attachDraw(cv,getR){ if(!cv||cv._drawAttached)return; cv._drawAttached=true;
+  function toData(e){ var C=CHART; if(!C||C.cv!==cv)return null; var rect=cv.getBoundingClientRect(); if(!rect.width)return null; var cx=(e.clientX-rect.left)*(cv.width/rect.width), cy=(e.clientY-rect.top)*(cv.height/rect.height); var f=(cx-C.padL)/((C.plotR-C.padL)||1); var t=C.data[0][5]+f*((C.data[C.n-1][5]-C.data[0][5])||1); var p=C.hi-(cy-C.padT)/((C.priceB-C.padT)||1)*(C.hi-C.lo); return {t:t,p:p}; }
+  var dg=null;
+  cv.addEventListener('mousedown',function(e){ var tool=window._drawTool; if(!tool||tool==='move'||e.button!==0)return; e.stopPropagation(); e.preventDefault(); var d=toData(e); if(!d)return; var r=getR&&getR(); if(tool==='hline'){ if(r){_addDraw(r.c,{type:'hline',p:d.p,color:'#e0b552'}); drawStockChart(cv,r);} return; } dg={tool:tool,t1:d.t,p1:d.p}; });
+  cv.addEventListener('mousemove',function(e){ if(!dg)return; var d=toData(e); if(!d)return; window._drawPreview={cv:cv,type:dg.tool,t1:dg.t1,p1:dg.p1,t2:d.t,p2:d.p,color:'#e0b552'}; var r=getR&&getR(); if(r)drawStockChart(cv,r); });
+  window.addEventListener('mouseup',function(){ if(!dg)return; var pv=window._drawPreview; window._drawPreview=null; var r=getR&&getR(); if(pv&&r&&(Math.abs(pv.t2-pv.t1)>1||Math.abs(pv.p2-pv.p1)>0)){ _addDraw(r.c,{type:dg.tool,t1:pv.t1,p1:pv.p1,t2:pv.t2,p2:pv.p2,color:'#e0b552'}); } dg=null; if(r)drawStockChart(cv,r); });
+}
+window._attachDraw=_attachDraw;
 /* 📓 매매 일지 (localStorage, 종목 공용) */
 function _cjLoad(){ try{return JSON.parse(localStorage.getItem('coinTrades')||'[]');}catch(e){return [];} }
 function _cjSave(t){ try{localStorage.setItem('coinTrades',JSON.stringify(t));}catch(e){} }
