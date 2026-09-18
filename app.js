@@ -543,6 +543,10 @@ function _smcStructure(data){ var n=data.length, sw=_smcSwings(data,2), ev=[], s
 function _smcLiquidity(data){ var sw=_smcSwings(data,2),n=data.length,i; var mx=-Infinity,mn=Infinity; for(i=0;i<n;i++){ if(data[i][1]>mx)mx=data[i][1]; if(data[i][2]<mn)mn=data[i][2]; } var tol=(mx-mn)*0.006||1; var out=[];
   function cl(list,type){ var used={},a,b; for(a=0;a<list.length;a++){ if(used[a])continue; var grp=[list[a]]; for(b=a+1;b<list.length;b++){ if(!used[b]&&Math.abs(list[b].p-list[a].p)<=tol){ grp.push(list[b]); used[b]=1; } } if(grp.length>=2){ var avg=0,i0=grp[0].i; grp.forEach(function(g){avg+=g.p;}); out.push({p:avg/grp.length,i0:i0,type:type}); } } }
   cl(sw.sh,'buy'); cl(sw.sl,'sell'); return out; }
+function _smcSweeps(data){ var sw=_smcSwings(data,2),n=data.length,out=[],j; // 전고/전저 꼬리로 찍고 종가는 안으로 복귀 = 유동성 스윕(스탑헌트)
+  sw.sh.forEach(function(s){ for(j=s.i+1;j<n;j++){ if(data[j][1]>s.p&&data[j][3]<s.p){ out.push({i:j,p:s.p,type:'bear'}); break; } if(data[j][3]>s.p)break; } });
+  sw.sl.forEach(function(s){ for(j=s.i+1;j<n;j++){ if(data[j][2]<s.p&&data[j][3]>s.p){ out.push({i:j,p:s.p,type:'bull'}); break; } if(data[j][3]<s.p)break; } });
+  return out; }
 function drawStockChart(cv,r){
   if(!cv)return; var ctx=cv.getContext('2d'); var rect=cv.getBoundingClientRect();
   cv.width=Math.round(rect.width*2); cv.height=cv.classList.contains('chartbig')?Math.max(360,Math.round((rect.height||520)*2)):520; // 확대(전체화면)는 실제 높이로
@@ -550,7 +554,7 @@ function drawStockChart(cv,r){
   var up=css('--up')||'#e5384d', dn=css('--down')||'#2f6bff', line=css('--line')||'#e7eaf0',
       sub=css('--sub')||'#8a94a6';
   if(r.mk==='COIN'){ up='#2ebd85'; dn='#f6465d'; } // 코인은 크립토 관례(초록↑/빨강↓)
-  var LON=(r.mk==='COIN'&&window._coinLineOn)?window._coinLineOn:{sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false};
+  var LON=(r.mk==='COIN'&&window._coinLineOn)?window._coinLineOn:{sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false,pd:false,ote:false,sweep:false};
   var MA=[[5,'#f5a623'],[20,'#2f9e6e'],[60,'#8b5cf6']]; // 이동평균선 색
   var W=cv.width,H=cv.height; ctx.clearRect(0,0,W,H);
   var seed=parseInt(r.c,10)||1234; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
@@ -599,6 +603,10 @@ function drawStockChart(cv,r){
     for(var kk=0;kk<n;kk++){ var _hu=new Date(data[kk][5]).getUTCHours(), _z=(_hu>=7&&_hu<10)?'l':((_hu>=12&&_hu<15)?'ny':null); if(_z){ ctx.fillStyle='rgba(126,87,194,0.09)'; ctx.fillRect(xAt(kk)-cw/2,padT,cw,priceB-padT); if(!_kzHit[_z]){ _kzHit[_z]=true; ctx.font='700 12px system-ui,sans-serif'; ctx.fillStyle='rgba(126,87,194,0.85)'; ctx.textBaseline='top'; ctx.textAlign='left'; ctx.fillText(_z==='l'?'런던 KZ':'뉴욕 KZ', xAt(kk)-cw/2+2, padT+2); ctx.textBaseline='middle'; } } } } }
   if(LON.fvg){ _smcFVG(data).slice(-16).forEach(function(f){ if(f.i>=n)return; var yt=y(f.top),yb=y(f.bottom); if(yb<padT||yt>priceB)return; var x0=xAt(f.i)-cw/2, rgb=f.type==='bull'?'38,198,218':'236,64,166', al=f.mit?0.05:0.17; ctx.fillStyle='rgba('+rgb+','+al+')'; ctx.fillRect(x0,yt,plotR-x0,yb-yt); if(!f.mit){ ctx.strokeStyle='rgba('+rgb+',0.55)'; ctx.lineWidth=1; ctx.strokeRect(x0,yt,plotR-x0,yb-yt); ctx.font='700 11px system-ui,sans-serif'; ctx.fillStyle='rgba('+rgb+',0.95)'; ctx.textBaseline='middle'; ctx.textAlign='right'; ctx.fillText('FVG',plotR-3,(yt+yb)/2); ctx.textAlign='start'; } }); }
   if(LON.liq){ _smcLiquidity(data).forEach(function(L){ var yy=y(L.p); if(yy<padT||yy>priceB)return; var x0=xAt(L.i0); ctx.strokeStyle='rgba(255,167,38,0.9)'; ctx.setLineDash([2,3]); ctx.lineWidth=1.4; ctx.beginPath(); ctx.moveTo(x0,yy); ctx.lineTo(plotR,yy); ctx.stroke(); ctx.setLineDash([]); ctx.font='700 12px system-ui,sans-serif'; ctx.fillStyle='rgba(255,167,38,0.95)'; ctx.textBaseline='bottom'; ctx.textAlign='left'; ctx.fillText(L.type==='buy'?'유동성 EQH':'유동성 EQL', x0+2, yy-2); ctx.textBaseline='middle'; }); }
+  // 프리미엄/디스카운트(균형선) · OTE 존
+  if((LON.pd||LON.ote)&&n>3){ var _rh=-Infinity,_rl=Infinity,_rhi=0,_rli=0,_q; for(_q=0;_q<n;_q++){ if(data[_q][1]>_rh){_rh=data[_q][1];_rhi=_q;} if(data[_q][2]<_rl){_rl=data[_q][2];_rli=_q;} } var _rng=_rh-_rl;
+    if(_rng>0&&LON.pd){ var _eq=(_rh+_rl)/2, yeq=y(_eq), yrh=y(_rh), yrl=y(_rl); ctx.fillStyle='rgba(246,70,93,0.06)'; ctx.fillRect(padL,yrh,plotR-padL,yeq-yrh); ctx.fillStyle='rgba(46,189,133,0.06)'; ctx.fillRect(padL,yeq,plotR-padL,yrl-yeq); ctx.strokeStyle='rgba(160,170,190,0.7)'; ctx.setLineDash([6,4]); ctx.lineWidth=1.2; ctx.beginPath();ctx.moveTo(padL,yeq);ctx.lineTo(plotR,yeq);ctx.stroke(); ctx.setLineDash([]); ctx.font='700 12px system-ui,sans-serif'; ctx.textBaseline='middle'; ctx.textAlign='left'; ctx.fillStyle='rgba(246,70,93,0.9)'; ctx.fillText('프리미엄(비싸게)',padL+3,yrh+10); ctx.fillStyle='rgba(160,170,190,0.95)'; ctx.fillText('균형 50%',padL+3,yeq-8); ctx.fillStyle='rgba(46,189,133,0.9)'; ctx.fillText('디스카운트(싸게)',padL+3,yrl-8); }
+    if(_rng>0&&LON.ote){ var _up=(_rhi>_rli), a,b; if(_up){ a=_rh-0.79*_rng; b=_rh-0.62*_rng; } else { a=_rl+0.62*_rng; b=_rl+0.79*_rng; } var oy1=y(Math.max(a,b)), oy2=y(Math.min(a,b)); ctx.fillStyle='rgba(224,181,82,0.16)'; ctx.fillRect(padL,oy1,plotR-padL,oy2-oy1); ctx.strokeStyle='rgba(224,181,82,0.7)'; ctx.setLineDash([4,3]); ctx.lineWidth=1.2; ctx.strokeRect(padL,oy1,plotR-padL,oy2-oy1); ctx.setLineDash([]); ctx.font='700 12px system-ui,sans-serif'; ctx.fillStyle='rgba(224,181,82,0.95)'; ctx.textBaseline='bottom'; ctx.textAlign='left'; ctx.fillText('OTE '+(_up?'롱':'숏')+' 0.62–0.79',padL+3,oy1-2); ctx.textBaseline='middle'; } }
   // 오더블럭 존(임펄스 직전 반대 캔들 → 되돌림 지지/저항)
   if(LON.ob)findOrderBlocks(data.map(function(d){return {o:d[0],h:d[1],l:d[2],c:d[3]};}), last).forEach(function(ob){
     var yt=y(ob.top), yb=y(ob.bottom), ox=xAt(ob.idx)-cw/2, rgb=ob.type==='bull'?'22,163,116':'229,56,77';
@@ -616,6 +624,8 @@ function drawStockChart(cv,r){
   ctx.lineWidth=2.2;
   if(LON.ma)MA.forEach(function(m,mi){ if(n<3)return; var e=emas[mi]; ctx.strokeStyle=m[1]; ctx.beginPath();
     for(var i=0;i<n;i++){ var x=xAt(i), yy=y(e[i]); if(i===0)ctx.moveTo(x,yy);else ctx.lineTo(x,yy);} ctx.stroke(); });
+  // 유동성 스윕(스탑헌트)
+  if(LON.sweep){ _smcSweeps(data).slice(-10).forEach(function(sp){ if(sp.i>=n)return; var xx=xAt(sp.i), yy=y(sp.p), col=sp.type==='bear'?'#f6465d':'#2ebd85'; ctx.font='800 12px system-ui,sans-serif'; ctx.fillStyle=col; ctx.textAlign='center'; if(sp.type==='bear'){ ctx.textBaseline='bottom'; ctx.fillText('✕스윕',xx,yy-4); } else { ctx.textBaseline='top'; ctx.fillText('✕스윕',xx,yy+4); } ctx.textBaseline='middle'; ctx.textAlign='start'; }); }
   // BOS / CHoCH (구조 전환)
   if(LON.bos){ _smcStructure(data).slice(-8).forEach(function(ev){ var yy=y(ev.p), x0=xAt(ev.fromI), x1=xAt(ev.i), col=ev.dir==='bull'?'rgba(46,189,133,0.95)':'rgba(246,70,93,0.95)'; ctx.strokeStyle=col; ctx.setLineDash([5,3]); ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(x0,yy); ctx.lineTo(x1,yy); ctx.stroke(); ctx.setLineDash([]); ctx.font='800 13px system-ui,sans-serif'; ctx.fillStyle=col; ctx.textBaseline='bottom'; ctx.textAlign='center'; ctx.fillText(ev.kind, x1, yy-3); ctx.textBaseline='middle'; ctx.textAlign='start'; }); }
   // 피보나치 되돌림 — 표시된 구간의 스윙 고/저를 자동 감지해 레벨 표시
@@ -2188,7 +2198,7 @@ async function openCoin(sym){
   var TF=window._coinTF||'1h'; window._coinTF=TF;
   var TFLIM={'1m':500,'5m':500,'15m':500,'30m':500,'1h':500,'4h':500,'1d':500};
   var TFLAB={'1m':'1분','5m':'5분','15m':'15분','30m':'30분','1h':'1시간','4h':'4시간','1d':'1일'};
-  if(!window._coinLineOn){ try{window._coinLineOn=JSON.parse(localStorage.getItem('coinLines'))||null;}catch(e){} if(!window._coinLineOn)window._coinLineOn={sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false}; }
+  if(!window._coinLineOn){ try{window._coinLineOn=JSON.parse(localStorage.getItem('coinLines'))||null;}catch(e){} if(!window._coinLineOn)window._coinLineOn={sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false,pd:false,ote:false,sweep:false}; }
   if(window._chartType===undefined){ try{window._chartType=localStorage.getItem('coinChartType')||'candle';}catch(e){window._chartType='candle';} }
   if(window._chartLog===undefined){ try{window._chartLog=(localStorage.getItem('coinChartLog')==='1');}catch(e){window._chartLog=false;} }
   try{
@@ -2216,7 +2226,7 @@ async function openCoin(sym){
       +'<div class="kv"><span class="muted">지지</span><span class="num" style="font-weight:700">'+coinPx(lo)+'</span></div>'
       +'<p class="rsub" id="cRangeNote">레인지 '+rp+'%'+(rp>=85?' (고점권·추격 롱 손익비 불리)':rp<=25?' (저점권)':'')+' · 펀딩 '+(fr==null?'—':((fr>=0?'+':'')+fr.toFixed(4)+'%'))+'.</p></div>';
     var tfRow='<div class="tfrow" id="cTfRow" style="display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 7px">'+['1m','5m','15m','30m','1h','4h','1d'].map(function(t){return '<button class="tf'+(t===TF?' on':'')+'" onclick="setCoinTF(\''+t+'\')">'+TFLAB[t]+'</button>';}).join('')+'<button class="tf" onclick="openChartFs()" title="차트 크게 보기" style="margin-left:auto">⛶ 확대</button></div>';
-    var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374'],['fvg','FVG','#26c6da'],['bos','BOS/CHoCH','#ec40a6'],['liq','유동성','#ffa726'],['kz','킬존','#7e57c2']];
+    var LK=[['sr','지지/저항','#2ebd85'],['ch','채널','#4a9eff'],['tr','추세선','#e0a83e'],['fib','피보','#a06bff'],['poc','매물대','#ff9800'],['ma','이평','#f5a623'],['ob','오더블럭','#22a374'],['fvg','FVG','#26c6da'],['bos','BOS/CHoCH','#ec40a6'],['liq','유동성','#ffa726'],['kz','킬존','#7e57c2'],['pd','프리미엄/디스카운트','#a0aabe'],['ote','OTE','#e0b552'],['sweep','유동성 스윕','#ff5db1']];
     var legend='<div class="clegend">'+'<span class="muted" style="font-weight:700;font-size:11px;align-self:center">선 표시 ›</span>'+LK.map(function(k){var on=window._coinLineOn[k[0]]!==false;return '<span class="lgd'+(on?'':' off')+'" onclick="toggleCoinLine(\''+k[0]+'\')"><i style="background:'+k[2]+'"></i>'+k[1]+'</span>';}).join('')+'</div>';
     var drawbar='<div class="drawbar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:2px 0 6px"><span class="muted" style="font-weight:700;font-size:11px">✏️ 그림 ›</span>'+[['move','🖱 이동'],['trend','／ 추세선'],['hline','― 수평선'],['box','▭ 박스']].map(function(t){return '<button class="tf drawbtn'+(t[0]==='move'?' on':'')+'" data-tool="'+t[0]+'" onclick="setDrawTool(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf" onclick="undoDraw()" style="padding:4px 10px;font-size:12px">↩ 취소</button><button class="tf" onclick="clearDraws()" style="padding:4px 10px;font-size:12px">🗑 전체</button></div>';
     var typebar='<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin:0 0 10px"><span class="muted" style="font-weight:700;font-size:11px">차트 ›</span>'+[['candle','캔들'],['heikin','하이킨아시'],['line','라인']].map(function(t){return '<button class="tf ctypebtn'+((window._chartType||'candle')===t[0]?' on':'')+'" data-ct="'+t[0]+'" onclick="setChartType(\''+t[0]+'\')" style="padding:4px 10px;font-size:12px">'+t[1]+'</button>';}).join('')+'<button class="tf'+(window._chartLog?' on':'')+'" id="ctLogBtn" onclick="toggleChartLog()" style="padding:4px 10px;font-size:12px" title="로그 스케일">log</button><button class="tf" onclick="replayStart()" style="padding:4px 10px;font-size:12px" title="과거 한 봉씩 재생">🎬 리플레이</button></div><div id="replayCtl"></div>';
@@ -2430,8 +2440,8 @@ function _coinMetricsHtml(hi,lo,qv,fr,oiUsd,la){
 /* 시간봉 전환 */
 window.setCoinTF=function(tf){ if(window._coinTF===tf)return; window._coinTF=tf; if(_coinCur)openCoin(_coinCur); };
 /* 선 표시 토글(차트만 다시 그림) */
-window.toggleCoinLine=function(k){ if(!window._coinLineOn)window._coinLineOn={sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false}; window._coinLineOn[k]=(window._coinLineOn[k]===false); try{localStorage.setItem('coinLines',JSON.stringify(window._coinLineOn));}catch(e){}
-  var host=$('#coinHost'), LK=['sr','ch','tr','fib','poc','ma','ob','fvg','bos','liq','kz'];
+window.toggleCoinLine=function(k){ if(!window._coinLineOn)window._coinLineOn={sr:true,ch:true,tr:true,fib:true,poc:true,ma:true,ob:true,fvg:false,bos:false,liq:false,kz:false,pd:false,ote:false,sweep:false}; window._coinLineOn[k]=(window._coinLineOn[k]===false); try{localStorage.setItem('coinLines',JSON.stringify(window._coinLineOn));}catch(e){}
+  var host=$('#coinHost'), LK=['sr','ch','tr','fib','poc','ma','ob','fvg','bos','liq','kz','pd','ote','sweep'];
   if(host){ var lgds=host.querySelectorAll('.clegend .lgd'); lgds.forEach(function(el,i){ var key=LK[i]; if(key)el.classList.toggle('off', window._coinLineOn[key]===false); }); }
   var cv=$('#coinChartCv'); if(cv&&window._coinR&&typeof drawStockChart==='function')drawStockChart(cv,window._coinR);
 };
