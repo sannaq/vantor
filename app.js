@@ -1722,7 +1722,7 @@ function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
 function _ensureCoinSection(){ var s=$('#coinSection'); if(!s){ var host=$('#coinHost'); if(!host)return null; s=document.createElement('div'); s.id='coinSection'; s.style.display='none'; host.parentNode.insertBefore(s,host); } return s; }
 window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect=_ensureCoinSection(); if(!sect)return;
   if(sec==='liq'){ if(typeof openLiqMap==='function')openLiqMap(_coinCur||'BTC'); return; }
-  if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); // 다른 섹션으로 가면 엔진 정리
+  if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); if(typeof stopCoinLive==='function')stopCoinLive(); // 다른 섹션으로 가면 엔진 정리
   $$('#menu .cmenu-a').forEach(function(a){ a.classList.toggle('on',a.dataset.cs===sec); });
   if(host){host.style.display='none';host.innerHTML='';}
   if(sec==='home'||sec==='radar'||sec==='sector'){ if(body)body.style.display=''; sect.style.display='none';
@@ -2237,6 +2237,7 @@ async function openCoin(sym){
       +'<div id="cJournal" class="flowcard"></div>';
     window._chartZoom=Math.min(90,candles.length||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
     var cv=host.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function'){ drawStockChart(cv,r); _attachChartZoom(cv); if(typeof _attachDraw==='function')_attachDraw(cv,function(){return window._coinR;}); }
+    if(typeof startCoinLive==='function')startCoinLive(sym,TF);
     window._drawTool='move';
     if(typeof coinFlow==='function')coinFlow(sym,s,px);
     if(typeof mountAskBox==='function')mountAskBox('#coinFlow', function(){ return window._coinR; });
@@ -2248,7 +2249,7 @@ async function openCoin(sym){
     if(typeof _startFundCd==='function')_startFundCd();
   }catch(e){ if(_coinCur===sym)host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">불러오기 실패</div>'; }
 }
-function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); if(typeof _stopChartTips==='function')_stopChartTips(); if(typeof _stopFundCd==='function')_stopFundCd(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
+function closeCoin(){ if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); if(typeof stopCoinLive==='function')stopCoinLive(); if(typeof _stopChartTips==='function')_stopChartTips(); if(typeof _stopFundCd==='function')_stopFundCd(); var host=$('#coinHost'), body=$('#coinBody'); if(host){host.style.display='none';host.innerHTML='';} var _cs=$('#coinSection'); if(_cs)_cs.style.display='none'; if(body)body.style.display=''; if(typeof coinNav==='function'){ $$('#menu .cmenu-a').forEach(function(a){a.classList.toggle('on',a.dataset.cs==='home');}); } _coinCur=null; if(typeof _cTakerWS!=='undefined'&&_cTakerWS){try{_cTakerWS.close()}catch(e){}_cTakerWS=null;} if(typeof _stopCoinRefresh==='function')_stopCoinRefresh(); }
 window.openCoin=openCoin; window.closeCoin=closeCoin;
 /* 💡 차트 팁 — 차트 볼 때 도움 팁 회전(클릭 시 다음) */
 var CHART_TIPS=[
@@ -2525,6 +2526,19 @@ function _attachDraw(cv,getR){ if(!cv||cv._drawAttached)return; cv._drawAttached
   window.addEventListener('mouseup',function(){ if(!dg)return; var pv=window._drawPreview; window._drawPreview=null; var r=getR&&getR(); if(pv&&r&&(Math.abs(pv.t2-pv.t1)>1||Math.abs(pv.p2-pv.p1)>0)){ _addDraw(r.c,{type:dg.tool,t1:pv.t1,p1:pv.p1,t2:pv.t2,p2:pv.p2,color:'#e0b552'}); } dg=null; if(r)drawStockChart(cv,r); });
 }
 window._attachDraw=_attachDraw;
+/* ── B. 초단위 실시간 틱 (코인 차트 현재 봉을 kline WS로 라이브) ── */
+var _coinLiveWS=null, _coinLiveRaf=null;
+function stopCoinLive(){ if(_coinLiveWS){ try{_coinLiveWS.onclose=null;_coinLiveWS.close();}catch(e){} _coinLiveWS=null; } if(_coinLiveRaf){ clearTimeout(_coinLiveRaf); _coinLiveRaf=null; } }
+window.stopCoinLive=stopCoinLive;
+function startCoinLive(sym,tf){ stopCoinLive(); if(!sym)return; var s=sym.toLowerCase()+'usdt', itv=tf||'1h';
+  function redraw(){ _coinLiveRaf=null; var r=window._coinR; if(!r)return; if(window._drawTool&&window._drawTool!=='move')return; if(window._chartPanning)return; var cv=document.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r); }
+  try{ _coinLiveWS=new WebSocket('wss://fstream.binance.com/ws/'+s+'@kline_'+itv); }catch(e){ return; }
+  _coinLiveWS.onmessage=function(ev){ var m; try{m=JSON.parse(ev.data);}catch(e){return;} var k=m.k; if(!k)return; var r=window._coinR; if(!r||!r._candles||!r._candles.length)return; var cs=r._candles, last=cs[cs.length-1]; var kt=k.t,o=+k.o,h=+k.h,l=+k.l,c=+k.c,v=+k.v;
+    if(last[0]===kt){ last[1]=o;last[2]=h;last[3]=l;last[4]=c;last[5]=v; } else if(kt>last[0]){ cs.push([kt,o,h,l,c,v]); if(cs.length>600)cs.shift(); }
+    r.px=c; if(!_coinLiveRaf)_coinLiveRaf=setTimeout(redraw,180); };
+  _coinLiveWS.onclose=function(){ var w=_coinLiveWS; if(w){ setTimeout(function(){ if(_coinLiveWS===w&&window._coinR&&window._coinR.c===sym)startCoinLive(sym,tf); },2500); } };
+}
+window.startCoinLive=startCoinLive;
 /* 📓 매매 일지 (localStorage, 종목 공용) */
 function _cjLoad(){ try{return JSON.parse(localStorage.getItem('coinTrades')||'[]');}catch(e){return [];} }
 function _cjSave(t){ try{localStorage.setItem('coinTrades',JSON.stringify(t));}catch(e){} }
