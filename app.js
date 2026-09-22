@@ -3231,7 +3231,7 @@ function _bbMeta(type){ return type==='notice'?{ic:'📢',lab:'이벤트·안내
 var _BRIEFS=null;
 function _loadBriefs(){ try{ fetch('briefs/index.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)&&j.length){ _BRIEFS=j.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}); renderBriefBoard(); } }).catch(function(){}); }catch(e){} }
 var _BB_SLOTS=[{k:'am',ic:'🌅',lab:'아침'},{k:'noon',ic:'🍱',lab:'점심'},{k:'pm',ic:'🔔',lab:'장마감'}];
-var _bbSlot=null;
+var _bbSlot=null, _bbSlotUser=false;
 function _bbMedia(b){
   if(!b)return '';
   if(b.img)return '<a href="'+_bbEsc(b.img)+'" target="_blank" rel="noopener"><img src="'+_bbEsc(b.img)+'" alt="브리핑" style="width:100%;border-radius:12px;border:1px solid var(--line2);display:block"></a>';
@@ -3242,7 +3242,7 @@ function renderBriefBoard(){
   var el=$('#briefBoard'); if(!el)return;
   var today=_bbToday(), briefs=(_BRIEFS||[]);
   var todays={}; briefs.forEach(function(b){ if(b.date===today)todays[b.slot||'am']=b; });
-  if(!_bbSlot||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
+  if(!_bbSlotUser||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
   var tabs=_BB_SLOTS.map(function(s){ var has=!!todays[s.k], on=s.k===_bbSlot;
     return '<button class="tf" onclick="_bbSetSlot(\''+s.k+'\')" style="flex:1;'+(on?'background:#2b6cff;color:#fff;border-color:transparent;':'')+'">'+s.ic+' '+s.lab+(has?' ●':'')+'</button>';
   }).join('');
@@ -3273,7 +3273,7 @@ function renderBriefBoard(){
     +'<div style="color:var(--faint);font-size:10.5px;margin-top:10px;line-height:1.5">시간대별 브리핑 + 실시간 지수 + 직접 쓰는 공지. 교육용 참고 · 투자 판단은 스스로.</div></div></div>';
   if(typeof renderBriefing==='function')renderBriefing();
 }
-window._bbSetSlot=function(k){ _bbSlot=k; renderBriefBoard(); };
+window._bbSetSlot=function(k){ _bbSlot=k; _bbSlotUser=true; renderBriefBoard(); };
 window.renderBriefBoard=renderBriefBoard;
 var _bbEditId=null;
 function _bbRenderModal(bg){
