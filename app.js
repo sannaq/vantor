@@ -3229,12 +3229,23 @@ function _bbLoad(){ try{ var a=JSON.parse(localStorage.getItem('aurBriefBoard')|
 function _bbSave(a){ try{ localStorage.setItem('aurBriefBoard',JSON.stringify(a)); }catch(e){} }
 function _bbToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function _bbMeta(type){ return type==='notice'?{ic:'📢',lab:'이벤트·안내',cl:'#e0a83e'}:{ic:'📊',lab:'시황 요약',cl:'#4a9eff'}; }
+var _BRIEFS=null;
+function _loadBriefs(){ try{ fetch('briefs/index.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)&&j.length){ _BRIEFS=j.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}); renderBriefBoard(); } }).catch(function(){}); }catch(e){} }
 function renderBriefBoard(){
   var el=$('#briefBoard'); if(!el)return;
   var list=_bbLoad().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||'')|| (b.id||0)-(a.id||0); });
+  var imgHtml='';
+  if(_BRIEFS&&_BRIEFS.length){ var b0=_BRIEFS[0];
+    imgHtml='<div style="padding:4px 0 12px">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+      +'<span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 오늘의 브리핑</span>'
+      +'<span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(b0.date)+'</span>'
+      +'<span style="font-weight:800;font-size:13.5px">'+_bbEsc(b0.title||'')+'</span></div>'
+      +'<a href="'+_bbEsc(b0.img)+'" target="_blank" rel="noopener"><img src="'+_bbEsc(b0.img)+'" alt="'+_bbEsc(b0.title||'브리핑')+'" style="width:100%;border-radius:12px;border:1px solid var(--line2);display:block" onerror="this.parentNode.parentNode.style.display=\'none\'"></a></div>';
+  }
   var body='';
   if(!list.length){
-    body='<div style="color:var(--faint);font-size:12.5px;line-height:1.6;padding:4px 2px">아직 등록된 요약·안내가 없어요. <b>✏️ 편집</b>을 눌러 오늘의 시황 요약이나 이벤트·공지를 직접 작성해 보세요.</div>';
+    body=imgHtml?'':'<div style="color:var(--faint);font-size:12.5px;line-height:1.6;padding:4px 2px">아직 등록된 요약·안내가 없어요. <b>✏️ 편집</b>을 눌러 오늘의 시황 요약이나 이벤트·공지를 직접 작성해 보세요.</div>';
   } else {
     list.slice(0,8).forEach(function(it){ var m=_bbMeta(it.type); var bd=_bbEsc(it.body).replace(/\n/g,'<br>');
       body+='<div style="padding:10px 0;border-top:1px solid var(--line2)">'
@@ -3248,8 +3259,8 @@ function renderBriefBoard(){
   }
   el.innerHTML='<div class="card" data-card="증시요약" style="margin-bottom:14px"><div class="ch"><h2>📰 증시 요약 · 안내</h2>'
     +'<div class="r"><button class="tf" onclick="openBriefBoard()">✏️ 편집</button></div></div>'
-    +'<div class="pad" style="padding-top:2px">'+body
-    +'<div style="color:var(--faint);font-size:10.5px;margin-top:10px;line-height:1.5">우리가 직접 작성하는 자체 요약·공지예요. 투자 판단은 스스로.</div></div></div>';
+    +'<div class="pad" style="padding-top:2px">'+imgHtml+body
+    +'<div style="color:var(--faint);font-size:10.5px;margin-top:10px;line-height:1.5">매일 아침 시황 브리핑(이미지) + 직접 쓰는 요약·공지. 교육용 참고 · 투자 판단은 스스로.</div></div></div>';
 }
 window.renderBriefBoard=renderBriefBoard;
 var _bbEditId=null;
@@ -3294,7 +3305,7 @@ window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
   if(_bbEditId){ var it=a.find(function(x){return x.id===_bbEditId;}); if(it){ it.type=type; it.date=date; it.title=title; it.body=body; } _bbEditId=null; }
   else { a.push({id:Date.now(),type:type,date:date,title:title,body:body}); }
   _bbSave(a); _bbRenderModal(bg); renderBriefBoard(); };
-initCards(); renderSummary(); renderBriefing(); renderBriefBoard();
+initCards(); renderSummary(); renderBriefing(); renderBriefBoard(); _loadBriefs();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
