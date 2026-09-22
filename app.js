@@ -1066,7 +1066,7 @@ window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.
   return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard'];
 /* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
 function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
 function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
@@ -1532,6 +1532,7 @@ function showView(v,noScroll){
   $$('.view').forEach(function(x){x.classList.remove('on');});
   var el=$('#v-'+v); if(el)el.classList.add('on');
   var _brf=$('#brief'); if(_brf)_brf.style.display=(!coinMode&&v==='home')?'':'none'; // 오늘의 브리핑은 HOME에서만
+  var _brb=$('#briefBoard'); if(_brb)_brb.style.display=(!coinMode&&v==='home')?'':'none'; // 증시 요약·안내도 HOME에서만
   if(!coinMode){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal&&!useRealMkt)_db.style.display=''; }
   $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===v);});
   if(v!=='stock')stopDetailLive(); // 상세를 벗어나면 라이브 폴링 중단
@@ -2688,6 +2689,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
   _applyCoinMenu(coinMode); // 코인 모드 전용 상단 메뉴(홈/RADAR/섹터/뉴스/관심/기초)
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
   var brf=$('#brief'); if(brf)brf.style.display=coinMode?'none':'';           // 주식 브리핑은 코인 모드에서 숨김
+  var brb=$('#briefBoard'); if(brb)brb.style.display=coinMode?'none':'';       // 증시 요약·안내도 코인 모드에서 숨김
   var msum=$('#marketSummary'); if(msum)msum.style.display=coinMode?'none':'';  // 주식 시장요약도 숨김
   $$('.view').forEach(function(v){v.classList.remove('on');});
   if(coinMode){ $('#v-coin').classList.add('on'); openCoinTerminal(); coinNav('home'); }
@@ -3221,7 +3223,78 @@ function renderBriefing(){
     +_sec('os','🌏 해외·밤사이',osSum.join(' · '),osBody)+_sec('kr','🇰🇷 국내·마감',krSum.join(' · '),krBody)+'</div></div>';
 }
 
-initCards(); renderSummary(); renderBriefing();
+/* ═══════════ 📰 증시 요약 · 안내 (앱에서 직접 입력·저장, 동기화됨) ═══════════ */
+function _bbEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function _bbLoad(){ try{ var a=JSON.parse(localStorage.getItem('aurBriefBoard')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function _bbSave(a){ try{ localStorage.setItem('aurBriefBoard',JSON.stringify(a)); }catch(e){} }
+function _bbToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function _bbMeta(type){ return type==='notice'?{ic:'📢',lab:'이벤트·안내',cl:'#e0a83e'}:{ic:'📊',lab:'시황 요약',cl:'#4a9eff'}; }
+function renderBriefBoard(){
+  var el=$('#briefBoard'); if(!el)return;
+  var list=_bbLoad().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||'')|| (b.id||0)-(a.id||0); });
+  var body='';
+  if(!list.length){
+    body='<div style="color:var(--faint);font-size:12.5px;line-height:1.6;padding:4px 2px">아직 등록된 요약·안내가 없어요. <b>✏️ 편집</b>을 눌러 오늘의 시황 요약이나 이벤트·공지를 직접 작성해 보세요.</div>';
+  } else {
+    list.slice(0,8).forEach(function(it){ var m=_bbMeta(it.type); var bd=_bbEsc(it.body).replace(/\n/g,'<br>');
+      body+='<div style="padding:10px 0;border-top:1px solid var(--line2)">'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'
+        +'<span style="font-size:11px;font-weight:800;color:#0b0f16;background:'+m.cl+';padding:2px 8px;border-radius:6px">'+m.ic+' '+m.lab+'</span>'
+        +'<span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(it.date)+'</span>'
+        +(it.title?'<span style="font-weight:800;font-size:13.5px">'+_bbEsc(it.title)+'</span>':'')+'</div>'
+        +'<div style="font-size:12.5px;color:var(--sub);line-height:1.65">'+bd+'</div></div>';
+    });
+    if(list.length>8)body+='<div style="color:var(--faint);font-size:11px;margin-top:6px">외 '+(list.length-8)+'건 — ✏️ 편집에서 전체 관리</div>';
+  }
+  el.innerHTML='<div class="card" data-card="증시요약" style="margin-bottom:14px"><div class="ch"><h2>📰 증시 요약 · 안내</h2>'
+    +'<div class="r"><button class="tf" onclick="openBriefBoard()">✏️ 편집</button></div></div>'
+    +'<div class="pad" style="padding-top:2px">'+body
+    +'<div style="color:var(--faint);font-size:10.5px;margin-top:10px;line-height:1.5">우리가 직접 작성하는 자체 요약·공지예요. 투자 판단은 스스로.</div></div></div>';
+}
+window.renderBriefBoard=renderBriefBoard;
+var _bbEditId=null;
+function _bbRenderModal(bg){
+  var list=_bbLoad().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||'')||(b.id||0)-(a.id||0); });
+  var ed=_bbEditId?_bbLoad().find(function(x){return x.id===_bbEditId;}):null;
+  var rows=list.map(function(it){ var m=_bbMeta(it.type);
+    return '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--line2)">'
+      +'<div style="flex:1;min-width:0"><div style="font-size:11px;color:var(--faint)">'+m.ic+' '+m.lab+' · '+_bbEsc(it.date)+'</div>'
+      +'<div style="font-weight:700;font-size:13px">'+_bbEsc(it.title||'(제목 없음)')+'</div>'
+      +'<div style="font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+_bbEsc(it.body)+'</div></div>'
+      +'<button class="tf" onclick="_bbEdit('+it.id+')">✏️</button><button class="tf" onclick="_bbDel('+it.id+')">🗑</button></div>';
+  }).join('')||'<div style="color:var(--faint);font-size:12px;padding:8px 0">등록된 항목이 없어요.</div>';
+  bg.querySelector('.modal').innerHTML='<h3>📰 증시 요약 · 안내 편집</h3>'
+    +'<div class="msub">오늘의 시황 요약이나 이벤트·공지를 직접 써서 저장해요. 저장하면 자동 동기화됩니다.</div>'
+    +'<div style="padding:4px 20px 8px">'
+    +'<div style="display:flex;gap:8px;margin-bottom:8px"><select id="bbType" class="tf" style="flex:1">'
+      +'<option value="brief"'+(ed&&ed.type==='notice'?'':' selected')+'>📊 시황 요약</option>'
+      +'<option value="notice"'+(ed&&ed.type==='notice'?' selected':'')+'>📢 이벤트·안내</option></select>'
+    +'<input id="bbDate" class="tf" type="date" value="'+_bbEsc(ed?ed.date:_bbToday())+'" style="flex:1"></div>'
+    +'<input id="bbTitle" class="tf" placeholder="제목 (예: 9월 22일 마감 요약 / 추석 휴장 안내)" value="'+_bbEsc(ed?ed.title:'')+'" style="width:100%;margin-bottom:8px">'
+    +'<textarea id="bbBody" class="tf" placeholder="내용을 입력하세요. 줄바꿈 그대로 표시됩니다." style="width:100%;min-height:120px;line-height:1.6;resize:vertical">'+_bbEsc(ed?ed.body:'')+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+      +'<button class="mbtn pri" onclick="_bbSaveForm()" style="flex:1">'+(ed?'수정 저장':'추가')+'</button>'
+      +(ed?'<button class="mbtn" onclick="_bbCancelEdit()">취소</button>':'')+'</div>'
+    +'<div style="margin-top:14px;font-weight:700;font-size:12.5px;color:var(--faint)">등록된 항목</div>'+rows
+    +'</div><div class="mfoot"><button class="mbtn pri" id="bbClose">닫기</button></div>';
+  bg.querySelector('#bbClose').onclick=function(){bg.remove();};
+}
+window.openBriefBoard=function(){ _bbEditId=null; var bg=document.createElement('div'); bg.className='modal-bg';
+  bg.innerHTML='<div class="modal" style="max-width:520px;max-height:86vh;overflow:auto"></div>';
+  document.body.appendChild(bg); bg.addEventListener('click',function(e){if(e.target===bg)bg.remove();}); _bbRenderModal(bg); };
+function _bbCurrentBg(){ return document.querySelector('.modal-bg'); }
+window._bbEdit=function(id){ _bbEditId=id; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
+window._bbCancelEdit=function(){ _bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
+window._bbDel=function(id){ if(!confirm('이 항목을 삭제할까요?'))return; var a=_bbLoad().filter(function(x){return x.id!==id;}); _bbSave(a); if(_bbEditId===id)_bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); renderBriefBoard(); };
+window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
+  var type=bg.querySelector('#bbType').value, date=bg.querySelector('#bbDate').value||_bbToday();
+  var title=bg.querySelector('#bbTitle').value.trim(), body=bg.querySelector('#bbBody').value.trim();
+  if(!title&&!body){ alert('제목이나 내용을 입력해 주세요.'); return; }
+  var a=_bbLoad();
+  if(_bbEditId){ var it=a.find(function(x){return x.id===_bbEditId;}); if(it){ it.type=type; it.date=date; it.title=title; it.body=body; } _bbEditId=null; }
+  else { a.push({id:Date.now(),type:type,date:date,title:title,body:body}); }
+  _bbSave(a); _bbRenderModal(bg); renderBriefBoard(); };
+initCards(); renderSummary(); renderBriefing(); renderBriefBoard();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
