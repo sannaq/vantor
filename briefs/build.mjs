@@ -99,16 +99,18 @@ ${(d.checks && d.checks.length) ? `<div class="chk"><h2>📌 개장 후 확인�
 <div class="foot">${esc(d.foot || 'VANTOR 아침 브리핑 · 교육용 참고 · 투자 판단은 스스로')}</div>
 </body></html>`;
 
-const outName = `${d.date}.html`;
+const slot = ['am', 'noon', 'pm'].includes(d.slot) ? d.slot : 'am';
+const slotRank = { am: 1, noon: 2, pm: 3 };
+const outName = `${d.date}-${slot}.html`;
 fs.writeFileSync(path.join(DIR, outName), html, 'utf8');
 
-// index.json 갱신 (같은 날짜는 교체, 최신순, 최근 30개 유지)
+// index.json 갱신 (같은 날짜+시간대는 교체, 최신순, 최근 30개 유지)
 const idxPath = path.join(DIR, 'index.json');
 let idx = [];
 try { idx = JSON.parse(fs.readFileSync(idxPath, 'utf8')); if (!Array.isArray(idx)) idx = []; } catch (e) {}
-idx = idx.filter(x => x.date !== d.date);
-idx.unshift({ date: d.date, title: d.title || '증시 브리핑', summary: d.lead || '', html: `briefs/${outName}` });
-idx.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+idx = idx.filter(x => !(x.date === d.date && (x.slot || 'am') === slot));
+idx.unshift({ date: d.date, slot, title: d.title || '증시 브리핑', summary: d.lead || '', html: `briefs/${outName}` });
+idx.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (slotRank[b.slot] || 1) - (slotRank[a.slot] || 1));
 idx = idx.slice(0, 30);
 fs.writeFileSync(idxPath, JSON.stringify(idx, null, 2) + '\n', 'utf8');
 
