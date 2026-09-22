@@ -102,16 +102,18 @@ ${(d.checks && d.checks.length) ? `<div class="chk"><h2>📌 개장 후 확인�
 const slot = ['am', 'noon', 'pm'].includes(d.slot) ? d.slot : 'am';
 const slotRank = { am: 1, noon: 2, pm: 3 };
 const outName = `${d.date}-${slot}.html`;
-fs.writeFileSync(path.join(DIR, outName), html, 'utf8');
+const dataName = `${d.date}-${slot}.json`;
+fs.writeFileSync(path.join(DIR, outName), html, 'utf8');            // 단독 HTML(백업/열기용)
+fs.writeFileSync(path.join(DIR, dataName), JSON.stringify(d, null, 2) + '\n', 'utf8'); // 앱이 텍스트로 렌더할 데이터
 
 // index.json 갱신 (같은 날짜+시간대는 교체, 최신순, 최근 30개 유지)
 const idxPath = path.join(DIR, 'index.json');
 let idx = [];
 try { idx = JSON.parse(fs.readFileSync(idxPath, 'utf8')); if (!Array.isArray(idx)) idx = []; } catch (e) {}
 idx = idx.filter(x => !(x.date === d.date && (x.slot || 'am') === slot));
-idx.unshift({ date: d.date, slot, title: d.title || '증시 브리핑', summary: d.lead || '', html: `briefs/${outName}` });
+idx.unshift({ date: d.date, slot, title: d.title || '증시 브리핑', summary: d.lead || '', data: `briefs/${dataName}` });
 idx.sort((a, b) => (b.date || '').localeCompare(a.date || '') || (slotRank[b.slot] || 1) - (slotRank[a.slot] || 1));
 idx = idx.slice(0, 30);
 fs.writeFileSync(idxPath, JSON.stringify(idx, null, 2) + '\n', 'utf8');
 
-console.log('built', outName, '· index entries:', idx.length);
+console.log('built', outName, '+', dataName, '· index entries:', idx.length);
