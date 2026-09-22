@@ -77,7 +77,7 @@ b{color:#111}
 @media (prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}b{color:#fff}.box,.ev{border-color:#232b36}.tile,.sbox.g{background:#122a1e}.sbox.n{background:#1a222d}.sbox .l,.ktext,.two .l,.evb,.note{color:#c4ccd6}.tile .t{color:#9aa4b0}.warn{background:#2a2413;border-color:#5c4d1e}.warn .l{color:#e8dcae}.warn .l b{color:#fff}.chk{background:#122036;border-color:#243a5c}.cb{color:#d3ddea}.cb b{color:#fff}.lead{color:#c4ccd6}.lead b{color:#fff}.pill.n{background:#1a222d;color:#c4ccd6}.note{border-color:#232b36}}
 </style></head>
 <body>
-<div class="head"><h1>${esc(d.title || '증시 브리핑')}</h1><div class="src">${esc(d.src || '경제길잡이 기준')} · ${esc(d.date)}</div></div>
+<div class="head"><h1>${esc(d.title || '증시 브리핑')}</h1><div class="src">${esc(d.src || 'VANTOR')} · ${esc(d.date)}</div></div>
 ${d.lead ? `<div class="lead">${md(d.lead)}</div>` : ''}
 ${d.us ? `<div class="box"><h2><span class="tag us">US</span> ${esc(d.us.title || '미국장')}</h2>
   <div class="tiles">${tiles(d.us.tiles)}</div>
@@ -96,7 +96,7 @@ ${(d.supply || d.gap) ? `<div class="two">
 </div>` : ''}
 ${(d.events && d.events.length) ? `<div class="ev"><h2>📅 오늘 진행되는 이벤트</h2>${evrows(d.events)}</div>` : ''}
 ${(d.checks && d.checks.length) ? `<div class="chk"><h2>📌 개장 후 확인할 ${d.checks.length}가지</h2>${checks(d.checks)}</div>` : ''}
-<div class="foot">${esc(d.foot || '경제길잡이(moneygil) 브리핑 재구성 + 이벤트·맥락 추가 · 교육용 참고 · 투자 판단은 스스로')}</div>
+<div class="foot">${esc(d.foot || 'VANTOR 아침 브리핑 · 교육용 참고 · 투자 판단은 스스로')}</div>
 </body></html>`;
 
 const outName = `${d.date}.html`;
