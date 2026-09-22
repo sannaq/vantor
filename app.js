@@ -3236,12 +3236,19 @@ function renderBriefBoard(){
   var list=_bbLoad().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||'')|| (b.id||0)-(a.id||0); });
   var imgHtml='';
   if(_BRIEFS&&_BRIEFS.length){ var b0=_BRIEFS[0];
-    imgHtml='<div style="padding:4px 0 12px">'
-      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
+    var head='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">'
       +'<span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 오늘의 브리핑</span>'
       +'<span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(b0.date)+'</span>'
-      +'<span style="font-weight:800;font-size:13.5px">'+_bbEsc(b0.title||'')+'</span></div>'
-      +'<a href="'+_bbEsc(b0.img)+'" target="_blank" rel="noopener"><img src="'+_bbEsc(b0.img)+'" alt="'+_bbEsc(b0.title||'브리핑')+'" style="width:100%;border-radius:12px;border:1px solid var(--line2);display:block" onerror="this.parentNode.parentNode.style.display=\'none\'"></a></div>';
+      +'<span style="font-weight:800;font-size:13.5px">'+_bbEsc(b0.title||'')+'</span></div>';
+    if(b0.img){
+      imgHtml='<div style="padding:4px 0 12px">'+head
+        +'<a href="'+_bbEsc(b0.img)+'" target="_blank" rel="noopener"><img src="'+_bbEsc(b0.img)+'" alt="'+_bbEsc(b0.title||'브리핑')+'" style="width:100%;border-radius:12px;border:1px solid var(--line2);display:block" onerror="this.parentNode.parentNode.style.display=\'none\'"></a></div>';
+    } else if(b0.html){
+      imgHtml='<div style="padding:4px 0 12px">'+head
+        +'<a href="'+_bbEsc(b0.html)+'" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line2);border-radius:12px;padding:14px 16px;background:var(--panel2,#0f151f)">'
+        +(b0.summary?'<div style="font-size:13px;color:var(--sub);line-height:1.6;margin-bottom:8px">'+_bbEsc(b0.summary)+'</div>':'')
+        +'<div style="font-weight:800;font-size:13px;color:#4a9eff">브리핑 전체 열기 →</div></a></div>';
+    }
   }
   var body='';
   if(!list.length){
