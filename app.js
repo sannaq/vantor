@@ -3292,8 +3292,10 @@ window._bbExportImg=function(){ var node=document.querySelector('#brfRender .brf
   html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(function(cv){ cv.toBlob(function(blob){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=(node.getAttribute('data-name')||'브리핑')+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000); }); }).catch(function(e){ alert('이미지 추출 실패: '+e); }); };
 function renderBriefBoard(){
   var el=$('#briefBoard'); if(!el)return;
-  var today=_bbToday(), briefs=(_BRIEFS||[]);
-  var todays={}; briefs.forEach(function(b){ if(b.date===today)todays[b.slot||'am']=b; });
+  var briefs=(_BRIEFS||[]);
+  var activeDate=(briefs[0]&&briefs[0].date)||_bbToday(); // 시계 불일치 대비 — 가장 최신 브리핑 날짜 기준
+  var today=activeDate;
+  var todays={}; briefs.forEach(function(b){ if(b.date===activeDate)todays[b.slot||'am']=b; });
   if(!_bbSlotUser||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
   var tabs='<div style="display:flex;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:11px;padding:3px;margin-bottom:12px">'
     +_BB_SLOTS.map(function(s){ var has=!!todays[s.k], on=s.k===_bbSlot;
