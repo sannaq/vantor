@@ -549,6 +549,7 @@
     <a data-v="stock">STOCK</a>
     <a data-v="news">NEWS</a>
     <a data-v="watch">관심</a>
+    <a data-v="events">📅 이벤트</a>
     <a data-v="learn">LEARN</a>
   </div>
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
@@ -668,6 +669,7 @@
   </div>
 
   <!-- ===== LEARN ===== -->
+  <div class="view" id="v-events"><div id="eventsPanel"></div></div>
   <div class="view" id="v-learn">
     <div class="sec-title">📚 LEARN</div>
     <p class="sec-sub">차트·캔들·패턴·지표·매매원칙·엘리엇 파동까지 — 교육용 정리. 매수·매도 신호가 아닙니다.</p>
@@ -724,7 +726,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=95"></script>
+<script src="app.js?v=96"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

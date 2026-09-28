@@ -1547,6 +1547,7 @@ function showView(v,noScroll){
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
+  if(v==='events'){ if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
   if(v==='market')renderHeatmap();
   if(v==='ai'&&typeof mountHomeAsk==='function')mountHomeAsk('#aiAsk','stock');
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
@@ -3389,9 +3390,9 @@ window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
   _bbSave(a); _bbRenderModal(bg); renderBriefBoard(); };
 /* ═══════════ 📅 이번주 경제 일정 (경제 캘린더) ═══════════ */
 var _ECAL=null, _ecalMkt='all', _ecalImp=0;
-function _loadEcal(){ try{ fetch('events.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j&&j.events){ _ECAL=j; renderEconCal(); } }).catch(function(){}); }catch(e){} }
-function renderEconCal(){
-  var el=$('#econCal'); if(!el)return; if(!_ECAL){ el.innerHTML=''; return; }
+function _loadEcal(){ try{ fetch('events.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j&&j.events){ _ECAL=j; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); } }).catch(function(){}); }catch(e){} }
+function renderEconCal(sel){
+  var el=$(sel||'#econCal'); if(!el)return; if(!_ECAL){ el.innerHTML=''; return; }
   var TYPE={data:{lab:'경제지표',c:'#f6465d'},earnings:{lab:'실적발표',c:'#4a9eff'},policy:{lab:'정책',c:'#2ebd85'},event:{lab:'이벤트',c:'#e0a83e'}};
   var MKT={US:{lab:'US',c:'#1d4ed8',bg:'#e7eefe'},KR:{lab:'KR',c:'#b4531a',bg:'#fdeede'}};
   var RV={hot:{c:'#c0334a',bg:'#fdeaeb'},cool:{c:'#12784a',bg:'#eaf7ef'},up:{c:'#12784a',bg:'#eaf7ef'},down:{c:'#c0334a',bg:'#fdeaeb'},neutral:{c:'#5b6470',bg:'#f1f3f6'}};
@@ -3423,10 +3424,14 @@ function renderEconCal(){
   var lens=_ECAL.lens?('<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">'
     +'<div style="flex:1;min-width:200px;background:#eaf7ef;border:1px solid #bce6cd;border-radius:11px;padding:12px 14px"><div style="font-weight:800;font-size:12.5px;color:#12784a;margin-bottom:5px">▼ '+_bbEsc(_ECAL.lens.cool.title)+'</div><div style="font-size:12px;line-height:1.55;color:#2c5c43">'+MD(_ECAL.lens.cool.body)+'</div></div>'
     +'<div style="flex:1;min-width:200px;background:#fdeaeb;border:1px solid #f3c2c6;border-radius:11px;padding:12px 14px"><div style="font-weight:800;font-size:12.5px;color:#c0334a;margin-bottom:5px">▲ '+_bbEsc(_ECAL.lens.hot.title)+'</div><div style="font-size:12px;line-height:1.55;color:#8f2e3d">'+MD(_ECAL.lens.hot.body)+'</div></div></div>'):'';
+  var compact=(el.id==='econCal');
+  var filtersRow='<div style="display:flex;gap:6px;margin:6px 0 2px">'+chip('all','전체')+chip('US','미국')+chip('KR','한국')+'</div>';
+  var moreBtn='<button class="tf" onclick="showView(\'events\')" style="width:100%;margin-top:10px;background:#2b6cff;color:#fff;border-color:transparent;font-weight:800">📅 전체 일정 보기 →</button>';
+  var foot='<div style="color:var(--faint);font-size:10.5px;margin-top:12px;line-height:1.5">시간은 한국시간(KST) · 발표 일정·수치는 변동될 수 있어요 · 투자 참고용, 매수/매도 권유 아님.</div>';
+  var inner=compact?(intro+keys+lens+moreBtn):(intro+filtersRow+body+keys+lens);
   el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>📅 이번주 증시 이벤트 <span style="font-weight:600;color:var(--faint);font-size:12px">'+_bbEsc(_ECAL.range||'')+'</span></h2>'
-    +'<div class="r"><button class="tf" onclick="_ecalImpToggle()" style="'+((_ecalImp>=3)?'background:#e0a83e;color:#0b0f16;border-color:transparent;':'')+'">★★★만</button></div></div>'
-    +'<div class="pad" style="padding-top:4px">'+intro+'<div style="display:flex;gap:6px;margin:6px 0 2px">'+chip('all','전체')+chip('US','미국')+chip('KR','한국')+'</div>'+body+keys+lens
-    +'<div style="color:var(--faint);font-size:10.5px;margin-top:12px;line-height:1.5">시간은 한국시간(KST) · 발표 일정·수치는 변동될 수 있어요 · 투자 참고용, 매수/매도 권유 아님.</div></div></div>';
+    +(compact?'':'<div class="r"><button class="tf" onclick="_ecalImpToggle()" style="'+((_ecalImp>=3)?'background:#e0a83e;color:#0b0f16;border-color:transparent;':'')+'">★★★만</button></div>')+'</div>'
+    +'<div class="pad" style="padding-top:4px">'+inner+foot+'</div></div>';
 }
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal(); };
