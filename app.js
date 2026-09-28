@@ -3231,8 +3231,15 @@ function renderBriefing(){
 
 /* ═══════════ 📰 증시 요약 · 안내 (앱에서 직접 입력·저장, 동기화됨) ═══════════ */
 function _bbEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function _bbLoad(){ try{ var a=JSON.parse(localStorage.getItem('aurBriefBoard')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
-function _bbSave(a){ try{ localStorage.setItem('aurBriefBoard',JSON.stringify(a)); }catch(e){} }
+/* 안내 공지 — 전체공개(worker /notice KV). PIN 아는 사람만 수정, 읽기는 누구나. */
+var _PUBNOTICE=[];
+function _loadPubNotice(){ try{ if(typeof PROXY==='undefined'||!PROXY)return; fetch(PROXY+'/notice',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&Array.isArray(j.items)){ _PUBNOTICE=j.items; if(typeof renderBriefBoard==='function')renderBriefBoard(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice&&typeof _bbRenderModal==='function')_bbRenderModal(bg); } }).catch(function(){}); }catch(e){} }
+function _bbLoad(){ return _PUBNOTICE.slice(); }
+function _bbSaveRemote(items,cb){ if(typeof PROXY==='undefined'||!PROXY){cb&&cb(false);return;}
+  var pin=''; try{pin=localStorage.getItem('aurNoticePin')||'';}catch(e){}
+  if(!pin){ pin=(window.prompt('공지 수정 PIN (처음이면 새로 정하세요, 4자 이상):')||'').trim(); if(pin.length<4){alert('PIN은 4자 이상이어야 해요.');cb&&cb(false);return;} try{localStorage.setItem('aurNoticePin',pin);}catch(e){} }
+  fetch(PROXY+'/notice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:pin,items:items})}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ _PUBNOTICE=j.items||items; cb&&cb(true); } else { if(j&&/PIN/.test(j.error||'')){ try{localStorage.removeItem('aurNoticePin');}catch(e){} alert('PIN이 맞지 않아요. 다시 시도해 주세요.'); } else { alert('저장 실패: '+((j&&j.error)||'네트워크')); } cb&&cb(false); } }).catch(function(){ alert('네트워크 오류로 저장 실패'); cb&&cb(false); }); }
+function _bbSave(a){ _PUBNOTICE=a; _bbSaveRemote(a, function(ok){ if(!ok){ _loadPubNotice(); } else { if(typeof renderBriefBoard==='function')renderBriefBoard(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice)_bbRenderModal(bg); } }); }
 function _bbToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function _bbMeta(type){ return type==='notice'?{ic:'📢',lab:'이벤트·안내',cl:'#e0a83e'}:{ic:'📊',lab:'시황 요약',cl:'#4a9eff'}; }
 var _BRIEFS=null;
@@ -3325,7 +3332,7 @@ function renderBriefBoard(){
       +(it.title?'<span style="font-weight:800;font-size:13px">'+_bbEsc(it.title)+'</span>':'')+'</div>'
       +'<div style="font-size:12.5px;color:var(--sub);line-height:1.65">'+bd+'</div></div>';
   });
-  var noticeSec=notices?('<div style="margin-top:6px"><div style="font-weight:800;font-size:12.5px;color:var(--faint);margin:8px 0 2px">📢 안내</div>'+notices+'</div>'):'';
+  var noticeSec=notices?('<div style="margin-top:6px"><div style="font-weight:800;font-size:12.5px;color:var(--faint);margin:8px 0 2px">📢 안내 <span style="font-weight:600;color:#4a9eff;font-size:10px">🌐 전체공개</span></div>'+notices+'</div>'):'';
   el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📰 오늘의 브리핑</h2>'
     +'<div class="r"><button class="tf" onclick="openBriefBoard()">✏️ 편집</button></div></div>'
     +'<div class="pad" style="padding-top:4px">'
@@ -3350,7 +3357,7 @@ function _bbRenderModal(bg){
       +'<button class="tf" onclick="_bbEdit('+it.id+')">✏️</button><button class="tf" onclick="_bbDel('+it.id+')">🗑</button></div>';
   }).join('')||'<div style="color:var(--faint);font-size:12px;padding:8px 0">등록된 항목이 없어요.</div>';
   bg.querySelector('.modal').innerHTML='<h3>📰 증시 요약 · 안내 편집</h3>'
-    +'<div class="msub">오늘의 시황 요약이나 이벤트·공지를 직접 써서 저장해요. 저장하면 자동 동기화됩니다.</div>'
+    +'<div class="msub">🌐 <b>전체 공개 공지</b> — 저장하면 방문자 모두에게 보여요. 처음 저장 시 <b>PIN</b>을 정하고, 이후 그 PIN을 아는 사람만 수정할 수 있어요.</div>'
     +'<div style="padding:4px 20px 8px">'
     +'<div style="display:flex;gap:8px;margin-bottom:8px"><select id="bbType" class="tf" style="flex:1">'
       +'<option value="brief"'+(ed&&ed.type==='notice'?'':' selected')+'>📊 시황 요약</option>'
@@ -3365,9 +3372,9 @@ function _bbRenderModal(bg){
     +'</div><div class="mfoot"><button class="mbtn pri" id="bbClose">닫기</button></div>';
   bg.querySelector('#bbClose').onclick=function(){bg.remove();};
 }
-window.openBriefBoard=function(){ _bbEditId=null; var bg=document.createElement('div'); bg.className='modal-bg';
+window.openBriefBoard=function(){ _bbEditId=null; var bg=document.createElement('div'); bg.className='modal-bg'; bg._isNotice=true;
   bg.innerHTML='<div class="modal" style="max-width:520px;max-height:86vh;overflow:auto"></div>';
-  document.body.appendChild(bg); bg.addEventListener('click',function(e){if(e.target===bg)bg.remove();}); _bbRenderModal(bg); };
+  document.body.appendChild(bg); bg.addEventListener('click',function(e){if(e.target===bg)bg.remove();}); _bbRenderModal(bg); _loadPubNotice(); };
 function _bbCurrentBg(){ return document.querySelector('.modal-bg'); }
 window._bbEdit=function(id){ _bbEditId=id; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
 window._bbCancelEdit=function(){ _bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
@@ -3387,6 +3394,8 @@ function renderEconCal(){
   var el=$('#econCal'); if(!el)return; if(!_ECAL){ el.innerHTML=''; return; }
   var TYPE={data:{lab:'경제지표',c:'#f6465d'},earnings:{lab:'실적발표',c:'#4a9eff'},policy:{lab:'정책',c:'#2ebd85'},event:{lab:'이벤트',c:'#e0a83e'}};
   var MKT={US:{lab:'US',c:'#1d4ed8',bg:'#e7eefe'},KR:{lab:'KR',c:'#b4531a',bg:'#fdeede'}};
+  var RV={hot:{c:'#c0334a',bg:'#fdeaeb'},cool:{c:'#12784a',bg:'#eaf7ef'},up:{c:'#12784a',bg:'#eaf7ef'},down:{c:'#c0334a',bg:'#fdeaeb'},neutral:{c:'#5b6470',bg:'#f1f3f6'}};
+  var MD0=(typeof _brfMd==='function')?_brfMd:function(x){return _bbEsc(x);};
   var WD=['일','월','화','수','목','금','토'], today=_bbToday();
   var evs=(_ECAL.events||[]).filter(function(e){ return (_ecalMkt==='all'||e.market===_ecalMkt)&&((e.imp||1)>=_ecalImp); });
   var days={}; evs.forEach(function(e){ (days[e.date]=days[e.date]||[]).push(e); });
@@ -3400,7 +3409,9 @@ function renderEconCal(){
         +'<span style="color:#e0a83e;font-size:11px;letter-spacing:-1px">'+new Array((e.imp||1)+1).join('★')+'</span>'
         +'<span style="font-weight:800;font-size:13px">'+_bbEsc(e.title)+'</span>'
         +'<span style="font-size:10px;font-weight:700;color:'+tp.c+';margin-left:auto">'+tp.lab+'</span></div>'
-        +(e.note?'<div style="font-size:12px;color:var(--sub);line-height:1.55;margin-top:5px">'+_bbEsc(e.note)+'</div>':'')+'</div>';
+        +(e.note?'<div style="font-size:12px;color:var(--sub);line-height:1.55;margin-top:5px">'+_bbEsc(e.note)+'</div>':'')
+        +(e.result?('<div style="font-size:12px;line-height:1.55;margin-top:6px;padding:6px 9px;border-radius:7px;background:'+(RV[e.result.verdict]||RV.neutral).bg+';color:'+(RV[e.result.verdict]||RV.neutral).c+'"><b style="font-size:10px;background:'+(RV[e.result.verdict]||RV.neutral).c+';color:#fff;padding:1px 6px;border-radius:5px;margin-right:6px">결과</b>'+MD0(e.result.v)+'</div>'):'')
+        +'</div>';
     }); body+='</div>';
   });
   if(!dates.length)body='<div style="color:var(--faint);font-size:12.5px;padding:8px 2px">해당 조건의 일정이 없어요.</div>';
@@ -3420,7 +3431,7 @@ function renderEconCal(){
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal(); };
 window._ecalImpToggle=function(){ _ecalImp=(_ecalImp>=3)?0:3; renderEconCal(); };
-initCards(); renderSummary(); renderBriefBoard(); renderBriefing(); _loadBriefs(); _loadEcal();
+initCards(); renderSummary(); renderBriefBoard(); renderBriefing(); _loadBriefs(); _loadEcal(); _loadPubNotice();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
