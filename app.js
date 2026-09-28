@@ -160,11 +160,15 @@ async function loadKisMarket(){
   if(!PROXY) return;
   try{
     var m=await fetch(PROXY+'/market?mkt=KR').then(function(r){return r.json();});
+    var changed=false;
     if(m&&Array.isArray(m.indices)&&m.indices.length){
       m.indices.forEach(function(x){ if(!x||!x.v)return; var t=IDX.find(function(i){return i.nm===x.nm;}); if(t){ t.v=x.v; t.c=x.c; t.d=x.d; t._real=true; } });
       if(m.breadth){ var b=m.breadth; ['up','down','flat','upH','downH'].forEach(function(k){ if(b[k]!=null)FLOW.breadth[k]=b[k]; }); }
-      useRealMkt=true; renderIdx(); renderFlow(); if(typeof renderSummary==='function')renderSummary(); if(typeof renderBriefing==='function')renderBriefing();
+      useRealMkt=true; changed=true;
     }
+    // 실환율 USD/KRW (/fx → Naver 하나은행 고시)
+    try{ var fx=await fetch(PROXY+'/fx').then(function(r){return r.json();}); if(fx&&fx.v){ var u=IDX.find(function(i){return i.fx||/USD/.test(i.nm||'');}); if(u){ u.v=fx.v; if(fx.c!=null)u.c=fx.c; if(fx.d!=null)u.d=fx.d; u._real=true; changed=true; } } }catch(e){}
+    if(changed){ renderIdx(); renderFlow(); if(typeof renderSummary==='function')renderSummary(); if(typeof renderBriefing==='function')renderBriefing(); }
   }catch(e){}
 }
 /* ═══════════ 관심종목(WATCHLIST) — localStorage 'aurWatch' ═══════════ */
