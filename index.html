@@ -564,6 +564,9 @@
   <!-- 증시 요약 · 안내 (앱에서 직접 입력·저장, HOME 전용) -->
   <div id="briefBoard"></div>
 
+  <!-- 이번주 경제 일정 (HOME 전용) -->
+  <div id="econCal"></div>
+
   <!-- 지수 스트립 (모든 화면 공통) -->
   <div id="marketSummary"></div>
   <div class="idxstrip" id="idxstrip"></div>
@@ -721,7 +724,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=91"></script>
+<script src="app.js?v=93"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
