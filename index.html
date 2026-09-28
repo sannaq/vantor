@@ -544,6 +544,7 @@
   <div class="menu" id="menu">
     <a data-v="home" class="on">HOME</a>
     <a data-v="ai">🤖 분석</a>
+    <a data-v="brief">📰 브리핑</a>
     <a data-v="market">MARKET</a>
     <a data-v="radar">RADAR</a>
     <a data-v="stock">STOCK</a>
@@ -669,6 +670,7 @@
   </div>
 
   <!-- ===== LEARN ===== -->
+  <div class="view" id="v-brief"><div id="briefPanel"></div></div>
   <div class="view" id="v-events"><div id="eventsPanel"></div></div>
   <div class="view" id="v-learn">
     <div class="sec-title">📚 LEARN</div>
@@ -726,7 +728,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=97"></script>
+<script src="app.js?v=98"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

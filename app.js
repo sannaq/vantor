@@ -1552,6 +1552,7 @@ function showView(v,noScroll){
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
   if(v==='events'){ if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
+  if(v==='brief'){ if(typeof renderBriefBoard==='function')renderBriefBoard('#briefPanel'); if(typeof renderBriefing==='function')renderBriefing(); }
   if(v==='market')renderHeatmap();
   if(v==='ai'&&typeof mountHomeAsk==='function')mountHomeAsk('#aiAsk','stock');
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
@@ -3238,17 +3239,17 @@ function renderBriefing(){
 function _bbEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 /* 안내 공지 — 전체공개(worker /notice KV). PIN 아는 사람만 수정, 읽기는 누구나. */
 var _PUBNOTICE=[];
-function _loadPubNotice(){ try{ if(typeof PROXY==='undefined'||!PROXY)return; fetch(PROXY+'/notice',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&Array.isArray(j.items)){ _PUBNOTICE=j.items; if(typeof renderBriefBoard==='function')renderBriefBoard(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice&&typeof _bbRenderModal==='function')_bbRenderModal(bg); } }).catch(function(){}); }catch(e){} }
+function _loadPubNotice(){ try{ if(typeof PROXY==='undefined'||!PROXY)return; fetch(PROXY+'/notice',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&Array.isArray(j.items)){ _PUBNOTICE=j.items; if(typeof renderBriefBoard==='function')renderBriefAll(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice&&typeof _bbRenderModal==='function')_bbRenderModal(bg); } }).catch(function(){}); }catch(e){} }
 function _bbLoad(){ return _PUBNOTICE.slice(); }
 function _bbSaveRemote(items,cb){ if(typeof PROXY==='undefined'||!PROXY){cb&&cb(false);return;}
   var pin=''; try{pin=localStorage.getItem('aurNoticePin')||'';}catch(e){}
   if(!pin){ pin=(window.prompt('공지 수정 PIN (처음이면 새로 정하세요, 4자 이상):')||'').trim(); if(pin.length<4){alert('PIN은 4자 이상이어야 해요.');cb&&cb(false);return;} try{localStorage.setItem('aurNoticePin',pin);}catch(e){} }
   fetch(PROXY+'/notice',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pin:pin,items:items})}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){ _PUBNOTICE=j.items||items; cb&&cb(true); } else { if(j&&/PIN/.test(j.error||'')){ try{localStorage.removeItem('aurNoticePin');}catch(e){} alert('PIN이 맞지 않아요. 다시 시도해 주세요.'); } else { alert('저장 실패: '+((j&&j.error)||'네트워크')); } cb&&cb(false); } }).catch(function(){ alert('네트워크 오류로 저장 실패'); cb&&cb(false); }); }
-function _bbSave(a){ _PUBNOTICE=a; _bbSaveRemote(a, function(ok){ if(!ok){ _loadPubNotice(); } else { if(typeof renderBriefBoard==='function')renderBriefBoard(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice)_bbRenderModal(bg); } }); }
+function _bbSave(a){ _PUBNOTICE=a; _bbSaveRemote(a, function(ok){ if(!ok){ _loadPubNotice(); } else { if(typeof renderBriefBoard==='function')renderBriefAll(); var bg=document.querySelector('.modal-bg'); if(bg&&bg._isNotice)_bbRenderModal(bg); } }); }
 function _bbToday(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function _bbMeta(type){ return type==='notice'?{ic:'📢',lab:'이벤트·안내',cl:'#e0a83e'}:{ic:'📊',lab:'시황 요약',cl:'#4a9eff'}; }
 var _BRIEFS=null;
-function _loadBriefs(){ try{ fetch('briefs/index.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)&&j.length){ _BRIEFS=j.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}); renderBriefBoard(); } }).catch(function(){}); }catch(e){} }
+function _loadBriefs(){ try{ fetch('briefs/index.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)&&j.length){ _BRIEFS=j.slice().sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}); renderBriefAll(); } }).catch(function(){}); }catch(e){} }
 var _BB_SLOTS=[{k:'am',lab:'시작'},{k:'noon',lab:'장중'},{k:'pm',lab:'장마감'}];
 var _bbSlot=null, _bbSlotUser=false;
 function _bbMedia(b){
@@ -3302,13 +3303,24 @@ function _briefHTML(d){ _brfStyleInject();
 }
 window._bbExportImg=function(){ var node=document.querySelector('#brfRender .brf'); if(!node){alert('추출할 브리핑이 없어요.');return;} if(typeof html2canvas==='undefined'){alert('이미지 변환 모듈을 불러오는 중이에요. 잠시 후 다시 눌러주세요.');return;}
   html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(function(cv){ cv.toBlob(function(blob){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=(node.getAttribute('data-name')||'브리핑')+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000); }); }).catch(function(e){ alert('이미지 추출 실패: '+e); }); };
-function renderBriefBoard(){
-  var el=$('#briefBoard'); if(!el)return;
+function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); }
+function renderBriefBoard(sel){
+  var el=$(sel||'#briefBoard'); if(!el)return;
+  var compact=(el.id==='briefBoard');
   var briefs=(_BRIEFS||[]);
   var activeDate=(briefs[0]&&briefs[0].date)||_bbToday(); // 시계 불일치 대비 — 가장 최신 브리핑 날짜 기준
   var today=activeDate;
   var todays={}; briefs.forEach(function(b){ if(b.date===activeDate)todays[b.slot||'am']=b; });
   if(!_bbSlotUser||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
+  if(compact){ var lt=briefs[0], body;
+    if(lt){ var llab=((_BB_SLOTS.filter(function(s){return s.k===(lt.slot||'am');})[0])||{}).lab||'';
+      body='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 '+llab+'</span><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(lt.date)+'</span><span style="font-weight:800;font-size:13.5px">'+_bbEsc(lt.title||'')+'</span></div>'
+        +(lt.summary?'<div style="font-size:12.5px;color:var(--sub);line-height:1.6">'+((typeof _brfMd==='function')?_brfMd(lt.summary):_bbEsc(lt.summary))+'</div>':'')
+        +'<button class="tf" onclick="showView(\'brief\')" style="width:100%;margin-top:10px;background:#2b6cff;color:#fff;border-color:transparent;font-weight:800">📰 전체 브리핑 보기 →</button>';
+    } else { body='<div style="color:var(--faint);font-size:12.5px;padding:6px 2px;line-height:1.6">아직 브리핑이 없어요. 채팅에서 <b>"브리핑 ㄱ"</b> 하면 만들어 드려요.</div>'; }
+    el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📰 오늘의 브리핑</h2></div><div class="pad" style="padding-top:4px">'+body+'</div></div>';
+    return;
+  }
   var tabs='<div style="display:flex;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:11px;padding:3px;margin-bottom:12px">'
     +_BB_SLOTS.map(function(s){ var has=!!todays[s.k], on=s.k===_bbSlot;
       return '<button onclick="_bbSetSlot(\''+s.k+'\')" style="flex:1;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:800;cursor:pointer;transition:background .15s,color .15s;'
@@ -3321,7 +3333,7 @@ function renderBriefBoard(){
     var dd=_BRIEFDATA[sel.data];
     if(dd){ media='<div id="brfRender" data-name="'+_bbEsc(sel.title||'브리핑')+'">'+_briefHTML(dd)+'</div>'
       +'<div style="margin-top:10px;text-align:right"><button class="tf" onclick="_bbExportImg()">🖼 이미지로 추출</button></div>'; }
-    else { media='<div style="padding:16px;color:var(--faint);font-size:12.5px">브리핑 불러오는 중…</div>'; _bbFetchData(sel.data,function(){ renderBriefBoard(); }); }
+    else { media='<div style="padding:16px;color:var(--faint);font-size:12.5px">브리핑 불러오는 중…</div>'; _bbFetchData(sel.data,function(){ renderBriefAll(); }); }
   }
   else if(sel){ media='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0"><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(sel.date)+'</span><span style="font-weight:800;font-size:13.5px">'+_bbEsc(sel.title||'')+'</span></div>'+_bbMedia(sel); }
   else { var latest=briefs[0];
@@ -3348,7 +3360,7 @@ function renderBriefBoard(){
     +'<div style="color:var(--faint);font-size:10.5px;margin-top:10px;line-height:1.5">시간대별 브리핑 + 실시간 지수 + 직접 쓰는 공지. 교육용 참고 · 투자 판단은 스스로.</div></div></div>';
   if(typeof renderBriefing==='function')renderBriefing();
 }
-window._bbSetSlot=function(k){ _bbSlot=k; _bbSlotUser=true; renderBriefBoard(); };
+window._bbSetSlot=function(k){ _bbSlot=k; _bbSlotUser=true; renderBriefAll(); };
 window.renderBriefBoard=renderBriefBoard;
 var _bbEditId=null;
 function _bbRenderModal(bg){
@@ -3383,7 +3395,7 @@ window.openBriefBoard=function(){ _bbEditId=null; var bg=document.createElement(
 function _bbCurrentBg(){ return document.querySelector('.modal-bg'); }
 window._bbEdit=function(id){ _bbEditId=id; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
 window._bbCancelEdit=function(){ _bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); };
-window._bbDel=function(id){ if(!confirm('이 항목을 삭제할까요?'))return; var a=_bbLoad().filter(function(x){return x.id!==id;}); _bbSave(a); if(_bbEditId===id)_bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); renderBriefBoard(); };
+window._bbDel=function(id){ if(!confirm('이 항목을 삭제할까요?'))return; var a=_bbLoad().filter(function(x){return x.id!==id;}); _bbSave(a); if(_bbEditId===id)_bbEditId=null; var bg=_bbCurrentBg(); if(bg)_bbRenderModal(bg); renderBriefAll(); };
 window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
   var type=bg.querySelector('#bbType').value, date=bg.querySelector('#bbDate').value||_bbToday();
   var title=bg.querySelector('#bbTitle').value.trim(), body=bg.querySelector('#bbBody').value.trim();
@@ -3391,7 +3403,7 @@ window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
   var a=_bbLoad();
   if(_bbEditId){ var it=a.find(function(x){return x.id===_bbEditId;}); if(it){ it.type=type; it.date=date; it.title=title; it.body=body; } _bbEditId=null; }
   else { a.push({id:Date.now(),type:type,date:date,title:title,body:body}); }
-  _bbSave(a); _bbRenderModal(bg); renderBriefBoard(); };
+  _bbSave(a); _bbRenderModal(bg); renderBriefAll(); };
 /* ═══════════ 📅 이번주 경제 일정 (경제 캘린더) ═══════════ */
 var _ECAL=null, _ecalMkt='all', _ecalImp=0;
 function _loadEcal(){ try{ fetch('events.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j&&j.events){ _ECAL=j; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); } }).catch(function(){}); }catch(e){} }
@@ -3440,7 +3452,7 @@ function renderEconCal(sel){
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal(); };
 window._ecalImpToggle=function(){ _ecalImp=(_ecalImp>=3)?0:3; renderEconCal(); };
-initCards(); renderSummary(); renderBriefBoard(); renderBriefing(); _loadBriefs(); _loadEcal(); _loadPubNotice();
+initCards(); renderSummary(); renderBriefAll(); renderBriefing(); _loadBriefs(); _loadEcal(); _loadPubNotice();
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
