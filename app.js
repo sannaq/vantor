@@ -3303,17 +3303,49 @@ function _briefHTML(d){ _brfStyleInject();
 }
 window._bbExportImg=function(){ var node=document.querySelector('#brfRender .brf'); if(!node){alert('추출할 브리핑이 없어요.');return;} if(typeof html2canvas==='undefined'){alert('이미지 변환 모듈을 불러오는 중이에요. 잠시 후 다시 눌러주세요.');return;}
   html2canvas(node,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(function(cv){ cv.toBlob(function(blob){ var url=URL.createObjectURL(blob); var a=document.createElement('a'); a.href=url; a.download=(node.getAttribute('data-name')||'브리핑')+'.png'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){URL.revokeObjectURL(url);},2000); }); }).catch(function(e){ alert('이미지 추출 실패: '+e); }); };
+/* 앱 자동 시황 — 실시간 데이터로 규칙기반 브리핑 생성(세션·서버 불필요). 매매신호 아님 */
+function _autoBriefData(){
+  try{
+    if(typeof IDX==='undefined'||!IDX)return null;
+    var ks=IDX.find(function(x){return x.nm==='KOSPI';})||{}, kq=IDX.find(function(x){return x.nm==='KOSDAQ';})||{};
+    if(!ks.v||!ks._real)return null; // 실데이터 아니면(데모/장 전) 생성 안 함
+    var b=(typeof FLOW!=='undefined'&&FLOW&&FLOW.breadth)?FLOW.breadth:{};
+    var U=(typeof BRIEF_US!=='undefined'&&BRIEF_US)?BRIEF_US:{};
+    var radar=(typeof KBOARD!=='undefined'&&KBOARD&&KBOARD.length)?KBOARD:((typeof RADAR!=='undefined'&&RADAR)?RADAR:[]);
+    var kc=+ks.c||0, kqc=+kq.c||0, up=b.up||0, dn=b.down||0, widePos=up>dn;
+    var lead3=radar.slice().filter(function(x){return x&&x.n;}).sort(function(a,b){return (b.value||0)-(a.value||0);}).slice(0,3);
+    var leadTxt=lead3.map(function(x){return x.n+' '+((+x.ch||0)>=0?'+':'')+(+x.ch||0).toFixed(2)+'%';}).join(' · ');
+    var view;
+    if(kc>=0.3&&widePos)view='지수 상승 + 오른 종목이 더 많은 **폭 넓은 상승** — 시장 전반 온기.';
+    else if(kc>=0.3&&!widePos)view='지수는 올랐지만 **하락 종목이 더 많은 폭 좁은 상승** — 대형주 주도, 지속력 확인 필요.';
+    else if(kc<=-0.3&&widePos)view='지수는 하락이지만 **오른 종목이 더 많음** — 대형주만 조정, 개별·중소형 순환매 가능.';
+    else if(kc<=-0.3&&!widePos)view='지수·종목 폭 모두 약세 — **전반적 약세** 국면.';
+    else view='지수 보합권 — 방향성 제한적, 개별 이슈 종목 중심.';
+    var usTiles=[];
+    [['QQQ','나스닥(QQQ)'],['SMH','반도체(SMH)'],['DIA','다우(DIA)']].forEach(function(p){ var q=U[p[0]]; if(q&&q.c!=null)usTiles.push({t:p[1],v:((+q.c)>=0?'+':'')+(+q.c).toFixed(2)+'%',s:'간밤'}); });
+    var d=new Date(), kstH=(d.getUTCHours()+9)%24, t=_bbToday().split('-');
+    var slotLab= kstH<9?'개장 전':(kstH<12?'오전':(kstH<15?'장중':(kstH<18?'마감':'마감 후')));
+    var data={ date:_bbToday(), slot:'auto', title:(+t[1])+'월 '+(+t[2])+'일 자동 시황 ('+slotLab+')', src:'VANTOR 자동',
+      lead:'코스피 **'+(kc>=0?'+':'')+kc.toFixed(2)+'%** ('+(+ks.v).toLocaleString()+') · 코스닥 '+(kqc>=0?'+':'')+kqc.toFixed(2)+'%. 상승 '+up+' vs 하락 '+dn+'.'+(leadTxt?(' 주도: '+leadTxt+'.'):''),
+      kr:{ title:'국내 지수·수급', pills:[{t:'코스피 '+(+ks.v).toLocaleString()+' ('+(kc>=0?'+':'')+kc.toFixed(2)+'%)',cl:kc>=0?'g':'r'},{t:'상승 '+up+' vs 하락 '+dn,cl:widePos?'g':'r'},{t:'코스닥 '+(+kq.v||0).toLocaleString()+' ('+(kqc>=0?'+':'')+kqc.toFixed(2)+'%)',cl:'n'}], text: leadTxt?('**거래대금 주도주**: '+leadTxt+'.'):'실시간 데이터 기준.' },
+      core:{ title:'방향 관점 (규칙기반)', body: view+' ※ 앱이 실시간 데이터로 만든 자동 요약 — 매매신호 아님, 참고용.' },
+      checks:['상승/하락 폭이 넓어지는지(순환매 vs 대형주)','주도주(반도체 등) 방향 지속','외국인·기관 수급','간밤/오늘 밤 미국장·환율'] };
+    if(usTiles.length)data.us={ title:'미국장(간밤·참고)', tiles:usTiles, note:'간밤 미국 지수 등락(참고).' };
+    return data;
+  }catch(e){ return null; }
+}
 function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); }
 function renderBriefBoard(sel){
   var el=$(sel||'#briefBoard'); if(!el)return;
   var compact=(el.id==='briefBoard');
   var briefs=(_BRIEFS||[]);
-  var activeDate=(briefs[0]&&briefs[0].date)||_bbToday(); // 시계 불일치 대비 — 가장 최신 브리핑 날짜 기준
+  var ab0=(typeof _autoBriefData==='function')?_autoBriefData():null; // 앱 실시간 자동 시황
+  var activeDate=ab0?_bbToday():((briefs[0]&&briefs[0].date)||_bbToday()); // 실시간 데이터 있으면 오늘 기준, 없으면 최신 브리핑
   var today=activeDate;
   var todays={}; briefs.forEach(function(b){ if(b.date===activeDate)todays[b.slot||'am']=b; });
   if(!_bbSlotUser||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
-  if(compact){ var lt=briefs[0], body;
-    if(lt){ var llab=((_BB_SLOTS.filter(function(s){return s.k===(lt.slot||'am');})[0])||{}).lab||'';
+  if(compact){ var lt=ab0?{date:ab0.date,slot:'auto',title:ab0.title,summary:ab0.lead}:briefs[0], body;
+    if(lt){ var llab=(lt.slot==='auto')?'실시간':(((_BB_SLOTS.filter(function(s){return s.k===(lt.slot||'am');})[0])||{}).lab||'');
       body='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 '+llab+'</span><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(lt.date)+'</span><span style="font-weight:800;font-size:13.5px">'+_bbEsc(lt.title||'')+'</span></div>'
         +(lt.summary?'<div style="font-size:12.5px;color:var(--sub);line-height:1.6">'+((typeof _brfMd==='function')?_brfMd(lt.summary):_bbEsc(lt.summary))+'</div>':'')
         +'<button class="tf" onclick="showView(\'brief\')" style="width:100%;margin-top:10px;background:#2b6cff;color:#fff;border-color:transparent;font-weight:800">📰 전체 브리핑 보기 →</button>';
@@ -3336,9 +3368,11 @@ function renderBriefBoard(sel){
     else { media='<div style="padding:16px;color:var(--faint);font-size:12.5px">브리핑 불러오는 중…</div>'; _bbFetchData(sel.data,function(){ renderBriefAll(); }); }
   }
   else if(sel){ media='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0"><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(sel.date)+'</span><span style="font-weight:800;font-size:13.5px">'+_bbEsc(sel.title||'')+'</span></div>'+_bbMedia(sel); }
-  else { var latest=briefs[0];
-    media='<div style="padding:16px;border:1px dashed var(--line2);border-radius:12px;text-align:center;color:var(--faint);font-size:12.5px;line-height:1.6;margin-top:8px">아직 <b>'+selLab+' 브리핑</b>이 없어요.<br>채팅에서 <b>"'+selLab+' 브리핑 ㄱ"</b> 하면 만들어 드려요.'
-      +(latest?'<br><br><a href="'+_bbEsc(latest.img||latest.html)+'" target="_blank" rel="noopener" style="color:#4a9eff;font-weight:700">최근 브리핑('+_bbEsc(latest.date)+') 열기 →</a>':'')+'</div>';
+  else { var latest=briefs[0]; var ab=ab0;
+    if(ab){ media='<div id="brfRender" data-name="'+_bbEsc(ab.title)+'">'+_briefHTML(ab)+'</div>'
+      +'<div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:10.5px;color:var(--faint)">🔄 앱 자동 생성 · 실시간 데이터 · 규칙기반</span><button class="tf" onclick="_bbExportImg()">🖼 이미지로 추출</button></div>'; }
+    else { media='<div style="padding:16px;border:1px dashed var(--line2);border-radius:12px;text-align:center;color:var(--faint);font-size:12.5px;line-height:1.6;margin-top:8px">아직 <b>'+selLab+' 브리핑</b>이 없어요.<br>채팅에서 <b>"'+selLab+' 브리핑 ㄱ"</b> 하면 만들어 드려요.'
+      +(latest?'<br><br><a href="'+_bbEsc(latest.img||latest.html)+'" target="_blank" rel="noopener" style="color:#4a9eff;font-weight:700">최근 브리핑('+_bbEsc(latest.date)+') 열기 →</a>':'')+'</div>'; }
   }
   var list=_bbLoad().slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||'')||(b.id||0)-(a.id||0); });
   var notices='';
