@@ -3480,7 +3480,7 @@ window._bbSaveForm=function(){ var bg=_bbCurrentBg(); if(!bg)return;
   _bbSave(a); _bbRenderModal(bg); renderBriefAll(); };
 /* ═══════════ 📅 이번주 경제 일정 (경제 캘린더) ═══════════ */
 var _ECAL=null, _ecalMkt='all', _ecalImp=0;
-function _loadEcal(){ try{ fetch('events.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j&&j.events){ _ECAL=j; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); } }).catch(function(){}); }catch(e){} }
+function _loadEcal(){ try{ fetch('events.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j&&j.events){ _ECAL=j; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); if(typeof renderHomeEvents==='function')renderHomeEvents(); } }).catch(function(){}); }catch(e){} }
 function renderEconCal(sel){
   var el=$(sel||'#econCal'); if(!el)return; if(!_ECAL){ el.innerHTML=''; return; }
   var TYPE={data:{lab:'경제지표',c:'#f6465d'},earnings:{lab:'실적발표',c:'#4a9eff'},policy:{lab:'정책',c:'#2ebd85'},event:{lab:'이벤트',c:'#e0a83e'}};
@@ -3518,11 +3518,21 @@ function renderEconCal(sel){
   var filtersRow='<div style="display:flex;gap:6px;margin:6px 0 2px">'+chip('all','전체')+chip('US','미국')+chip('KR','한국')+'</div>';
   var moreBtn='<button class="tf" onclick="showView(\'events\')" style="width:100%;margin-top:10px;background:#2b6cff;color:#fff;border-color:transparent;font-weight:800">📅 전체 일정 보기 →</button>';
   var foot='<div style="color:var(--faint);font-size:10.5px;margin-top:12px;line-height:1.5">시간은 한국시간(KST) · 발표 일정·수치는 변동될 수 있어요 · 투자 참고용, 매수/매도 권유 아님.</div>';
-  var inner=compact?(intro+keys+lens+moreBtn):(intro+filtersRow+body+keys+lens);
+  var inner=compact?(keys+lens):(intro+filtersRow+body+keys+lens);
   el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>📅 이번주 증시 이벤트 <span style="font-weight:600;color:var(--faint);font-size:12px">'+_bbEsc(_ECAL.range||'')+'</span></h2>'
     +(compact?'':'<div class="r"><button class="tf" onclick="_ecalImpToggle()" style="'+((_ecalImp>=3)?'background:#e0a83e;color:#0b0f16;border-color:transparent;':'')+'">★★★만</button></div>')+'</div>'
-    +'<div class="pad" style="padding-top:4px">'+inner+foot+'</div></div>';
+    +'<div class="pad" style="padding-top:4px">'+inner+(compact?'':foot)+'</div></div>';
 }
+function renderHomeEvents(){ var el=document.getElementById('homeEvents'); if(!el)return; if(typeof _ECAL==='undefined'||!_ECAL||!_ECAL.events){el.innerHTML='';return;}
+  var today=_bbToday(), WD=['일','월','화','수','목','금','토'], FLAG={US:'🇺🇸',KR:'🇰🇷',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵'};
+  var up=(_ECAL.events||[]).filter(function(e){return (e.date||'')>=today;});
+  var evs=(up.length?up:(_ECAL.events||[])).slice(0,5);
+  if(!evs.length){el.innerHTML='';return;}
+  var rows=evs.map(function(e){ var dt=new Date((e.date||today)+'T00:00:00'), md=(dt.getMonth()+1)+'/'+dt.getDate(), wd=WD[dt.getDay()]||'';
+    return '<tr class="rowbtn" onclick="showView(\'events\')"><td class="l num" style="color:var(--sub);white-space:nowrap">'+md+' ('+wd+') '+_bbEsc(e.time||'')+'</td><td style="text-align:center">'+(FLAG[e.market]||'🌐')+'</td><td class="l" style="font-weight:700">'+_bbEsc(e.title)+'</td><td style="color:#e0a83e;letter-spacing:-1px;white-space:nowrap">'+new Array(((e.imp||1)+1)).join('★')+'</td><td class="l" style="color:var(--sub);font-size:11.5px">'+_bbEsc((e.note||'')).slice(0,46)+'</td></tr>'; }).join('');
+  el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>📅 이번주 주요 이벤트</h2><div class="r"><span class="more" data-v="events">더보기 ›</span></div></div><div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table><thead><tr><th class="l">날짜/시간</th><th>국가</th><th class="l">이벤트</th><th>중요도</th><th class="l">시장 영향</th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
+}
+window.renderHomeEvents=renderHomeEvents;
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal(); };
 window._ecalImpToggle=function(){ _ecalImp=(_ecalImp>=3)?0:3; renderEconCal(); };

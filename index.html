@@ -130,6 +130,13 @@
   .mktseg button.on{background:var(--panel);color:var(--ink)}
   .sec-h2{font-size:12px;font-weight:800;color:var(--faint);letter-spacing:.3px;margin:20px 2px 10px}
   .sec-h2 span{color:var(--faint);font-weight:600}
+  /* 목업 배치: 히어로 | 핵심3·시나리오 2단 */
+  .home-top2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:stretch}
+  .home-top2>div{min-width:0;display:flex;flex-direction:column}
+  .home-top2>div>.card{flex:1;margin-bottom:0 !important}
+  .home-top2 #briefBoard>.card{display:flex;flex-direction:column}
+  .home-top2 #briefBoard>.card>.pad{flex:1;display:flex;flex-direction:column;justify-content:center}
+  @media(max-width:900px){.home-top2{grid-template-columns:1fr}.home-top2>div>.card{flex:0 0 auto}.home-top2 #briefBoard>.card>.pad{display:block}}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
   .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
   .brief-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:280px;height:220px;background:radial-gradient(circle at center,rgba(61,123,255,.30),transparent 68%);pointer-events:none}
@@ -645,10 +652,14 @@
   <div id="brief"></div>
 
   <!-- 증시 요약 · 안내 (앱에서 직접 입력·저장, HOME 전용) -->
-  <div id="briefBoard"></div>
+  <!-- 목업 배치: 히어로 브리핑 | 핵심3·시나리오 (2단) -->
+  <div class="home-top2">
+    <div id="briefBoard"></div>
+    <div id="econCal"></div>
+  </div>
 
-  <!-- 이번주 경제 일정 (HOME 전용) -->
-  <div id="econCal"></div>
+  <!-- 이번주 주요 이벤트 (테이블) -->
+  <div id="homeEvents"></div>
 
   <!-- 지수 스트립 (모든 화면 공통) -->
   <div id="marketSummary"></div>
@@ -841,7 +852,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=104"></script>
+<script src="app.js?v=106"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
