@@ -218,7 +218,7 @@ document.addEventListener('click',function(e){ var b=e.target&&e.target.closest&
 function starBtn(code,nm){ var on=watchHas(code);
   return '<button class="starbtn'+(on?' on':'')+'" data-c="'+code+'" title="관심종목" '
     +'onclick="event.stopPropagation();watchToggle(\''+code+'\')">'+(on?'★':'☆')+'</button>'; }
-function updateWatchBadge(){ var a=$('.menu a[data-v=\"watch\"]'); if(a) a.textContent='관심'+(WATCH.length?' '+WATCH.length:''); }
+function updateWatchBadge(){ var a=$('.menu a[data-v=\"watch\"] .lbl')||$('.menu a[data-v=\"watch\"]'); if(a) a.textContent='관심'+(WATCH.length?' '+WATCH.length:''); }
 /* 관심종목 화면 — 실시간 시세(/quotes 배치) + RADAR 점수 비교표 */
 async function renderWatch(){
   var el=$('#watchPanel'); if(!el) return;

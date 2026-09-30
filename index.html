@@ -87,7 +87,9 @@
   .side .segmode{margin:0 4px 14px;align-self:stretch;justify-content:center}
   .side .segmode button{flex:1}
   .side .menu{display:flex;flex-direction:column;gap:3px;overflow:visible;flex:0 0 auto}
-  .side .menu a{padding:10px 12px;font-size:14px;border-radius:10px}
+  .side .menu a{padding:10px 12px;font-size:14px;border-radius:10px;display:flex;align-items:center;gap:11px}
+  .side .menu a svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;opacity:.85}
+  .side .menu a.on svg{opacity:1;stroke:var(--gold2)}
   .side .menu a.on{color:var(--ink);background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 20%,transparent),transparent)}
   .side .menu a.on::after{display:none}
   .side .side-promo{margin-top:auto;text-align:center;background:linear-gradient(160deg,color-mix(in srgb,var(--gold) 9%,var(--panel)),var(--panel));border:1px solid var(--line);border-radius:14px;padding:14px}
@@ -138,7 +140,10 @@
   .home-top2 #briefBoard>.card>.pad{flex:1;display:flex;flex-direction:column;justify-content:center}
   @media(max-width:900px){.home-top2{grid-template-columns:1fr}.home-top2>div>.card{flex:0 0 auto}.home-top2 #briefBoard>.card>.pad{display:block}}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
-  .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
+  .brief-hero{position:relative;overflow:hidden;border-color:#243044;color:#dfe7f2;box-shadow:var(--shadow2);
+    background:linear-gradient(180deg,rgba(10,14,22,.05) 0%,rgba(10,14,22,.42) 50%,rgba(10,14,22,.86) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 300' preserveAspectRatio='none'%3E%3Cpath d='M0 300 L0 205 L220 130 L430 200 L640 100 L860 190 L1060 120 L1200 175 L1200 300 Z' fill='%230d1826'/%3E%3Cpath d='M0 300 L0 250 L200 195 L410 240 L610 175 L820 230 L1030 185 L1200 225 L1200 300 Z' fill='%2311213e'/%3E%3C/svg%3E") bottom center/100% 62% no-repeat,
+    radial-gradient(120% 95% at 22% -12%,#2a4a80 0%,#182a49 42%,#0c1320 100%)}
   .brief-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:280px;height:220px;background:radial-gradient(circle at center,rgba(61,123,255,.30),transparent 68%);pointer-events:none}
   .brief-hero .ch h2{color:#f2f6fc}
   .brief-hero .pad{position:relative;z-index:1}
@@ -625,16 +630,16 @@
   <div class="logo"><svg width="26" height="26" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="van" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0cf78"/><stop offset="1" stop-color="#c19a3e"/></linearGradient></defs><path d="M24 3 L11 22 H18 L15 37 L29 17 H21 Z" fill="url(#van)"/></svg><span class="wm">VANTOR</span></div>
   <div class="segmode"><button class="on" data-m="stock">주식</button><button data-m="coin">코인</button></div>
   <div class="menu" id="menu">
-    <a data-v="home" class="on">HOME</a>
-    <a data-v="ai">🤖 분석</a>
-    <a data-v="brief">📰 브리핑</a>
-    <a data-v="market">MARKET</a>
-    <a data-v="radar">RADAR</a>
-    <a data-v="stock">STOCK</a>
-    <a data-v="news">NEWS</a>
-    <a data-v="watch">관심</a>
-    <a data-v="events">📅 이벤트</a>
-    <a data-v="learn">LEARN</a>
+    <a data-v="home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg><span class="lbl">홈</span></a>
+    <a data-v="ai"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span class="lbl">분석</span></a>
+    <a data-v="brief"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span class="lbl">브리핑</span></a>
+    <a data-v="market"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="lbl">마켓</span></a>
+    <a data-v="radar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/></svg><span class="lbl">레이더</span></a>
+    <a data-v="stock"><svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg><span class="lbl">종목</span></a>
+    <a data-v="news"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h6M7 13h6M16 9h1.5M16 13h1.5"/></svg><span class="lbl">뉴스</span></a>
+    <a data-v="watch"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9L6.3 20l1.1-6L3 9.8l6-.8z"/></svg><span class="lbl">관심</span></a>
+    <a data-v="events"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><span class="lbl">이벤트</span></a>
+    <a data-v="learn"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M18 3v18"/></svg><span class="lbl">스터디</span></a>
   </div>
   <div class="side-promo"><div class="m">🐿️</div><p>좋은 사람들과<br><b>더 좋은 투자를!</b></p><button onclick="showView('brief')">브리핑 보기 →</button></div>
 </aside>
@@ -852,7 +857,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=106"></script>
+<script src="app.js?v=107"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
