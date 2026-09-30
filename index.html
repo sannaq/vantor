@@ -99,7 +99,8 @@
   .topbar{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:14px;padding:11px clamp(14px,3vw,30px);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
   .topbar .search{flex:1;max-width:480px}
   .topbar .navbtns{margin-left:auto}
-  .main .wrap{padding-top:20px}
+  .main .wrap{max-width:none;margin:0;width:100%;padding:20px clamp(16px,2.2vw,32px) 44px}
+  .main .foot .in,.main .disc{max-width:none}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
   .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
   .brief-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:280px;height:220px;background:radial-gradient(circle at center,rgba(61,123,255,.30),transparent 68%);pointer-events:none}
