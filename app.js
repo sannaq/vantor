@@ -1497,7 +1497,7 @@ function openStock(code){
       +'<span class="starbtn'+(watchHas(r.c)?' on':'')+'" data-c="'+r.c+'" title="관심종목" style="font-size:22px" onclick="watchToggle(\''+r.c+'\')">'+(watchHas(r.c)?'★':'☆')+'</span>'
       +'<span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
       +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-weight:700">RADAR SCORE <span class="scorepill">'+r.score+'</span></span></div>'
-    +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+cls(r.ch)+'">'+priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span></div>'
+    +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+(r.px>0?cls(r.ch):'')+'">'+(r.px>0?(priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'):'<span style="font-size:15px;color:var(--faint);font-weight:700">⏳ 시세 불러오는 중…</span>')+'</div>'
     +'<div class="metrics" id="metGrid">'
       +met('거래대금',valueT,'상위권',null,'m-value')
       +met('시가총액',mcapT,r.mk+' 상위',null,'m-mcap')
