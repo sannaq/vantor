@@ -137,7 +137,7 @@
   .home-top2>div{min-width:0;display:flex;flex-direction:column}
   .home-top2>div>.card{flex:1;margin-bottom:0 !important}
   .home-top2 #briefBoard>.card{display:flex;flex-direction:column}
-  .home-top2 #briefBoard>.card>.pad{flex:1;display:flex;flex-direction:column;justify-content:center}
+  .home-top2 #briefBoard>.card>.pad{flex:1;display:flex;flex-direction:column;justify-content:flex-end}
   @media(max-width:900px){.home-top2{grid-template-columns:1fr}.home-top2>div>.card{flex:0 0 auto}.home-top2 #briefBoard>.card>.pad{display:block}}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
   .brief-hero{position:relative;overflow:hidden;border-color:#243044;color:#dfe7f2;box-shadow:var(--shadow2);
@@ -857,7 +857,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=107"></script>
+<script src="app.js?v=108"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
