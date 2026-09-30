@@ -3315,19 +3315,26 @@ function _autoBriefData(){
     var kc=+ks.c||0, kqc=+kq.c||0, up=b.up||0, dn=b.down||0, widePos=up>dn;
     var lead3=radar.slice().filter(function(x){return x&&x.n;}).sort(function(a,b){return (b.value||0)-(a.value||0);}).slice(0,3);
     var leadTxt=lead3.map(function(x){return x.n+' '+((+x.ch||0)>=0?'+':'')+(+x.ch||0).toFixed(2)+'%';}).join(' · ');
-    var view;
-    if(kc>=0.3&&widePos)view='지수 상승 + 오른 종목이 더 많은 **폭 넓은 상승** — 시장 전반 온기.';
-    else if(kc>=0.3&&!widePos)view='지수는 올랐지만 **하락 종목이 더 많은 폭 좁은 상승** — 대형주 주도, 지속력 확인 필요.';
-    else if(kc<=-0.3&&widePos)view='지수는 하락이지만 **오른 종목이 더 많음** — 대형주만 조정, 개별·중소형 순환매 가능.';
-    else if(kc<=-0.3&&!widePos)view='지수·종목 폭 모두 약세 — **전반적 약세** 국면.';
-    else view='지수 보합권 — 방향성 제한적, 개별 이슈 종목 중심.';
+    var ksv=+ks.v||0, sup=ksv?Math.floor(ksv/100)*100:0, res=ksv?Math.ceil(ksv/100)*100:0;
+    var smh=(U.SMH&&U.SMH.c!=null)?+U.SMH.c:null;
+    var dir;
+    if(kc>=0.3&&widePos)dir='지수 상승 + 오른 종목이 더 많은 **폭 넓은 상승** — 시장 전반 온기.';
+    else if(kc>=0.3&&!widePos)dir='지수는 올랐지만 **하락 종목이 더 많은 폭 좁은 상승** — 대형주 주도, 지속력 확인 필요.';
+    else if(kc<=-0.3&&widePos)dir='지수는 하락이지만 **오른 종목이 더 많음** — 대형주만 조정, 개별·중소형 순환매 가능.';
+    else if(kc<=-0.3&&!widePos)dir='지수·종목 폭 모두 약세 — **전반적 약세** 국면.';
+    else dir='지수 보합권 — 방향성 제한적, 개별 이슈 종목 중심.';
+    var relTxt=kqc>kc+0.15?'코스닥이 코스피보다 강함 → **중소형 위험선호**.':(kqc<kc-0.15?'코스닥이 코스피보다 약함 → **대형주 방어** 성격.':'대형·중소형 등락 폭 비슷.');
+    var semiTxt=smh==null?'':(smh>=0.5?' 간밤 미 반도체(SMH '+((smh>=0?'+':'')+smh.toFixed(2))+'%) 강세가 우호적.':(smh<=-0.5?' 간밤 미 반도체(SMH '+smh.toFixed(2)+'%) 약세는 부담.':' 간밤 미 반도체는 중립.'));
+    var levelTxt=ksv?('관찰선 — 지지 **'+sup.toLocaleString()+'** · 저항 **'+res.toLocaleString()+'**: '+sup.toLocaleString()+'선 종가 이탈 시 단기 관점 무효, '+res.toLocaleString()+'선 안착 시 상방 재개 관점.'):'';
+    var trendTxt='추세 이탈 관점 — 지수·주도주가 직전 박스/추세선을 **이탈하는 첫 캔들의 방향과 거래량 동반** 여부로 판단(이탈 실패=되돌림이면 관망).';
+    var view=[dir+' '+relTxt+semiTxt, levelTxt, trendTxt].filter(Boolean).join(' ');
     var usTiles=[];
     [['QQQ','나스닥(QQQ)'],['SMH','반도체(SMH)'],['DIA','다우(DIA)']].forEach(function(p){ var q=U[p[0]]; if(q&&q.c!=null)usTiles.push({t:p[1],v:((+q.c)>=0?'+':'')+(+q.c).toFixed(2)+'%',s:'간밤'}); });
     var d=new Date(), kstH=(d.getUTCHours()+9)%24, t=_bbToday().split('-');
     var slotLab= kstH<9?'개장 전':(kstH<12?'오전':(kstH<15?'장중':(kstH<18?'마감':'마감 후')));
     var data={ date:_bbToday(), slot:'auto', title:(+t[1])+'월 '+(+t[2])+'일 자동 시황 ('+slotLab+')', src:'VANTOR 자동',
       lead:'코스피 **'+(kc>=0?'+':'')+kc.toFixed(2)+'%** ('+(+ks.v).toLocaleString()+') · 코스닥 '+(kqc>=0?'+':'')+kqc.toFixed(2)+'%. 상승 '+up+' vs 하락 '+dn+'.'+(leadTxt?(' 주도: '+leadTxt+'.'):''),
-      kr:{ title:'국내 지수·수급', pills:[{t:'코스피 '+(+ks.v).toLocaleString()+' ('+(kc>=0?'+':'')+kc.toFixed(2)+'%)',cl:kc>=0?'g':'r'},{t:'상승 '+up+' vs 하락 '+dn,cl:widePos?'g':'r'},{t:'코스닥 '+(+kq.v||0).toLocaleString()+' ('+(kqc>=0?'+':'')+kqc.toFixed(2)+'%)',cl:'n'}], text: leadTxt?('**거래대금 주도주**: '+leadTxt+'.'):'실시간 데이터 기준.' },
+      kr:{ title:'국내 지수·수급', pills:[{t:'코스피 '+(+ks.v).toLocaleString()+' ('+(kc>=0?'+':'')+kc.toFixed(2)+'%)',cl:kc>=0?'g':'r'},{t:'상승 '+up+' vs 하락 '+dn,cl:widePos?'g':'r'},{t:'코스닥 '+(+kq.v||0).toLocaleString()+' ('+(kqc>=0?'+':'')+kqc.toFixed(2)+'%)',cl:'n'}].concat(ksv?[{t:'관찰선 지지 '+sup.toLocaleString()+' · 저항 '+res.toLocaleString(),cl:'n'}]:[]), text: leadTxt?('**거래대금 주도주**: '+leadTxt+'.'):'실시간 데이터 기준.' },
       core:{ title:'방향 관점 (규칙기반)', body: view+' ※ 앱이 실시간 데이터로 만든 자동 요약 — 매매신호 아님, 참고용.' },
       checks:['상승/하락 폭이 넓어지는지(순환매 vs 대형주)','주도주(반도체 등) 방향 지속','외국인·기관 수급','간밤/오늘 밤 미국장·환율'] };
     if(usTiles.length)data.us={ title:'미국장(간밤·참고)', tiles:usTiles, note:'간밤 미국 지수 등락(참고).' };
