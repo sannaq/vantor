@@ -20,17 +20,17 @@
     --r:14px;
   }
   @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-    --bg:#0b0f16;--panel:#131924;--panel2:#0f151f;--ink:#e8ecf3;--sub:#8b96a7;--faint:#5f6b7c;
-    --line:#212a38;--line2:#1a222e;
-    --gold:#e0b552;--gold2:#f0cf78;--navy:#080d15;--navytxt:#aab6c6;
+    --bg:#0a0e17;--panel:#111726;--panel2:#0d1320;--ink:#e9edf4;--sub:#8791a3;--faint:#5b6576;
+    --line:#1f2735;--line2:#171e2a;
+    --gold:#3d7bff;--gold2:#5b93ff;--navy:#080d15;--navytxt:#aab6c6;
     --up:#f6465d;--down:#4a9eff;--upbg:#2a1720;--downbg:#12233b;--flat:#6b7788;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 26px -16px rgba(0,0,0,.7);
     --shadow2:0 2px 8px rgba(0,0,0,.5),0 20px 50px -24px rgba(0,0,0,.8);
   }}
   :root[data-theme="dark"]{
-    --bg:#0b0f16;--panel:#131924;--panel2:#0f151f;--ink:#e8ecf3;--sub:#8b96a7;--faint:#5f6b7c;
-    --line:#212a38;--line2:#1a222e;
-    --gold:#e0b552;--gold2:#f0cf78;--navy:#080d15;--navytxt:#aab6c6;
+    --bg:#0a0e17;--panel:#111726;--panel2:#0d1320;--ink:#e9edf4;--sub:#8791a3;--faint:#5b6576;
+    --line:#1f2735;--line2:#171e2a;
+    --gold:#3d7bff;--gold2:#5b93ff;--navy:#080d15;--navytxt:#aab6c6;
     --up:#f6465d;--down:#4a9eff;--upbg:#2a1720;--downbg:#12233b;--flat:#6b7788;
     --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 26px -16px rgba(0,0,0,.7);
     --shadow2:0 2px 8px rgba(0,0,0,.5),0 20px 50px -24px rgba(0,0,0,.8);
@@ -175,6 +175,8 @@
   .starbtn:hover{transform:scale(1.2)}
   .starbtn.on{color:#f5b301}
   .scorepill.s2{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}
+  @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .scorepill:not(.s2){color:#fff}}
+  :root[data-theme="dark"] .scorepill:not(.s2){color:#fff}
   .st{font-size:11px;font-weight:800;padding:3px 8px;border-radius:20px;white-space:nowrap}
   .st.surge{color:#fff;background:var(--up)}
   .st.rise{color:var(--up);background:var(--upbg)}
@@ -805,7 +807,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=102"></script>
+<script src="app.js?v=103"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
