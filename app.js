@@ -3352,12 +3352,14 @@ function renderBriefBoard(sel){
   var todays={}; briefs.forEach(function(b){ if(b.date===activeDate)todays[b.slot||'am']=b; });
   if(!_bbSlotUser||!_BB_SLOTS.some(function(s){return s.k===_bbSlot;})){ var order=['pm','noon','am']; _bbSlot='am'; for(var i=0;i<order.length;i++){ if(todays[order[i]]){ _bbSlot=order[i]; break; } } }
   if(compact){ var lt=ab0?{date:ab0.date,slot:'auto',title:ab0.title,summary:ab0.lead}:briefs[0], body;
+    var _mk=(typeof IDX!=='undefined'&&IDX)?(IDX.find(function(x){return x.nm==='KOSPI';})||{}):{}, _mc=+_mk.c||0;
+    var _bdg=_mk._real?(_mc>=0.1?'<span class="bh-badge up">📈 상승세</span>':(_mc<=-0.1?'<span class="bh-badge dn">📉 약세</span>':'<span class="bh-badge fl">➖ 보합</span>')):'';
     if(lt){ var llab=(lt.slot==='auto')?'실시간':(((_BB_SLOTS.filter(function(s){return s.k===(lt.slot||'am');})[0])||{}).lab||'');
-      body='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 '+llab+'</span><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(lt.date)+'</span><span style="font-weight:800;font-size:13.5px">'+_bbEsc(lt.title||'')+'</span></div>'
-        +(lt.summary?'<div style="font-size:12.5px;color:var(--sub);line-height:1.6">'+((typeof _brfMd==='function')?_brfMd(lt.summary):_bbEsc(lt.summary))+'</div>':'')
-        +'<button class="tf" onclick="showView(\'brief\')" style="width:100%;margin-top:10px;background:#2b6cff;color:#fff;border-color:transparent;font-weight:800">📰 전체 브리핑 보기 →</button>';
-    } else { body='<div style="color:var(--faint);font-size:12.5px;padding:6px 2px;line-height:1.6">아직 브리핑이 없어요. 채팅에서 <b>"브리핑 ㄱ"</b> 하면 만들어 드려요.</div>'; }
-    el.innerHTML='<div class="card" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📰 오늘의 브리핑</h2></div><div class="pad" style="padding-top:4px">'+body+'</div></div>';
+      body='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span style="font-size:11px;font-weight:800;color:#0b0f16;background:#4a9eff;padding:2px 8px;border-radius:6px">📊 '+llab+'</span><span class="bh-date">'+_bbEsc(lt.date)+'</span><span style="font-weight:800;font-size:15px">'+_bbEsc(lt.title||'')+'</span></div>'
+        +(lt.summary?'<div class="bh-sum">'+((typeof _brfMd==='function')?_brfMd(lt.summary):_bbEsc(lt.summary))+'</div>':'')
+        +'<button class="tf" onclick="showView(\'brief\')" style="width:100%;margin-top:12px;background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.22);font-weight:800">📰 전체 브리핑 보기 →</button>';
+    } else { body='<div style="color:#9fb0c6;font-size:12.5px;padding:6px 2px;line-height:1.6">아직 브리핑이 없어요. 채팅에서 <b>"브리핑 ㄱ"</b> 하면 만들어 드려요.</div>'; }
+    el.innerHTML='<div class="card brief-hero" data-card="브리핑" style="margin-bottom:14px"><div class="ch"><h2>📰 오늘의 브리핑</h2>'+(_bdg?'<div class="r">'+_bdg+'</div>':'')+'</div><div class="pad" style="padding-top:6px">'+body+'</div></div>';
     return;
   }
   var tabs='<div style="display:flex;background:var(--panel2,#0f151f);border:1px solid var(--line2);border-radius:11px;padding:3px;margin-bottom:12px">'

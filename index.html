@@ -80,6 +80,49 @@
   #chartFs .cfs-hint{font-size:11px;color:var(--faint);margin-top:8px;text-align:center}
   /* ===== 레이아웃 ===== */
   .wrap{max-width:1320px;margin:0 auto;padding:18px clamp(14px,3vw,34px) 40px}
+  /* ===== 리디자인: 사이드바 셸 + 프리미엄 무드 ===== */
+  .app{display:flex;align-items:flex-start;min-height:100vh}
+  .side{position:sticky;top:0;height:100vh;width:216px;flex:0 0 216px;background:var(--panel2);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 12px;z-index:40}
+  .side .logo{padding:8px 8px 16px}
+  .side .segmode{margin:0 4px 14px;align-self:stretch;justify-content:center}
+  .side .segmode button{flex:1}
+  .side .menu{display:flex;flex-direction:column;gap:3px;overflow:visible;flex:0 0 auto}
+  .side .menu a{padding:10px 12px;font-size:14px;border-radius:10px}
+  .side .menu a.on{color:var(--ink);background:linear-gradient(90deg,color-mix(in srgb,var(--gold) 20%,transparent),transparent)}
+  .side .menu a.on::after{display:none}
+  .side .side-promo{margin-top:auto;text-align:center;background:linear-gradient(160deg,color-mix(in srgb,var(--gold) 9%,var(--panel)),var(--panel));border:1px solid var(--line);border-radius:14px;padding:14px}
+  .side .side-promo .m{font-size:26px}
+  .side .side-promo p{margin:7px 0 11px;font-size:11.5px;color:var(--sub);font-weight:600}
+  .side .side-promo b{color:var(--ink)}
+  .side .side-promo button{width:100%;border:none;border-radius:10px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#3a2c07;font-weight:800;font-size:12px;padding:9px;cursor:pointer;font-family:inherit}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:14px;padding:11px clamp(14px,3vw,30px);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+  .topbar .search{flex:1;max-width:480px}
+  .topbar .navbtns{margin-left:auto}
+  .main .wrap{padding-top:20px}
+  /* 브리핑 히어로 (항상 다크 · 테마 무관) */
+  .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
+  .brief-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:280px;height:220px;background:radial-gradient(circle at center,rgba(61,123,255,.30),transparent 68%);pointer-events:none}
+  .brief-hero .ch h2{color:#f2f6fc}
+  .brief-hero .pad{position:relative;z-index:1}
+  .brief-hero .bh-date{font-size:11.5px;color:#93a3bb}
+  .brief-hero .bh-sum{font-size:13px;line-height:1.65;color:#c4d0e0}
+  .brief-hero .bh-sum b{color:#fff}
+  .brief-hero .bh-badge{font-size:11.5px;font-weight:800;padding:4px 11px;border-radius:9px;white-space:nowrap}
+  .brief-hero .bh-badge.up{background:linear-gradient(135deg,#f0cf78,#c19a3e);color:#3a2c07}
+  .brief-hero .bh-badge.dn{background:color-mix(in srgb,var(--up) 26%,#1a2740);color:#ffd6db;border:1px solid color-mix(in srgb,var(--up) 45%,transparent)}
+  .brief-hero .bh-badge.fl{background:rgba(255,255,255,.12);color:#cdd7e6}
+  .brief-hero .tf:hover{background:rgba(255,255,255,.22)!important}
+  @media(max-width:860px){
+    .app{flex-direction:column;min-height:0}
+    .side{position:static;height:auto;width:100%;flex:0 0 auto;flex-direction:row;flex-wrap:wrap;align-items:center;border-right:none;border-bottom:1px solid var(--line);gap:8px;padding:8px 10px}
+    .side .logo{padding:4px 6px}
+    .side .segmode{margin:0;align-self:auto}
+    .side .segmode button{flex:0 0 auto}
+    .side .menu{flex-direction:row;overflow-x:auto;flex:1 1 100%;order:3}
+    .side .side-promo{display:none}
+    .topbar{position:static}
+  }
   .view{display:none}.view.on{display:block}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
   .ch{display:flex;align-items:center;gap:8px;padding:15px 18px 0}
@@ -538,7 +581,8 @@
   <label class="sp-remember"><input type="checkbox" id="spRemember"> 다음부터 이 화면 건너뛰고 바로 열기</label>
 </div>
 
-<nav class="nav">
+<div class="app">
+<aside class="side">
   <div class="logo"><svg width="26" height="26" viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="van" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f0cf78"/><stop offset="1" stop-color="#c19a3e"/></linearGradient></defs><path d="M24 3 L11 22 H18 L15 37 L29 17 H21 Z" fill="url(#van)"/></svg><span class="wm">VANTOR</span></div>
   <div class="segmode"><button class="on" data-m="stock">주식</button><button data-m="coin">코인</button></div>
   <div class="menu" id="menu">
@@ -553,9 +597,13 @@
     <a data-v="events">📅 이벤트</a>
     <a data-v="learn">LEARN</a>
   </div>
+  <div class="side-promo"><div class="m">🐿️</div><p>좋은 사람들과<br><b>더 좋은 투자를!</b></p><button onclick="showView('brief')">브리핑 보기 →</button></div>
+</aside>
+<div class="main">
+<header class="topbar">
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
   <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="기기 간 동기화" onclick="openSync()">☁️</button><button class="ibtn" title="가이드·도움말" onclick="openHelp()">❓</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
-</nav>
+</header>
 
 <div class="wrap">
   <div class="demoban" id="demoban">🧪 <b>데모 모드</b> — 지금은 예시 데이터로 화면·RADAR 100점 엔진을 보여줍니다. KIS 프록시를 연결하면 <b>실시간 장중 데이터</b>로 자동 전환됩니다.</div>
@@ -726,9 +774,11 @@
 <div class="disc" style="max-width:1320px;margin:16px auto;padding-left:clamp(14px,3vw,34px);padding-right:clamp(14px,3vw,34px);background:none;border:none">
   ⚠️ 모든 점수·RADAR·타점은 <b>교육용 참고</b>이며 매수/매도 권유가 아닙니다. RADAR는 "무엇이 올랐나"가 아니라 "지금 어디로 돈이 들어오고 그 힘이 강해지는가"를 보여주는 도구입니다. 투자 판단과 책임은 본인에게 있습니다.
 </div>
+</div><!--/main-->
+</div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=100"></script>
+<script src="app.js?v=101"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
