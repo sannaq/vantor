@@ -168,7 +168,7 @@ async function loadKisMarket(){
     }
     // 실환율 USD/KRW (/fx → Naver 하나은행 고시)
     try{ var fx=await fetch(PROXY+'/fx').then(function(r){return r.json();}); if(fx&&fx.v){ var u=IDX.find(function(i){return i.fx||/USD/.test(i.nm||'');}); if(u){ u.v=fx.v; if(fx.c!=null)u.c=fx.c; if(fx.d!=null)u.d=fx.d; u._real=true; changed=true; } } }catch(e){}
-    if(changed){ renderIdx(); renderFlow(); if(typeof renderSummary==='function')renderSummary(); if(typeof renderBriefing==='function')renderBriefing(); }
+    if(changed){ renderIdx(); renderFlow(); if(typeof renderSummary==='function')renderSummary(); if(typeof renderBriefing==='function')renderBriefing(); if(typeof renderHomeMarket==='function')renderHomeMarket(); }
   }catch(e){}
 }
 /* ═══════════ 관심종목(WATCHLIST) — localStorage 'aurWatch' ═══════════ */
@@ -198,6 +198,23 @@ function renderRailBtc(){ var el=document.getElementById('railBtc'); if(!el)retu
     +'<button class="tf" onclick="enterMode&&enterMode(\'coin\')" style="width:100%;margin-top:8px;font-weight:800">코인 상세 →</button>';
   var u=document.getElementById('railBtcUpd'); if(u)u.textContent='실시간';
 }
+/* ── 홈 실시간 시장 테이블 (목업형) ── */
+var _homeMkt='all';
+function renderHomeMarket(){ var el=document.getElementById('homeMarket'); if(!el)return;
+  var src=(typeof KBOARD!=='undefined'&&KBOARD&&KBOARD.length)?KBOARD:((typeof RADAR!=='undefined'&&RADAR)?RADAR:[]);
+  var list=(src||[]).filter(function(x){return x&&(x.n||x.name);});
+  if(_homeMkt!=='all')list=list.filter(function(x){var m=(x.mk||'').toUpperCase();return _homeMkt==='US'?(m.indexOf('US')>-1||m==='NASDAQ'||m==='NYSE'):(m.indexOf('US')<0&&m.indexOf('NAS')<0&&m.indexOf('NYSE')<0);});
+  var rows=list.slice(0,8);
+  if(!rows.length){ el.innerHTML='<tbody><tr><td style="color:var(--faint);padding:14px">데이터 불러오는 중…</td></tr></tbody>'; return; }
+  var head='<thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th class="l">시장</th></tr></thead>';
+  var body=rows.map(function(r){ var nm=r.n||r.name, code=r.code||r.c||'', ch=+r.ch||0, px=(r.px!=null?r.px:r.price), cls=ch>0?'up':(ch<0?'down':'flat'), arw=ch>0?'▲':(ch<0?'▼':'–');
+    return '<tr class="rowbtn" data-c="'+code+'"><td class="l"><div class="sym">'+nm+'<small>'+code+(r.mk?' · '+r.mk:'')+'</small></div></td>'
+      +'<td class="num">'+(px!=null&&px!==''?(+px).toLocaleString():'–')+'</td>'
+      +'<td class="num '+cls+'">'+arw+' '+Math.abs(ch).toFixed(2)+'%</td>'
+      +'<td class="l" style="color:var(--sub)">'+(r.mk||'–')+'</td></tr>'; }).join('');
+  el.innerHTML=head+'<tbody>'+body+'</tbody>';
+}
+document.addEventListener('click',function(e){ var b=e.target&&e.target.closest&&e.target.closest('#homeMktSeg button'); if(b){ _homeMkt=b.getAttribute('data-mk')||'all'; var seg=document.getElementById('homeMktSeg'); if(seg)seg.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); renderHomeMarket(); } });
 function starBtn(code,nm){ var on=watchHas(code);
   return '<button class="starbtn'+(on?' on':'')+'" data-c="'+code+'" title="관심종목" '
     +'onclick="event.stopPropagation();watchToggle(\''+code+'\')">'+(on?'★':'☆')+'</button>'; }
@@ -304,7 +321,7 @@ async function loadKisRadar(){
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
       j.stocks.forEach(function(s){ s.ccy='KRW'; });
       KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
-      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); renderCatch(); renderStrongSectors(); }
+      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; renderHeatmap(); renderCatch(); renderStrongSectors(); if(typeof renderHomeMarket==='function')renderHomeMarket(); }
       var db=$('#demoban'); if(db)db.style.display='none';
       renderRadar(); renderCats();
     }
@@ -3039,7 +3056,7 @@ try{ var _cp=JSON.parse(localStorage.getItem('aurCards')||'null'); if(_cp)CARDPR
 function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
 
 /* ═══════════ 초기화 ═══════════ */
-renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge(); if(typeof renderRailWatch==='function')renderRailWatch(); if(typeof renderRailBtc==='function')renderRailBtc();
+renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge(); if(typeof renderRailWatch==='function')renderRailWatch(); if(typeof renderRailBtc==='function')renderRailBtc(); if(typeof renderHomeMarket==='function')renderHomeMarket();
 
 /* ═══════════ 카드 편집기 ═══════════ */
 function cardId(card){

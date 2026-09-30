@@ -114,6 +114,22 @@
   .rail .railhot .hdt.fl{color:var(--faint)}
   @media(max-width:1160px){.main .wrap{grid-template-columns:1fr}.rail{display:none}}
   .main .foot .in,.main .disc{max-width:none}
+  /* 커뮤니티 피드 · 시장 세그 · 섹션 헤더 */
+  .feed a{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line2);align-items:flex-start}
+  .feed a:last-child{border-bottom:none}
+  .feed .av{flex:0 0 30px;height:30px;border-radius:9px;background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:14px}
+  .feed .fc{flex:1;min-width:0}
+  .feed .ftag{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:5px;margin-right:6px}
+  .feed .ftag.s{background:color-mix(in srgb,var(--gold) 24%,transparent);color:var(--gold2)}
+  .feed .ftag.c{background:color-mix(in srgb,#39c2c9 22%,transparent);color:#7fdbe0}
+  .feed .ftag.t{background:color-mix(in srgb,#f6465d 20%,transparent);color:#ff9aa7}
+  .feed .ft{font-weight:700;font-size:12.5px}
+  .feed .fs{color:var(--faint);font-size:11px;margin-top:3px;display:flex;gap:10px}
+  .mktseg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:2px}
+  .mktseg button{border:none;background:none;font-family:inherit;font-size:11.5px;font-weight:800;color:var(--sub);padding:4px 10px;border-radius:6px;cursor:pointer}
+  .mktseg button.on{background:var(--panel);color:var(--ink)}
+  .sec-h2{font-size:12px;font-weight:800;color:var(--faint);letter-spacing:.3px;margin:20px 2px 10px}
+  .sec-h2 span{color:var(--faint);font-weight:600}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
   .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
   .brief-hero::after{content:"";position:absolute;right:-50px;top:-70px;width:280px;height:220px;background:radial-gradient(circle at center,rgba(61,123,255,.30),transparent 68%);pointer-events:none}
@@ -646,6 +662,24 @@
   </div>
 
   <div class="view on" id="v-home">
+    <div class="row a" style="margin-top:0">
+      <div class="card">
+        <div class="ch"><h2>📈 실시간 시장</h2><div class="r"><span class="mktseg" id="homeMktSeg"><button class="on" data-mk="all">전체</button><button data-mk="KR">국내</button><button data-mk="US">해외</button></span></div></div>
+        <div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table id="homeMarket"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><h2>💬 오늘의 이슈 · 커뮤니티</h2><div class="r"><span class="more" data-v="brief">더보기 ›</span></div></div>
+        <div class="pad feed" style="padding-top:8px">
+          <a><div class="av">🧑</div><div class="fc"><div><span class="ftag s">주식</span><span class="ft">반도체주, 추가 상승 가능할까요?</span></div><div class="fs"><span>👁 1.2만</span><span>💬 132</span><span>2시간 전</span></div></div></a>
+          <a><div class="av">🧑</div><div class="fc"><div><span class="ftag c">코인</span><span class="ft">비트코인 조정 구간인가요?</span></div><div class="fs"><span>👁 8,432</span><span>💬 96</span><span>3시간 전</span></div></div></a>
+          <a><div class="av">🧑</div><div class="fc"><div><span class="ftag t">트레이딩</span><span class="ft">오늘도 수익 인증합니다 🔥</span></div><div class="fs"><span>👁 6,921</span><span>💬 75</span><span>4시간 전</span></div></div></a>
+          <a><div class="av">🧑</div><div class="fc"><div><span class="ftag s">스터디</span><span class="ft">기초부터 배우는 차트 분석 — 3강</span></div><div class="fs"><span>👁 4,203</span><span>💬 58</span><span>5시간 전</span></div></div></a>
+          <div style="font-size:10.5px;color:var(--faint);margin-top:8px">※ 예시 — 커뮤니티 연동 예정</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-h2">🛠 프로 지표 <span>· VANTOR 엔진</span></div>
     <div class="row a">
       <div class="card">
         <div class="ch"><h2>🌊 MARKET FLOW</h2><div class="r"><span id="flowupd">–</span></div></div>
@@ -807,7 +841,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=103"></script>
+<script src="app.js?v=104"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
