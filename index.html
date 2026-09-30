@@ -99,7 +99,20 @@
   .topbar{position:sticky;top:0;z-index:35;display:flex;align-items:center;gap:14px;padding:11px clamp(14px,3vw,30px);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
   .topbar .search{flex:1;max-width:480px}
   .topbar .navbtns{margin-left:auto}
-  .main .wrap{max-width:none;margin:0;width:100%;padding:20px clamp(16px,2.2vw,32px) 44px}
+  .main .wrap{max-width:none;margin:0;width:100%;padding:20px clamp(16px,2.2vw,32px) 44px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+  .maincol{min-width:0}
+  .rail{position:sticky;top:74px;display:flex;flex-direction:column;gap:16px;min-width:0}
+  .rail .rw{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line2)}
+  .rail .rw:last-child{border-bottom:none}
+  .rail .rw .rnm{font-weight:800;font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rail .railhot{margin:0;padding:0;list-style:none}
+  .rail .railhot li{display:flex;align-items:center;gap:11px;padding:8px 0;border-bottom:1px solid var(--line2)}
+  .rail .railhot li:last-child{border-bottom:none}
+  .rail .railhot .rk{font-weight:800;color:var(--gold);width:16px}
+  .rail .railhot .hnm{flex:1;font-weight:700;font-size:12.5px}
+  .rail .railhot .hdt{font-size:11px;font-weight:800}
+  .rail .railhot .hdt.fl{color:var(--faint)}
+  @media(max-width:1160px){.main .wrap{grid-template-columns:1fr}.rail{display:none}}
   .main .foot .in,.main .disc{max-width:none}
   /* 브리핑 히어로 (항상 다크 · 테마 무관) */
   .brief-hero{position:relative;overflow:hidden;border-color:#243044;background:linear-gradient(165deg,#1b2942 0%,#111a2b 55%,#0e1520 100%);color:#dfe7f2;box-shadow:var(--shadow2)}
@@ -607,6 +620,7 @@
 </header>
 
 <div class="wrap">
+<div class="maincol">
   <div class="demoban" id="demoban">🧪 <b>데모 모드</b> — 지금은 예시 데이터로 화면·RADAR 100점 엔진을 보여줍니다. KIS 프록시를 연결하면 <b>실시간 장중 데이터</b>로 자동 전환됩니다.</div>
 
   <!-- 오늘의 브리핑 (토글: 밤사이·장전 / 장마감) -->
@@ -764,6 +778,18 @@
     </div>
     <div id="coinHost" style="display:none"></div>
   </div>
+</div><!--/maincol-->
+<aside class="rail" id="homeRail">
+  <div class="card"><div class="ch"><h2>👀 관심 종목</h2><div class="r"><span class="more" data-v="watch">더보기 ›</span></div></div><div class="pad" style="padding-top:8px" id="railWatch"><div style="color:var(--faint);font-size:12px">관심종목을 담아보세요.</div></div></div>
+  <div class="card"><div class="ch"><h2>🪙 BTC/USDT</h2><div class="r" id="railBtcUpd">–</div></div><div class="pad" style="padding-top:8px" id="railBtc"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div></div>
+  <div class="card"><div class="ch"><h2>🔥 실시간 인기 검색어</h2></div><div class="pad" style="padding-top:6px"><ol class="railhot">
+    <li><span class="rk">1</span><span class="hnm">삼성전자</span><span class="hdt up">▲ 3</span></li>
+    <li><span class="rk">2</span><span class="hnm">SK하이닉스</span><span class="hdt up">▲ 2</span></li>
+    <li><span class="rk">3</span><span class="hnm">비트코인</span><span class="hdt down">▼ 1</span></li>
+    <li><span class="rk">4</span><span class="hnm">에코프로</span><span class="hdt fl">— 0</span></li>
+    <li><span class="rk">5</span><span class="hnm">테슬라</span><span class="hdt up">▲ 1</span></li>
+  </ol><div style="font-size:10.5px;color:var(--faint);margin-top:8px">※ 예시 — 검색 집계 연동 예정</div></div></div>
+</aside>
 </div>
 
 <footer class="foot"><div class="in">
@@ -779,7 +805,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=101"></script>
+<script src="app.js?v=102"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

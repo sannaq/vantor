@@ -182,7 +182,21 @@ function watchToggle(code,nm){
   // 열린 화면들 갱신
   $$('.starbtn[data-c="'+code+'"]').forEach(function(b){ var on=watchHas(code); b.textContent=on?'★':'☆'; b.classList.toggle('on',on); });
   if($('#v-watch')&&$('#v-watch').classList.contains('on')) renderWatch();
-  updateWatchBadge();
+  updateWatchBadge(); if(typeof renderRailWatch==='function')renderRailWatch();
+}
+/* ── 우측 레일: 관심종목 TOP5 · BTC 미니차트 ── */
+function renderRailWatch(){ var el=document.getElementById('railWatch'); if(!el)return;
+  if(!WATCH||!WATCH.length){ el.innerHTML='<div style="color:var(--faint);font-size:12px">관심종목을 담아보세요. 종목에서 ★ 를 누르면 여기 떠요.</div>'; return; }
+  el.innerHTML=WATCH.slice(0,5).map(function(code){ var m=(typeof meta==='function')?(meta(code)||{}):{}; var nm=m.nm||code;
+    return '<div class="rw" onclick="showView(\'watch\')" style="cursor:pointer"><div class="rnm">'+nm+'</div><div style="color:var(--faint);font-size:11px" class="num">'+code+'</div></div>'; }).join('');
+}
+function renderRailBtc(){ var el=document.getElementById('railBtc'); if(!el)return;
+  var b=(typeof BRIEF_BTC!=='undefined'&&BRIEF_BTC)?BRIEF_BTC:null; if(!b||!b.px)return;
+  var c=+b.c||0, col=c>=0?'var(--up)':'var(--down)', arw=c>=0?'▲':'▼', sc=c>=0?'#f6465d':'#4a9eff';
+  el.innerHTML='<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:6px"><span style="font-size:19px;font-weight:800" class="num">$'+Math.round(b.px).toLocaleString()+'</span><span style="font-weight:800;color:'+col+'" class="num">'+arw+' '+Math.abs(c).toFixed(2)+'%</span></div>'
+    +'<svg viewBox="0 0 260 64" style="width:100%;height:60px"><defs><linearGradient id="rbg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+sc+'" stop-opacity=".25"/><stop offset="1" stop-color="'+sc+'" stop-opacity="0"/></linearGradient></defs><path d="M0,42 L26,38 L52,44 L78,32 L104,38 L130,26 L156,34 L182,22 L208,32 L234,28 L260,36 L260,64 L0,64 Z" fill="url(#rbg)"/><path d="M0,42 L26,38 L52,44 L78,32 L104,38 L130,26 L156,34 L182,22 L208,32 L234,28 L260,36" fill="none" stroke="'+sc+'" stroke-width="1.8"/></svg>'
+    +'<button class="tf" onclick="enterMode&&enterMode(\'coin\')" style="width:100%;margin-top:8px;font-weight:800">코인 상세 →</button>';
+  var u=document.getElementById('railBtcUpd'); if(u)u.textContent='실시간';
 }
 function starBtn(code,nm){ var on=watchHas(code);
   return '<button class="starbtn'+(on?' on':'')+'" data-c="'+code+'" title="관심종목" '
@@ -3025,7 +3039,7 @@ try{ var _cp=JSON.parse(localStorage.getItem('aurCards')||'null'); if(_cp)CARDPR
 function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
 
 /* ═══════════ 초기화 ═══════════ */
-renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge();
+renderIdx(); renderTune(); renderRadar(); renderSmart(); renderFlow(); renderCats(); renderStrongSectors(); fetchNews(); updateWatchBadge(); if(typeof renderRailWatch==='function')renderRailWatch(); if(typeof renderRailBtc==='function')renderRailBtc();
 
 /* ═══════════ 카드 편집기 ═══════════ */
 function cardId(card){
@@ -3128,7 +3142,7 @@ async function loadBriefData(){
     var m={}; res.forEach(function(q){ if(q&&q.quotes)q.quotes.forEach(function(x){ if(x&&x.c!=null)m[x.code]=x; }); });
     if(Object.keys(m).length)BRIEF_US=m; }catch(e){}
   try{ var bt=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr?symbols=%5B%22BTCUSDT%22,%22ETHUSDT%22%5D').then(function(r){return r.json();});
-    if(Array.isArray(bt))bt.forEach(function(t){ if(t.symbol==='BTCUSDT')BRIEF_BTC={px:+t.lastPrice,c:+t.priceChangePercent}; if(t.symbol==='ETHUSDT')BRIEF_ETH={px:+t.lastPrice,c:+t.priceChangePercent}; }); }catch(e){}
+    if(Array.isArray(bt))bt.forEach(function(t){ if(t.symbol==='BTCUSDT')BRIEF_BTC={px:+t.lastPrice,c:+t.priceChangePercent}; if(t.symbol==='ETHUSDT')BRIEF_ETH={px:+t.lastPrice,c:+t.priceChangePercent}; }); if(typeof renderRailBtc==='function')renderRailBtc(); }catch(e){}
   renderBriefing();
 }
 function _bp(label,val){ return '<div class="bpill"><span class="bl">'+label+'</span>'+val+'</div>'; }
