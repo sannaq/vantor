@@ -3292,7 +3292,7 @@ function _bbMedia(b){
 /* ── 브리핑을 텍스트(스타일 HTML)로 렌더 — 이미지 대신 ── */
 var _BRIEFDATA={};
 function _bbFetchData(path,cb){ if(_BRIEFDATA[path]){cb&&cb(_BRIEFDATA[path]);return;} fetch(path,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){_BRIEFDATA[path]=j; cb&&cb(j);} }).catch(function(){}); }
-function _brfMd(s){ return _bbEsc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'); }
+function _brfMd(s){ return _bbEsc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>'); }
 function _brfStyleInject(){ if(document.getElementById('brfStyle'))return; var st=document.createElement('style'); st.id='brfStyle'; st.textContent=
 ".brf{background:#fff;color:#1b2028;border-radius:14px;padding:18px;font-family:'Malgun Gothic','맑은 고딕',sans-serif}"
 +".brf .bhead{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;border-bottom:2px solid #eceef1;padding-bottom:12px}"
