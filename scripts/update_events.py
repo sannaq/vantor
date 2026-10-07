@@ -84,6 +84,13 @@ def fetch_json(url, data=None, headers=None):
 
 
 
+def sort_time(t):
+    """'휴장'·'참고'는 그날 맨 앞, '개장 전'은 09:00 앞, 나머지는 HH:MM 그대로."""
+    if re.match(r"^\d\d:\d\d$", t):
+        return t
+    return "08:59" if "개장" in t else "00:00"
+
+
 def week_label(monday):
     thu = monday + timedelta(days=3)
     return f"{thu.year}년 {thu.month}월 {(thu.day - 1) // 7 + 1}주차"
@@ -193,7 +200,7 @@ def main():
                     if k in p:
                         n[k] = p[k]
             evs.append(n)
-        evs.sort(key=lambda e: (e["date"], e["time"]))
+        evs.sort(key=lambda e: (e["date"], sort_time(e.get("time", ""))))
 
         new = dict(old) if same_week else {}
         new.update({"week": week_label(monday), "range": rng})
