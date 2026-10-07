@@ -4,6 +4,7 @@
 GitHub Actions(.github/workflows/flow.yml)가 장중 30분마다 + 저녁에 실행한다. 출처는 네이버 증권(무료·키 없음).
 - inv   : 코스피·코스닥 투자자별 매매(개인·외국인·기관·프로그램, 억원) — 장중 실시간 누적
 - h52u/h52d : 52주 신고가·신저가 종목 수 (코스피+코스닥)
+- trend : 지수(코스피·코스닥·코스피200)·환율 최근 20거래일 종가 — 지수 카드 그래프
 - smart : 외국인·기관 순매수/순매도 TOP5 (억원) — 시가총액 상위 종목의 '확정된 직전 거래일' 수급으로 계산.
           날짜가 바뀌었을 때만 다시 계산한다(종목마다 1번씩 요청하므로).
 표준 라이브러리만 사용.
@@ -48,6 +49,23 @@ def investors():
     return out, bizdate
 
 
+def trend():
+    """지수 카드 그래프용 최근 20거래일 종가 [[날짜, 값], ...] 오래된 순."""
+    out = {}
+    for nm, code in (("KOSPI", "KOSPI"), ("KOSDAQ", "KOSDAQ"), ("KOSPI200", "KPI200")):
+        rows = get(f"/index/{code}/price?pageSize=20&page=1")
+        out[nm] = [[r["localTradedAt"], n(r["closePrice"])] for r in reversed(rows)]
+    fx = get_raw("https://m.stock.naver.com/front-api/marketIndex/prices?category=exchange&reutersCode=FX_USDKRW&page=1&pageSize=20")
+    out["USD/KRW"] = [[r["localTradedAt"], n(r["closePrice"])] for r in reversed(fx.get("result") or [])]
+    return out
+
+
+def get_raw(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode("utf-8"))
+
+
 def count(kind):
     return sum(int(get(f"/stocks/{kind}/{m}?page=1&pageSize=1").get("totalCount") or 0) for m in ("KOSPI", "KOSDAQ"))
 
@@ -89,6 +107,7 @@ def main():
     try:
         new["inv"], new["invDate"] = investors()
         new["h52u"], new["h52d"] = count("high52week"), count("low52week")
+        new["trend"] = trend()
     except Exception as e:  # noqa
         print("지수 수급 실패:", e, file=sys.stderr)
     try:
