@@ -4,7 +4,7 @@
 GitHub Actions(.github/workflows/events.yml)가 매일 아침 실행한다.
 - 미국 일정: ForexFactory 주간 피드(무료·키 없음)에서 USD 중요/보통 일정을 가져온다.
 - 한국 휴장: 아래 KRX_HOLIDAYS 표.
-- 한글 제목·해설: TITLE_KO 사전 → 없으면 GitHub Models(GITHUB_TOKEN) 번역 → 그래도 실패하면 영문 그대로.
+- 한글 제목·해설: TITLE_KO 사전. 사전에 없는 일정은 영문 제목 그대로(사전에 한 줄 추가하면 다음 실행부터 한글).
 - 같은 주에 손으로 넣은 이벤트(src 없음)·해설·결과는 지우지 않고 그대로 둔다.
   같은 날짜·시각에 손으로 넣은 미국 이벤트가 있으면 자동 이벤트는 추가하지 않는다.
 표준 라이브러리만 사용.
@@ -28,9 +28,9 @@ KRX_HOLIDAYS = {
 
 # 영문 제목 → (한글 제목, 중요도 보정, 종류, 주식 해설, 코인 해설)
 TITLE_KO = [
-    (r"^CPI m/m|^CPI y/y|^Core CPI", ("소비자물가(CPI)", 3, "data", "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담.", "물가가 뜨거우면 리스크오프로 하락 압력, 식으면 안도.")),
-    (r"^PPI m/m|^Core PPI", ("생산자물가(PPI)", 2, "data", "CPI 선행 성격. 기업 원가 압력 확인.", "물가 선행지표 — 금리 기대를 흔듦.")),
-    (r"^Core PCE|^PCE Price", ("PCE 물가지수", 3, "data", "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑.", "연준 핵심 물가 — 금리·달러 민감한 크립토에 직결.")),
+    (r"CPI m/m|CPI y/y|Core CPI", ("소비자물가(CPI)", 3, "data", "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담.", "물가가 뜨거우면 리스크오프로 하락 압력, 식으면 안도.")),
+    (r"PPI m/m|Core PPI", ("생산자물가(PPI)", 2, "data", "CPI 선행 성격. 기업 원가 압력 확인.", "물가 선행지표 — 금리 기대를 흔듦.")),
+    (r"Core PCE|PCE Price", ("PCE 물가지수", 3, "data", "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑.", "연준 핵심 물가 — 금리·달러 민감한 크립토에 직결.")),
     (r"^Non-Farm Employment Change", ("고용보고서 (비농업 고용)", 3, "data", "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차.", "고용 강/약이 금리 경로를 흔들어 변동성 확대.")),
     (r"^Unemployment Rate", ("실업률", 3, "data", "고용보고서와 함께 발표. 상승 시 경기 둔화 신호.", None)),
     (r"^Average Hourly Earnings", ("시간당 임금", 2, "data", "임금발 물가 압력 확인.", None)),
@@ -40,7 +40,7 @@ TITLE_KO = [
     (r"^ISM Services PMI", ("ISM 서비스업 PMI", 2, "data", "미국 경제의 몸통(서비스) 체감 경기. 50 위·아래와 가격지수 확인.", None)),
     (r"^ISM Manufacturing PMI", ("ISM 제조업 PMI", 2, "data", "제조업 체감 경기. 반도체·수출주 심리에 영향.", None)),
     (r"Retail Sales", ("소매판매", 2, "data", "소비 체력 확인. 강하면 금리 부담.", None)),
-    (r"^Advance GDP|^Prelim GDP|^Final GDP|^GDP", ("GDP 성장률", 3, "data", "경기 전체 성적표.", "경기 방향 — 위험자산 심리에 영향.")),
+    (r"^(Advance |Prelim |Final )?GDP q/q", ("GDP 성장률", 3, "data", "경기 전체 성적표.", "경기 방향 — 위험자산 심리에 영향.")),
     (r"^FOMC Meeting Minutes", ("FOMC 의사록 공개", 3, "policy", "직전 회의에서 추가 인상·인하 논의가 얼마나 강했는지. 매파적이면 금리·달러↑.", "연준 톤 변화 — 매파면 크립토 하락 압력.")),
     (r"^Federal Funds Rate|^FOMC Statement", ("FOMC 금리 결정", 3, "policy", "금리 결정과 성명 문구. 주 최대 이벤트.", "금리 결정 — 크립토 변동성 최대 구간.")),
     (r"^FOMC Press Conference", ("연준 의장 기자회견", 3, "policy", "향후 경로 힌트.", "의장 발언에 따라 급변동 가능.")),
@@ -51,6 +51,18 @@ TITLE_KO = [
     (r"UoM Inflation Expectations", ("미시간대 기대 인플레이션", 2, "data", "기대 물가가 오르면 금리 부담.", None)),
     (r"^CB Consumer Confidence", ("컨퍼런스보드 소비자신뢰지수", 2, "data", "소비 심리.", None)),
     (r"^Empire State|^Philly Fed", ("지역 제조업 지수", 1, "data", "제조업 체감 경기 참고.", None)),
+    (r"Durable Goods Orders", ("내구재 주문", 2, "data", "기업 설비투자 흐름.", None)),
+    (r"New Home Sales|Existing Home Sales|Pending Home Sales|Housing Starts|Building Permits", ("주택 지표", 1, "data", "금리 민감한 주택 경기 확인.", None)),
+    (r"Flash Manufacturing PMI", ("S&P 제조업 PMI(속보)", 2, "data", "제조업 체감 경기 속보치.", None)),
+    (r"Flash Services PMI", ("S&P 서비스업 PMI(속보)", 2, "data", "서비스업 체감 경기 속보치.", None)),
+    (r"Industrial Production", ("산업생산", 1, "data", "제조업 실물 경기.", None)),
+    (r"Beige Book", ("연준 베이지북", 2, "policy", "지역별 경기 진단 — 다음 FOMC 판단 재료.", None)),
+    (r"Employment Cost Index", ("고용비용지수(ECI)", 2, "data", "임금발 물가 압력.", None)),
+    (r"Trade Balance", ("무역수지", 1, "data", "관세 영향 참고.", None)),
+    (r"Chicago PMI", ("시카고 PMI", 1, "data", "제조업 체감 경기 참고.", None)),
+    (r"Nonfarm Productivity|Unit Labor Costs", ("노동생산성·단위노동비용", 1, "data", "임금·물가 압력 참고.", None)),
+    (r"GDP Price Index", ("GDP 물가지수", 2, "data", "성장 속 물가 압력.", None)),
+    (r"Crude Oil Inventories", ("원유 재고", 1, "data", "유가·물가 기대 참고.", None)),
     (r"Treasury.*Auction|Bond Auction", ("미 국채 입찰", 2, "event", "입찰 수요가 약하면 장기금리↑ → 성장주 부담.", None)),
 ]
 
@@ -70,22 +82,6 @@ def fetch_json(url, data=None, headers=None):
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read().decode("utf-8"))
 
-
-def ai(prompt):
-    """GitHub Models 로 짧은 JSON 응답. 실패하면 None."""
-    tok = os.environ.get("GITHUB_TOKEN")
-    if not tok:
-        return None
-    try:
-        body = json.dumps({"model": "openai/gpt-4o-mini", "temperature": 0.3,
-                           "response_format": {"type": "json_object"},
-                           "messages": [{"role": "user", "content": prompt}]}).encode()
-        j = fetch_json("https://models.github.ai/inference/chat/completions", body,
-                       {"Authorization": "Bearer " + tok, "Content-Type": "application/json"})
-        return json.loads(j["choices"][0]["message"]["content"])
-    except Exception as e:  # noqa
-        print("AI 실패:", e, file=sys.stderr)
-        return None
 
 
 def week_label(monday):
@@ -140,7 +136,6 @@ def main():
         print("일정 피드를 못 받아 이번 실행은 건너뜀", file=sys.stderr)
         return 1
     auto = []
-    unknown = []
     for e in ff:
         if e.get("country") != "USD" or e.get("impact") not in ("High", "Medium"):
             continue
@@ -155,24 +150,12 @@ def main():
             ev["title"], kimp, ev["type"], ev["note"], cnote = k
             ev["imp"] = max(imp, kimp) if imp == 3 else kimp
             ev["_cnote"] = cnote
-        else:
-            unknown.append(ev)
         extra = " · ".join(x for x in [f"예상 {e['forecast']}" if e.get("forecast") else "",
                                        f"직전 {e['previous']}" if e.get("previous") else ""] if x)
         if extra:
             ev["note"] = (ev["note"] + " " if ev["note"] else "") + f"({extra})"
         auto.append(ev)
 
-    if unknown:
-        res = ai("다음 미국 경제 일정 영문 제목을 한국 투자자용 짧은 한글 제목과 한 문장 해설로 바꿔라. "
-                 'JSON {"items":[{"en":..,"ko":..,"note":..}]} 로만 답하라.\n'
-                 + "\n".join(u["title"] for u in unknown))
-        tr = {i.get("en"): i for i in (res or {}).get("items", []) if isinstance(i, dict)}
-        for u in unknown:
-            t = tr.get(u["title"])
-            if t and t.get("ko"):
-                u["title"] = t["ko"]
-                u["note"] = (t.get("note", "") + " " + u["note"]).strip()
 
     for d, name in KRX_HOLIDAYS.items():
         if d in days and monday.isoformat() <= d <= friday.isoformat():
@@ -182,8 +165,8 @@ def main():
 
     rng = f"{monday.month}/{monday.day}~{friday.month}/{friday.day}"
     if not any(a["market"] == "US" for a in auto):
-        print("이번 주 미국 일정이 0건 — 피드가 아직 새 주로 안 바뀐 것으로 보고 건너뜀", file=sys.stderr)
-        return 1
+        print("이번 주 미국 일정이 0건 — 피드가 아직 새 주로 안 바뀐 것으로 보고 건너뜀")
+        return 0
     changed = False
     for path, market in ((os.path.join(ROOT, "events.json"), None),
                          (os.path.join(ROOT, "feeds", "coin-events.json"), "COIN")):
@@ -200,8 +183,9 @@ def main():
                 if a["market"] != "US" or not (a["imp"] >= COIN_KEEP or a["type"] == "policy"):
                     continue
                 a = {**a, "market": "COIN", "note": a.get("_cnote") or a["note"]}
-            if (a["date"], a["time"]) in taken:
+            if (a["date"], a["time"]) in taken or (a["date"], a["time"], a["title"]) in taken:
                 continue
+            taken.add((a["date"], a["time"], a["title"]))  # CPI m/m·y/y·Core 처럼 한 발표가 여러 줄이면 한 번만
             p = prev_auto.get(a["src"])
             n = {k: v for k, v in a.items() if not k.startswith("_")}
             if p:  # 손으로 고친 해설·결과는 유지
@@ -218,20 +202,9 @@ def main():
         new["events"] = evs
         if market is None and not same_week:
             top = [e for e in evs if e["imp"] >= 3] or evs[:3]
-            res = ai("한국 개인투자자용 '이번주 증시 이벤트' 요약을 써라. 교육용 관찰 톤, 매수·매도 권유 금지. "
-                     '**굵게** 마크업 사용 가능. JSON {"intro":"2문장","keys":[{"t":"짧은 제목","b":"한두 문장"}] (3개),'
-                     '"lens":{"cool":{"title":..,"body":..},"hot":{"title":..,"body":..}}} 로만 답하라.\n'
-                     + "\n".join(f"{e['date']} {e['time']} {e['market']} ★{e['imp']} {e['title']} {e['note']}" for e in top))
-            if res and res.get("intro"):
-                new["intro"] = res["intro"] + " (★★★ = 매우 중요)"
-                keys = [k for k in res.get("keys") or [] if isinstance(k, dict) and k.get("t") and k.get("b")]
-                if keys:
-                    new["keys"] = keys[:3]
-                lens = res.get("lens")
-                if isinstance(lens, dict) and all(isinstance(lens.get(k), dict) and lens[k].get("title") and lens[k].get("body") for k in ("cool", "hot")):
-                    new["lens"] = lens
-            if not new["intro"]:
-                new["intro"] = "이번 주 핵심: " + ", ".join(f"**{e['title']}**" for e in top[:3]) + " (★★★ = 매우 중요)"
+            new["intro"] = "이번 주 핵심: " + ", ".join(f"**{e['title']}**" for e in top[:3]) + " (★★★ = 매우 중요)"
+            new["keys"] = [{"t": f"{e['title']} ({int(e['date'][5:7])}/{int(e['date'][8:])} {e['time']})", "b": e["note"]}
+                           for e in [x for x in evs if x["imp"] >= 3][:3] if e.get("note")]
             new.setdefault("dayNotes", {})
         cmp_old = {k: v for k, v in old.items() if k != "updated"}
         cmp_new = {k: v for k, v in new.items() if k != "updated"}
@@ -248,7 +221,4 @@ def main():
 
 
 if __name__ == "__main__":
-    if sys.argv[1:] == ["--ai-check"]:  # 수동 실행 시 AI 연결 점검
-        print("AI 점검:", ai('JSON {"ok":true} 로만 답하라.'))
-        sys.exit(0)
     sys.exit(main())
