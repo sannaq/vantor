@@ -3,7 +3,8 @@
 
 GitHub Actions(.github/workflows/events.yml)가 매일 아침 실행한다.
 - 미국 일정: ForexFactory 주간 피드(무료·키 없음)에서 USD 중요/보통 일정을 가져온다.
-- 한국 휴장: 아래 KRX_HOLIDAYS 표.
+- 한국 휴장: 아래 KRX_HOLIDAYS 표. 한국 정기 일정: 수출입동향(1일)·옵션 만기(둘째 목)·금통위(BOK_MPC 표)·잠정실적 시즌.
+- 결과: 미 노동통계국(BLS) 무료 API 로 CPI·PPI·고용·실업률·임금 실제값을 채우고 예상 대비 뜨거움/식음 판정.
 - 한글 제목·해설: TITLE_KO 사전. 사전에 없는 일정은 영문 제목 그대로(사전에 한 줄 추가하면 다음 실행부터 한글).
 - 같은 주에 손으로 넣은 이벤트(src 없음)·해설·결과는 지우지 않고 그대로 둔다.
   같은 날짜·시각에 손으로 넣은 미국 이벤트가 있으면 자동 이벤트는 추가하지 않는다.
@@ -66,6 +67,23 @@ TITLE_KO = [
     (r"Treasury.*Auction|Bond Auction", ("미 국채 입찰", 2, "event", "입찰 수요가 약하면 장기금리↑ → 성장주 부담.", None)),
 ]
 
+# 한은 금통위 기준금리 결정일. 다음 해 일정은 한은이 매년 10~11월에 발표 → 그때 추가.
+BOK_MPC = {"2026-10-22", "2026-11-26"}
+
+# ForexFactory 제목 → (BLS 시리즈, 계산법, 표시 이름). 계산: mm=전월비% yy=전년비% chg=전월 대비 증감(천명) lvl=수준
+BLS = {
+    "CPI m/m": ("CUSR0000SA0", "mm", "전월비"),
+    "CPI y/y": ("CUUR0000SA0", "yy", "전년비"),
+    "Core CPI m/m": ("CUSR0000SA0L1E", "mm", "근원 전월비"),
+    "PPI m/m": ("WPSFD4", "mm", "전월비"),
+    "Core PPI m/m": ("WPSFD49104", "mm", "근원 전월비"),
+    "Non-Farm Employment Change": ("CES0000000001", "chg", "비농업 고용"),
+    "Unemployment Rate": ("LNS14000000", "lvl", "실업률"),
+    "Average Hourly Earnings m/m": ("CES0500000003", "mm", "전월비"),
+}
+HEADLINE = ["CPI m/m", "PPI m/m", "Non-Farm Employment Change", "Unemployment Rate", "Average Hourly Earnings m/m"]
+REVERSED = {"Unemployment Rate"}  # 높을수록 경기 '식음'
+
 COIN_KEEP = 3  # 코인 피드는 중요도 3 + 연준 이벤트만
 
 
@@ -82,6 +100,123 @@ def fetch_json(url, data=None, headers=None):
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read().decode("utf-8"))
 
+
+
+def num(x):
+    try:
+        return float(re.sub(r"[^0-9.\-]", "", str(x)))
+    except ValueError:
+        return None
+
+
+def bls_values(series):
+    """{시리즈: [(연, 월, 값), ...] 최신순}. 무료 v1 API(하루 25회) — 하루 1번만 부른다."""
+    year = datetime.now(KST).year
+    body = json.dumps({"seriesid": sorted(series), "startyear": str(year - 1), "endyear": str(year)}).encode()
+    j = fetch_json("https://api.bls.gov/publicAPI/v1/timeseries/data/", body, {"Content-Type": "application/json"})
+    out = {}
+    for ser in j.get("Results", {}).get("series", []):
+        out[ser["seriesID"]] = [(int(x["year"]), int(x["period"][1:]), float(x["value"]))
+                                for x in ser["data"] if x["period"].startswith("M") and x["period"] != "M13"
+                                and num(x["value"]) is not None]
+    return out
+
+
+def bls_actual(vals, how, want):
+    """want=(연,월) 자료가 나왔으면 계산값, 아니면 None."""
+    if not vals or (vals[0][0], vals[0][1]) != want:
+        return None
+    v = vals[0][2]
+    if how == "lvl":
+        return v
+    if how in ("mm", "chg"):
+        prev = vals[1][2] if len(vals) > 1 else None
+        if prev is None:
+            return None
+        return v - prev if how == "chg" else (v / prev - 1) * 100
+    if how == "yy":
+        ago = next((x[2] for x in vals if (x[0], x[1]) == (want[0] - 1, want[1])), None)
+        return None if ago is None else (v / ago - 1) * 100
+
+
+def fmt(v, how):
+    return f"{v:+,.0f}K".replace("+", "+") if how == "chg" else f"{v:.1f}%"
+
+
+def fill_results(evs, today):
+    """지난 미국 지표 이벤트에 실제값·판정(result)을 채운다."""
+    todo = [e for e in evs if e.get("fc") and not e.get("result") and e["date"] < today.isoformat()
+            and any(k in BLS for k in e["fc"])]
+    if not todo:
+        return 0
+    try:
+        data = bls_values({BLS[k][0] for e in todo for k in e["fc"] if k in BLS})
+    except Exception as ex:  # noqa
+        print("BLS 실패:", ex, file=sys.stderr)
+        return 0
+    n = 0
+    for e in todo:
+        y, m = int(e["date"][:4]), int(e["date"][5:7])
+        want = (y, m - 1) if m > 1 else (y - 1, 12)  # 발표 달의 전달 자료
+        parts, verdict = [], "neutral"
+        keys = sorted((k for k in e["fc"] if k in BLS), key=lambda k: HEADLINE.index(k) if k in HEADLINE else 99)
+        for k in keys:
+            ser, how, lab = BLS[k]
+            a = bls_actual(data.get(ser), how, want)
+            if a is None:
+                continue
+            f = num(e["fc"][k])
+            txt = f"{lab} {fmt(a, how)}" + (f" (예상 {e['fc'][k]})" if e["fc"][k] else "")
+            if not parts:
+                txt = "**" + txt.split(" (")[0] + "**" + (" (" + txt.split(" (", 1)[1] if " (" in txt else "")
+                if f is not None:
+                    r = round(a, 1 if how != "chg" else 0)
+                    d = (r - f) if how != "chg" else (r - f)
+                    if k in REVERSED:
+                        d = -d
+                    verdict = "hot" if d > 0 else "cool" if d < 0 else "neutral"
+            parts.append(txt)
+        if parts:
+            word = {"hot": "예상보다 뜨거움 → 금리 부담", "cool": "예상보다 식음 → 금리 부담 완화", "neutral": "예상 수준"}[verdict]
+            e["result"] = {"v": " · ".join(parts) + f" — {word}", "verdict": verdict}
+            n += 1
+    return n
+
+
+def kr_events(days, monday):
+    """한국 정기 일정 (날짜 규칙·표 기반)."""
+    out = []
+    week = sorted(d for d in days if datetime.fromisoformat(d).weekday() < 5)
+    for d in week:
+        dt = datetime.fromisoformat(d)
+        if dt.day == 1:
+            pm = 12 if dt.month == 1 else dt.month - 1
+            out.append({"date": d, "time": "09:00", "market": "KR", "type": "data", "imp": 2,
+                        "title": f"{pm}월 수출입동향", "note": "반도체 수출이 국내 대형주 실적 기대에 직결. 수출 증가율·반도체 비중 확인.",
+                        "src": f"kr:trade:{d}"})
+        if d in BOK_MPC:
+            out.append({"date": d, "time": "10:00", "market": "KR", "type": "policy", "imp": 3,
+                        "title": "한은 금통위 기준금리 결정", "note": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향.",
+                        "src": f"kr:mpc:{d}"})
+    # 옵션 만기: 매월 둘째 목요일(휴장이면 직전 영업일). 3·6·9·12월은 선물 동시만기.
+    for first in {monday.replace(day=1), (monday + timedelta(days=4)).replace(day=1)}:
+        thu = first + timedelta(days=(3 - first.weekday()) % 7 + 7)
+        while thu.isoformat() in KRX_HOLIDAYS or thu.weekday() >= 5:
+            thu -= timedelta(days=1)
+        if thu.isoformat() in week:
+            q = thu.month in (3, 6, 9, 12)
+            out.append({"date": thu.isoformat(), "time": "15:20", "market": "KR", "type": "event", "imp": 3 if q else 2,
+                        "title": "선물·옵션 동시만기" if q else "옵션 만기일",
+                        "note": "장 막판 프로그램 매매로 지수 변동이 커지기 쉬움(관찰용).", "src": f"kr:exp:{thu.isoformat()}"})
+    # 잠정실적 시즌: 1·4·7·10월 7일이 들어 있는 주
+    seventh = [monday + timedelta(days=i) for i in range(7) if (monday + timedelta(days=i)).day == 7
+               and (monday + timedelta(days=i)).month in (1, 4, 7, 10)]
+    if seventh and week:
+        out.append({"date": week[0], "time": "참고", "market": "KR", "type": "earnings", "imp": 3,
+                    "title": "삼성전자·LG전자 잠정실적 (이번 주 발표 예상)",
+                    "note": "분기 첫 대형주 실적. 정확한 날짜는 회사 공시로 확정 — 숫자보다 발표 후 외국인 수급과 반도체 업황 코멘트가 관건.",
+                    "src": f"kr:earn:{week[0]}"})
+    return out
 
 
 def sort_time(t):
@@ -123,8 +258,7 @@ def main():
     now = datetime.now(KST)
     today = now.date()
     monday = today - timedelta(days=today.weekday())
-    if today.weekday() >= 5:  # 주말엔 다음 주를 준비
-        monday += timedelta(days=7)
+    # 주말에도 지난 주를 유지 — 금요일 밤 발표(고용보고서 등) 결과를 토요일 아침에 채운다. 새 주 교체는 월요일 아침.
     friday = monday + timedelta(days=4)
     days = {(monday + timedelta(days=i)).isoformat() for i in range(7)}
 
@@ -161,6 +295,8 @@ def main():
                                        f"직전 {e['previous']}" if e.get("previous") else ""] if x)
         if extra:
             ev["note"] = (ev["note"] + " " if ev["note"] else "") + f"({extra})"
+        if e["title"] in BLS:
+            ev["_fc"] = {e["title"]: e.get("forecast", "")}
         auto.append(ev)
 
 
@@ -169,6 +305,21 @@ def main():
             auto.append({"date": d, "time": "휴장", "market": "KR", "type": "event", "imp": 2,
                          "title": f"{name} — 국내 증시 휴장", "note": "직전 영업일 이후 해외 변수는 다음 개장일에 한꺼번에 반영.",
                          "src": "krx:" + d})
+
+    auto += kr_events(days, monday)
+
+    # CPI m/m·y/y·Core 처럼 한 발표가 여러 줄이면 하나로 묶고 예상치는 모은다
+    merged = {}
+    for a in auto:
+        k = (a["date"], a["time"], a["title"])
+        if k in merged:
+            merged[k].setdefault("_fc", {}).update(a.get("_fc", {}))
+        else:
+            merged[k] = a
+    auto = list(merged.values())
+    for a in auto:
+        if a.get("_fc"):
+            a["fc"] = a.pop("_fc")
 
     rng = f"{monday.month}/{monday.day}~{friday.month}/{friday.day}"
     if not any(a["market"] == "US" for a in auto):
@@ -192,6 +343,8 @@ def main():
                 a = {**a, "market": "COIN", "note": a.get("_cnote") or a["note"]}
             if (a["date"], a["time"]) in taken or (a["date"], a["time"], a["title"]) in taken:
                 continue
+            if a["src"].startswith("kr:earn:") and any("잠정실적" in m.get("title", "") for m in manual):
+                continue
             taken.add((a["date"], a["time"], a["title"]))  # CPI m/m·y/y·Core 처럼 한 발표가 여러 줄이면 한 번만
             p = prev_auto.get(a["src"])
             n = {k: v for k, v in a.items() if not k.startswith("_")}
@@ -201,6 +354,15 @@ def main():
                         n[k] = p[k]
             evs.append(n)
         evs.sort(key=lambda e: (e["date"], sort_time(e.get("time", ""))))
+        if market is None:
+            filled = fill_results(evs, today)
+            if filled:
+                print("결과 채움:", filled, "건")
+            stock_results = {e["src"]: e["result"] for e in evs if e.get("src") and e.get("result")}
+        else:
+            for e in evs:
+                if e.get("src") in stock_results and not e.get("result"):
+                    e["result"] = stock_results[e["src"]]
 
         new = dict(old) if same_week else {}
         new.update({"week": week_label(monday), "range": rng})
