@@ -1,0 +1,35 @@
+name: 이번주 이벤트 자동 갱신
+
+on:
+  schedule:
+    - cron: "0 21 * * *"   # 매일 06:00 KST (월요일 06:00 에 새 주로 교체)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  models: read
+
+concurrency:
+  group: events-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 이벤트 갱신
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/update_events.py
+      - name: 변경분 올리기
+        run: |
+          git add events.json feeds/coin-events.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date +%F) 이번주 이벤트 갱신"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1
