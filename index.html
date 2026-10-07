@@ -156,7 +156,8 @@
   .brief-hero .bh-badge.fl{background:rgba(255,255,255,.12);color:#cdd7e6}
   .brief-hero .tf:hover{background:rgba(255,255,255,.22)!important}
   @media(max-width:860px){
-    .app{flex-direction:column;min-height:0}
+    .app{flex-direction:column;min-height:0;align-items:stretch}
+    .main{width:100%}
     .side{position:static;height:auto;width:100%;flex:0 0 auto;flex-direction:row;flex-wrap:wrap;align-items:center;border-right:none;border-bottom:1px solid var(--line);gap:8px;padding:8px 10px}
     .side .logo{padding:4px 6px}
     .side .segmode{margin:0;align-self:auto}
@@ -242,7 +243,9 @@
   .cattop .r{display:flex;justify-content:space-between;padding:3px 0;color:var(--sub)}
   .cattop .r b{color:var(--ink);font-weight:700}
   .catfoot{margin-top:9px;font-size:11px;color:var(--faint);border-top:1px solid var(--line2);padding-top:8px;display:flex;justify-content:space-between}
-  .heat{display:flex;gap:2px;margin-top:2px}
+  .card.off{display:none!important}
+  .heat{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
+  .heat .h{min-width:64px}
   .heat .h{flex:1;text-align:center;padding:9px 2px;border-radius:7px;color:#fff;font-weight:800;font-size:12px}
   .heat .hs{font-size:9px;font-weight:700;opacity:.9}
   /* 뉴스 */
@@ -678,12 +681,12 @@
   </div>
 
   <div class="view on" id="v-home">
-    <div class="row a" style="margin-top:0">
+    <div class="row a" style="margin-top:0;grid-template-columns:1fr">
       <div class="card">
         <div class="ch"><h2>📈 실시간 시장</h2><div class="r"><span class="mktseg" id="homeMktSeg"><button class="on" data-mk="all">전체</button><button data-mk="KR">국내</button><button data-mk="US">해외</button></span></div></div>
         <div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table id="homeMarket"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
       </div>
-      <div class="card">
+      <div class="card off"><!-- 커뮤니티 연동 전까지 숨김 -->
         <div class="ch"><h2>💬 오늘의 이슈 · 커뮤니티</h2><div class="r"><span class="more" data-v="brief">더보기 ›</span></div></div>
         <div class="pad feed" style="padding-top:8px">
           <a><div class="av">🧑</div><div class="fc"><div><span class="ftag s">주식</span><span class="ft">반도체주, 추가 상승 가능할까요?</span></div><div class="fs"><span>👁 1.2만</span><span>💬 132</span><span>2시간 전</span></div></div></a>
@@ -834,7 +837,7 @@
 <aside class="rail" id="homeRail">
   <div class="card"><div class="ch"><h2>👀 관심 종목</h2><div class="r"><span class="more" data-v="watch">더보기 ›</span></div></div><div class="pad" style="padding-top:8px" id="railWatch"><div style="color:var(--faint);font-size:12px">관심종목을 담아보세요.</div></div></div>
   <div class="card"><div class="ch"><h2>🪙 BTC/USDT</h2><div class="r" id="railBtcUpd">–</div></div><div class="pad" style="padding-top:8px" id="railBtc"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div></div>
-  <div class="card"><div class="ch"><h2>🔥 실시간 인기 검색어</h2></div><div class="pad" style="padding-top:6px"><ol class="railhot">
+  <div class="card off"><!-- 검색 집계 연동 전까지 숨김 --><div class="ch"><h2>🔥 실시간 인기 검색어</h2></div><div class="pad" style="padding-top:6px"><ol class="railhot">
     <li><span class="rk">1</span><span class="hnm">삼성전자</span><span class="hdt up">▲ 3</span></li>
     <li><span class="rk">2</span><span class="hnm">SK하이닉스</span><span class="hdt up">▲ 2</span></li>
     <li><span class="rk">3</span><span class="hnm">비트코인</span><span class="hdt down">▼ 1</span></li>
@@ -857,7 +860,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=110"></script>
+<script src="app.js?v=111"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
