@@ -5,6 +5,8 @@ GitHub Actions(.github/workflows/flow.yml)가 장중 30분마다 + 저녁에 실
 - inv   : 코스피·코스닥 투자자별 매매(개인·외국인·기관·프로그램, 억원) — 장중 실시간 누적
 - h52u/h52d : 52주 신고가·신저가 종목 수 (코스피+코스닥)
 - trend : 지수(코스피·코스닥·코스피200)·환율 최근 20거래일 종가 — 지수 카드 그래프
+- us    : QQQ·SPY 종가·등락률 (워커 /quotes 가 값을 빠뜨릴 때 대체)
+- stock-list.json : 검색용 전체 종목 코드·이름 (주 1회)
 - smart : 외국인·기관 순매수/순매도 TOP5 (억원) — 시가총액 상위 종목의 '확정된 직전 거래일' 수급으로 계산.
           날짜가 바뀌었을 때만 다시 계산한다(종목마다 1번씩 요청하므로).
 표준 라이브러리만 사용.
@@ -66,6 +68,47 @@ def get_raw(url):
         return json.loads(r.read().decode("utf-8"))
 
 
+def us_etf():
+    """미국 지수 ETF(QQQ·SPY) 종가·등락률 — 워커가 값을 빠뜨릴 때 지수 카드 대체값."""
+    out = {}
+    for nm, code in (("QQQ", "QQQ.O"), ("SPY", "SPY")):
+        d = get_raw(f"https://api.stock.naver.com/stock/{code}/basic")
+        out[nm] = {"px": n(d.get("closePrice")), "c": n(d.get("fluctuationsRatio")), "at": d.get("localTradedAt", "")}
+    return out
+
+
+LIST = os.path.join(ROOT, "feeds", "stock-list.json")
+
+
+def stock_list():
+    """검색용 전체 국내 종목 [[코드, 이름], ...] (코스피·코스닥, ETF 포함). 일주일에 한 번만 다시 만든다."""
+    try:
+        if time.time() - os.path.getmtime(LIST) < 6 * 86400 and os.path.getsize(LIST) > 10000:
+            return False
+    except OSError:
+        pass
+    rows, seen = [], set()
+    for mkt in ("KOSPI", "KOSDAQ"):
+        page = 1
+        while True:
+            d = get(f"/stocks/marketValue/{mkt}?page={page}&pageSize=50")
+            for st in d.get("stocks", []):
+                if st["itemCode"] not in seen:
+                    seen.add(st["itemCode"])
+                    rows.append([st["itemCode"], st["stockName"]])
+            if page * 50 >= int(d.get("totalCount") or 0) or not d.get("stocks"):
+                break
+            page += 1
+            time.sleep(0.1)
+    if len(rows) < 1500:
+        print("종목 목록이 너무 적어 저장 안 함:", len(rows), file=sys.stderr)
+        return False
+    with open(LIST, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, separators=(",", ":"))
+    print("종목 목록 갱신:", len(rows))
+    return True
+
+
 def count(kind):
     return sum(int(get(f"/stocks/{kind}/{m}?page=1&pageSize=1").get("totalCount") or 0) for m in ("KOSPI", "KOSDAQ"))
 
@@ -110,6 +153,14 @@ def main():
         new["trend"] = trend()
     except Exception as e:  # noqa
         print("지수 수급 실패:", e, file=sys.stderr)
+    try:
+        new["us"] = us_etf()
+    except Exception as e:  # noqa
+        print("미국 ETF 실패:", e, file=sys.stderr)
+    try:
+        stock_list()
+    except Exception as e:  # noqa
+        print("종목 목록 실패:", e, file=sys.stderr)
     try:
         latest = get("/stock/005930/trend?pageSize=1")[0].get("bizdate")
         if latest and latest != (old.get("smart") or {}).get("date"):

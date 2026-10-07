@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>VANTOR · 실시간 주식·코인 분석</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cpath d='M24 3 L11 22 H18 L15 37 L29 17 H21 Z' fill='%23e0b552'/%3E%3C/svg%3E"/>
 <meta name="description" content="VANTOR — 시장 자금 흐름·업종 강도·DAY TRADE RADAR로 지금 돈이 들어오는 주식과 코인을 실시간으로 포착하는 분석 터미널."/>
@@ -114,7 +114,7 @@
   .rail .railhot .hnm{flex:1;font-weight:700;font-size:12.5px}
   .rail .railhot .hdt{font-size:11px;font-weight:800}
   .rail .railhot .hdt.fl{color:var(--faint)}
-  @media(max-width:1160px){.main .wrap{grid-template-columns:1fr}.rail{display:none}}
+  @media(max-width:1160px){.main .wrap{grid-template-columns:1fr}.rail{position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));align-items:start}}
   .main .foot .in,.main .disc{max-width:none}
   /* 커뮤니티 피드 · 시장 세그 · 섹션 헤더 */
   .feed a{display:flex;gap:11px;padding:11px 0;border-bottom:1px solid var(--line2);align-items:flex-start}
@@ -788,7 +788,7 @@
   </div>
 
   <!-- ===== LEARN ===== -->
-  <div class="view" id="v-brief"><div id="briefPanel"></div></div>
+  <div class="view" id="v-brief"><div id="briefPanel"></div><div id="recoPanel"></div></div>
   <div class="view" id="v-events"><div id="eventsPanel"></div></div>
   <div class="view" id="v-learn">
     <div class="sec-title">📚 LEARN</div>
@@ -860,7 +860,7 @@
 </div><!--/app-->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="app.js?v=112"></script>
+<script src="app.js?v=113"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

@@ -173,6 +173,7 @@ function loadFlowFeed(){ try{ fetch('feeds/flow.json',{cache:'no-store'}).then(f
   if(Array.isArray(j.inv)&&j.inv.length){ FLOW.inv.length=0; j.inv.forEach(function(r){FLOW.inv.push(r);}); }
   if(j.h52u!=null){ FLOW.breadth.h52u=j.h52u; FLOW.breadth.h52d=j.h52d; }
   if(j.smart){ ['foreign','inst','foreignSell','instSell'].forEach(function(k){ SMART[k]=j.smart[k]||[]; }); }
+  if(j.us){ IDX.forEach(function(ix){ var q=ix.etf&&j.us[ix.etf]; if(q&&q.px&&!ix._real){ ix.v=q.px; ix.c=q.c||0; ix.d=ix.v*ix.c/(100+ix.c); ix._real=true; ix._fb=true; } }); }
   if(j.trend&&j.trend['USD/KRW']){ var fx=IDX.find(function(i){return i.fx;}); if(fx)fx.hi20=Math.max.apply(null,j.trend['USD/KRW'].map(function(p){return p[1];})); }
   renderIdx(); renderFlow(); renderSmart(); if(typeof renderBriefing==='function')renderBriefing(); if(typeof renderBriefAll==='function')renderBriefAll(); }).catch(function(){}); }catch(e){} }
 function _ymdMD(s){ s=String(s||'').replace(/-/g,''); return s.length>=8?(+s.slice(4,6))+'/'+(+s.slice(6,8)):''; }
@@ -483,7 +484,7 @@ function renderIdx(){
   el.innerHTML=IDX.map(function(x){ var pc=cls(x.c), col=x.c>0?'var(--up)':x.c<0?'var(--down)':'var(--flat)';
     var badge=(!x._real&&!x._us)?' <span style="font-size:9px;font-weight:800;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 4px;vertical-align:middle">데모</span>':(x._us?' <span style="font-size:9px;font-weight:800;color:var(--sub);border:1px solid var(--line);border-radius:4px;padding:0 4px;vertical-align:middle">ETF</span>':'');
     var valTxt=(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-    var foot=x._us?('<span>미국 ETF</span><span>'+x.etf+' · 코인 상관</span>'):(x.fx?('<span>하나은행 고시</span><span>'+(x.hi20?'20일 고 '+x.hi20.toLocaleString():'')+'</span>'):('<span>거래대금 '+x.val+'</span><span>거래량 '+x.vol+'</span>'));
+    var foot=x._us?('<span>'+(x._fb?'미국 ETF · 전일 종가':'미국 ETF')+'</span><span>'+x.etf+' · 코인 상관</span>'):(x.fx?('<span>하나은행 고시</span><span>'+(x.hi20?'20일 고 '+x.hi20.toLocaleString():'')+'</span>'):('<span>거래대금 '+x.val+'</span><span>거래량 '+x.vol+'</span>'));
     var trs=_idxTrend(x);
     return '<div class="idx"><div class="nm">'+x.nm+badge+'</div>'+(trs.length>1?sparkline(trs,96,44,col):'')
       +'<div class="v num '+pc+'">'+((!x._real&&(x._us||!x.v))?'—':valTxt)+'</div>'
@@ -499,7 +500,7 @@ function loadUsIdx(){
   fetch(PROXY+'/quotes?mkt=US&codes=QQQ,SPY').then(function(r){return r.json();}).then(function(q){
     if(!q||!q.quotes)return; var m={}; q.quotes.forEach(function(x){m[x.code]=x;});
     IDX.forEach(function(ix){ if(ix.etf&&m[ix.etf]&&m[ix.etf].px!=null){ var qq=m[ix.etf];
-      ix.v=+qq.px; ix.c=+qq.c||0; ix.d=ix.v*(ix.c/100); ix._real=true;
+      ix.v=+qq.px; ix.c=+qq.c||0; ix.d=ix.v*(ix.c/100); ix._real=true; ix._fb=false;
       ix.tr=(ix.tr||[]).concat([ix.v]); if(ix.tr.length>9)ix.tr=ix.tr.slice(-9); } });
     renderIdx();
   }).catch(function(){});
@@ -1279,6 +1280,7 @@ function scoredOf(code,opt){
   if(s){ var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0}); }
   // 데모·RADAR에 없는 종목(티커 검색) → 스텁 생성. 실데이터는 enrichStock이 채운다.
   var isKR=/^\d{6}$/.test(code); opt=opt||{};
+  if(!opt.n&&typeof _STKLIST!=='undefined'&&_STKLIST){ var _hit=_STKLIST.find(function(x){return x[0]===code;}); if(_hit)opt.n=_hit[1]; } // 전체 종목 목록에서 이름
   return { c:code, n:opt.n||code, mk:opt.mk||(isKR?'KOSPI':'NASDAQ'), ccy:isKR?'KRW':'USD',
     px:0, ch:0, score:0, g:{trade:0,price:0,press:0,flow:0,trend:0}, gmax:{trade:35,price:30,press:25,flow:5,trend:5},
     reasons:[], grade:['조회 중','steady'], rank:'-', dRank:0,
@@ -1704,6 +1706,12 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('
 })();
 
 /* ═══════════ 검색 ═══════════ */
+/* 검색용 전체 국내 종목 목록 — feeds/stock-list.json (주 1회 갱신, 첫 검색 때 한 번 받음) */
+var _STKLIST=null, _stkListP=null;
+function _loadStockList(){ if(_stkListP)return _stkListP; _stkListP=fetch('feeds/stock-list.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST=Array.isArray(j)?j:[]; return _STKLIST; }).catch(function(){ _STKLIST=[]; return []; }); return _stkListP; }
+function _findInList(t){ var L=_STKLIST||[]; if(!L.length)return null; var ex=null, pre=null, part=null;
+  for(var i=0;i<L.length;i++){ var nm=L[i][1].toLowerCase(); if(nm===t){ex=L[i];break;} if(!pre&&nm.indexOf(t)===0)pre=L[i]; else if(!part&&nm.indexOf(t)>-1)part=L[i]; }
+  var hit=ex||pre||part; return hit?hit[0]:null; }
 function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false; var t=raw.toLowerCase();
   var pool=(RADAR||[]).concat(typeof ALLSTK!=='undefined'?ALLSTK:STK);
   function open(code){ if(coinMode)setMode('stock'); openStock(code); return true; }
@@ -1716,11 +1724,15 @@ function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false; var t=raw.to
   // 3) 부분 일치(이름/코드 포함)
   var part=pool.find(function(s){return s.n.toLowerCase().includes(t)||s.c.toLowerCase().includes(t);});
   if(part) return open(part.c);
+  // 3-2) 전체 국내 종목 목록(이름)
+  var lc=_findInList(t); if(lc) return open(lc);
   // 4) 그래도 영문이면 미국 티커로 시도
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw)) return open(raw.toUpperCase());
   return false;
 }
-$('#q').onkeydown=function(e){ if(e.key!=='Enter')return; if(doSearch(this.value)){ this.blur(); }
+$('#q').onfocus=function(){ _loadStockList(); };
+$('#q').onkeydown=function(e){ if(e.key!=='Enter')return; var self0=this; if(!_STKLIST&&!/^[A-Za-z0-9]+$/.test(this.value.trim())){ _loadStockList().then(function(){ if(doSearch(self0.value))self0.blur(); else { self0.style.borderColor='var(--down)'; setTimeout(function(){self0.style.borderColor='';},900); } }); return; }
+  if(doSearch(this.value)){ this.blur(); }
   else { this.style.borderColor='var(--down)'; var self=this; setTimeout(function(){self.style.borderColor='';},900); } };
 
 /* ═══════════ 초기화 ═══════════ */
@@ -3396,7 +3408,14 @@ function _autoBriefData(){
     return data;
   }catch(e){ return null; }
 }
-function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); }
+function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); renderRecos(); }
+/* 오늘의 방향 관점 — feeds/stock-recos.json (자동 생성, 하루 3번) */
+var _RECOS=null;
+function _loadRecos(){ try{ fetch('feeds/stock-recos.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)){ _RECOS=j; renderRecos(); } }).catch(function(){}); }catch(e){} }
+function renderRecos(){ var el=document.getElementById('recoPanel'); if(!el)return; var r=(_RECOS||[])[0]; if(!r||!r.summary){ el.innerHTML=''; return; }
+  el.innerHTML='<div class="card" style="margin-top:16px"><div class="ch"><h2>🧭 '+_bbEsc(r.title||'오늘의 방향 관점')+'</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+_bbEsc(r.date||'')+'</span></div></div>'
+    +'<div class="pad" style="padding-top:6px;font-size:13.5px;line-height:1.75;color:var(--sub)">'+_brfMd(r.summary)+'</div>'
+    +'<div style="font-size:11px;color:var(--faint);padding:0 20px 14px">교육용 관찰이며 매매 신호가 아닙니다.</div></div>'; }
 function renderBriefBoard(sel){
   var el=$(sel||'#briefBoard'); if(!el)return;
   var compact=(el.id==='briefBoard');
@@ -3561,7 +3580,7 @@ window.renderHomeEvents=renderHomeEvents;
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); };
 window._ecalImpToggle=function(){ _ecalImp=(_ecalImp>=3)?0:3; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); };
-initCards(); renderSummary(); renderBriefAll(); renderBriefing(); _loadBriefs(); _loadEcal(); _loadPubNotice(); loadFlowFeed(); setInterval(loadFlowFeed,300000);
+initCards(); renderSummary(); renderBriefAll(); renderBriefing(); _loadBriefs(); _loadEcal(); _loadPubNotice(); _loadRecos(); loadFlowFeed(); setInterval(loadFlowFeed,300000);
 if(PROXY){ loadKisRadar(); loadKisMarket(); loadBriefData(); loadUsIdx(); setInterval(loadKisRadar,60000); setInterval(loadKisMarket,60000); setInterval(loadBriefData,90000); setInterval(loadUsIdx,60000); } // 실데이터: RADAR·MARKET 1분, 브리핑 US 90초, 나스닥·S&P 1분
 setInterval(fetchNews,300000);
 /* ===== 첫 진입 스플래시 — 풀블리드 좌우 분할 + 캔들 배경 ===== */
