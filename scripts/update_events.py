@@ -224,10 +224,12 @@ def main():
                      + "\n".join(f"{e['date']} {e['time']} {e['market']} ★{e['imp']} {e['title']} {e['note']}" for e in top))
             if res and res.get("intro"):
                 new["intro"] = res["intro"] + " (★★★ = 매우 중요)"
-                if isinstance(res.get("keys"), list):
-                    new["keys"] = res["keys"][:3]
-                if isinstance(res.get("lens"), dict):
-                    new["lens"] = res["lens"]
+                keys = [k for k in res.get("keys") or [] if isinstance(k, dict) and k.get("t") and k.get("b")]
+                if keys:
+                    new["keys"] = keys[:3]
+                lens = res.get("lens")
+                if isinstance(lens, dict) and all(isinstance(lens.get(k), dict) and lens[k].get("title") and lens[k].get("body") for k in ("cool", "hot")):
+                    new["lens"] = lens
             if not new["intro"]:
                 new["intro"] = "이번 주 핵심: " + ", ".join(f"**{e['title']}**" for e in top[:3]) + " (★★★ = 매우 중요)"
             new.setdefault("dayNotes", {})
@@ -246,4 +248,7 @@ def main():
 
 
 if __name__ == "__main__":
+    if sys.argv[1:] == ["--ai-check"]:  # 수동 실행 시 AI 연결 점검
+        print("AI 점검:", ai('JSON {"ok":true} 로만 답하라.'))
+        sys.exit(0)
     sys.exit(main())

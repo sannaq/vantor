@@ -24,7 +24,9 @@ jobs:
       - name: 이벤트 갱신
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/update_events.py
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then python3 scripts/update_events.py --ai-check; fi
+          python3 scripts/update_events.py
       - name: 변경분 올리기
         run: |
           git add events.json feeds/coin-events.json
