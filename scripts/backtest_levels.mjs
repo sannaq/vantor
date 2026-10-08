@@ -62,13 +62,13 @@ function sim(c, i, L) {
 
 // ③ 규칙 후보
 const RULES = [
-  { key: 'adopt', nm: '채택 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−2ATR)', o: {}, adopt: true },
-  { key: 'stop1', nm: '손절 2차−1ATR (10/8 이전 규칙)', o: { stopAtr: 1 } },
+  { key: 'adopt', nm: '채택 규칙 (1차 60일선 · 2차 매물대 · 손절 2차−2ATR)', o: {}, adopt: true },
+  { key: 'ma20', nm: '1차 20일선 · 손절 2차−2ATR (10/8 오후 규칙)', o: { b1: 'ma20' } },
+  { key: 'ma20s1', nm: '1차 20일선 · 손절 2차−1ATR (10/8 첫 규칙)', o: { b1: 'ma20', stopAtr: 1 } },
+  { key: 'stop1', nm: '손절 2차−1ATR', o: { stopAtr: 1 } },
   { key: 'stop15', nm: '손절 2차−1.5ATR', o: { stopAtr: 1.5 } },
   { key: 'stop3', nm: '손절 2차−3ATR', o: { stopAtr: 3 } },
   { key: 'nostop', nm: '손절 없음', o: { stopAtr: 0 } },
-  { key: 'ma60', nm: '1차 = 60일선 부근 · 손절 2차−2ATR', o: { b1: 'ma60' } },
-  { key: 'ma60s3', nm: '1차 = 60일선 부근 · 손절 2차−3ATR', o: { b1: 'ma60', stopAtr: 3 } },
   { key: 'mkt1', nm: '1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR', o: { b1: 'now', stopAtr: 1 } },
   { key: 'mkt1s2', nm: '1차 = 다음 날 시가 · 손절 2차−2ATR', o: { b1: 'now', stopAtr: 2 } },
   { key: 'mkt1ns', nm: '1차 = 다음 날 시가 · 손절 없음', o: { b1: 'now', stopAtr: 0 } },

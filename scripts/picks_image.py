@@ -75,6 +75,17 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 """
 
 
+def bt_line(p):
+    """60거래일 보유 검증 한 줄 (feeds/backtest-60.json, 매달 갱신)."""
+    try:
+        with open(os.path.join(ROOT, "feeds/backtest-60.json"), encoding="utf-8") as f:
+            b = json.load(f)
+        g = b["all"]["groups"]
+        return f'검증({b["all"]["from"][2:4]}.{int(b["all"]["from"][4:6])}~{b["all"]["to"][2:4]}.{int(b["all"]["to"][4:6])}, 60일 보유): 추천 {g["추천"]["x20"]:+.1f}%p · 매수 금지 {g["매수 금지"]["x20"]:+.1f}%p (시장 평균 대비)'
+    except Exception:
+        return "60일 보유 기준"
+
+
 def build(p):
     d = p["date"]
     day = f"{int(d[4:6])}월 {int(d[6:8])}일"
@@ -87,7 +98,7 @@ def build(p):
 {"".join(row(x, i + 1) for i, x in enumerate(p["top"]))}
 <div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
 {"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}
-<div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · 2025.9~2026.9 검증: 이후 20일 추천 +0.9%p · 매수 금지 −2.1%p (시장 평균 대비)<br>
+<div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · {bt_line(p)}<br>
 교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 갱신 {E(p["updated"])}</div>
 </div></body></html>"""
 
