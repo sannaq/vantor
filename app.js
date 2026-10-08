@@ -1014,7 +1014,8 @@ function _homeAskHTML(scope){ var ph=scope==='coin'?'코인 심볼 (예: BTC · 
   +'</div></div></div>'; }
 function _homeStockItem(raw){ raw=(raw||'').trim(); if(!raw)return null; var t=raw.toLowerCase(); var pool=((typeof RADAR!=='undefined'&&RADAR)?RADAR:[]).concat((typeof ALLSTK!=='undefined'&&ALLSTK)?ALLSTK:((typeof STK!=='undefined'&&STK)?STK:[]));
   var ex=pool.find(function(s){return (s.c||'').toLowerCase()===t||(s.n||'').toLowerCase()===t;}); if(ex)return ex;
-  if(/^\d{6}$/.test(raw))return {c:raw,n:raw,ccy:'KRW',mk:'KR'};
+  var lm=(typeof _stkMatches==='function'&&_STKLIST)?_stkMatches(raw,1)[0]:null; if(lm&&lm.rank<=1)return {c:lm.c,n:lm.n,mk:lm.mk,ccy:_isKRCode(lm.c)?'KRW':'USD'};
+  if(_isKRCode(raw.toUpperCase()))return {c:raw.toUpperCase(),n:raw,ccy:'KRW',mk:'KR'};
   var part=pool.find(function(s){return (s.n||'').toLowerCase().indexOf(t)>=0||(s.c||'').toLowerCase().indexOf(t)>=0;}); if(part)return part;
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw))return {c:raw.toUpperCase(),n:raw.toUpperCase(),ccy:'USD',mk:'NAS'}; return null; }
 function homeResolve(scope,s,tf,lab){ if(scope==='coin'){ var sym=(s||'').toUpperCase().replace(/[^A-Z0-9]/g,'').replace(/USDT$/,''); if(!sym)return Promise.resolve(null); var F='https://fapi.binance.com/fapi/v1/'; var itv=tf||'1h';
@@ -1279,8 +1280,8 @@ function scoredOf(code,opt){
   var s=(typeof ALLSTK!=='undefined'?ALLSTK:STK).find(function(x){return x.c===code;});
   if(s){ var sc=aureumScore(s); return Object.assign({},s,{score:sc.total,g:sc.groups,reasons:sc.reasons,grade:sc.grade,rank:'-',dRank:0}); }
   // 데모·RADAR에 없는 종목(티커 검색) → 스텁 생성. 실데이터는 enrichStock이 채운다.
-  var isKR=/^\d{6}$/.test(code); opt=opt||{};
-  if(!opt.n&&typeof _STKLIST!=='undefined'&&_STKLIST){ var _hit=_STKLIST.find(function(x){return x[0]===code;}); if(_hit)opt.n=_hit[1]; } // 전체 종목 목록에서 이름
+  var isKR=_isKRCode(code); opt=opt||{};
+  if(typeof _STKLIST!=='undefined'&&_STKLIST){ var _hit=_STKLIST.find(function(x){return x[0]===code;}); if(_hit){ if(!opt.n)opt.n=_hit[1]; if(!opt.mk&&_hit[2])opt.mk=_hit[2]; } } // 전체 종목 목록에서 이름
   return { c:code, n:opt.n||code, mk:opt.mk||(isKR?'KOSPI':'NASDAQ'), ccy:isKR?'KRW':'USD',
     px:0, ch:0, score:0, g:{trade:0,price:0,press:0,flow:0,trend:0}, gmax:{trade:35,price:30,press:25,flow:5,trend:5},
     reasons:[], grade:['조회 중','steady'], rank:'-', dRank:0,
@@ -1515,7 +1516,7 @@ function openStock(code){
       +'<span class="starbtn'+(watchHas(r.c)?' on':'')+'" data-c="'+r.c+'" title="관심종목" style="font-size:22px" onclick="watchToggle(\''+r.c+'\')">'+(watchHas(r.c)?'★':'☆')+'</span>'
       +'<span style="color:var(--faint);font-size:13px">'+r.c+' · '+r.mk+'</span>'
       +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-weight:700">RADAR SCORE <span class="scorepill">'+r.score+'</span></span></div>'
-    +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+(r.px>0?cls(r.ch):'')+'">'+(r.px>0?(priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'):'<span style="font-size:15px;color:var(--faint);font-weight:700">⏳ 시세 불러오는 중…</span>')+'</div>'
+    +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+(r.px>0?cls(r.ch):'')+'">'+(r.px>0?(priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'):(r.ccy!=='USD'&&/ETN/.test(r.n||'')?'<span style="font-size:14px;color:var(--faint);font-weight:700">ETN 은 실시간 시세를 받지 못해요 · <a href="https://m.stock.naver.com/domestic/stock/'+r.c+'/total" target="_blank" rel="noopener" style="color:#4a9eff">네이버 증권에서 보기 →</a></span>':'<span style="font-size:15px;color:var(--faint);font-weight:700">⏳ 시세 불러오는 중…</span>'))+'</div>'
     +'<div class="metrics" id="metGrid">'
       +met('거래대금',valueT,'상위권',null,'m-value')
       +met('시가총액',mcapT,r.mk+' 상위',null,'m-mcap')
@@ -1706,34 +1707,76 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('
 })();
 
 /* ═══════════ 검색 ═══════════ */
-/* 검색용 전체 국내 종목 목록 — feeds/stock-list.json (주 1회 갱신, 첫 검색 때 한 번 받음) */
+/* 국내 종목코드 — 6자리 숫자, 또는 2024년부터 나온 새 형식(0126Z0·0167A0: 숫자로 시작, 영문 섞임) */
+function _isKRCode(c){ return /^\d[0-9A-Z]{5}$/.test(String(c||'')); }
+/* 검색용 전체 국내 종목 목록 — feeds/stock-list.json [[코드, 이름, 시장], ...] (주 1회 갱신, 첫 검색 때 한 번 받음) */
 var _STKLIST=null, _stkListP=null;
-function _loadStockList(){ if(_stkListP)return _stkListP; _stkListP=fetch('feeds/stock-list.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST=Array.isArray(j)?j:[]; return _STKLIST; }).catch(function(){ _STKLIST=[]; return []; }); return _stkListP; }
-function _findInList(t){ var L=_STKLIST||[]; if(!L.length)return null; var ex=null, pre=null, part=null;
-  for(var i=0;i<L.length;i++){ var nm=L[i][1].toLowerCase(); if(nm===t){ex=L[i];break;} if(!pre&&nm.indexOf(t)===0)pre=L[i]; else if(!part&&nm.indexOf(t)>-1)part=L[i]; }
-  var hit=ex||pre||part; return hit?hit[0]:null; }
-function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false; var t=raw.toLowerCase();
-  var pool=(RADAR||[]).concat(typeof ALLSTK!=='undefined'?ALLSTK:STK);
+function _loadStockList(){ if(_stkListP)return _stkListP; _stkListP=fetch('feeds/stock-list.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST=Array.isArray(j)?j:[]; _STKLIST.forEach(function(x){ x._k=_skey(x[1]); }); return _STKLIST; }).catch(function(){ _STKLIST=[]; return []; }); return _stkListP; }
+/* 비교용 키 — 대소문자·띄어쓰기·하이픈·점 무시 ("kodex200" = "KODEX 200", "s oil" = "S-Oil") */
+function _skey(s){ return String(s||'').toLowerCase().replace(/[\s\-·.]/g,''); }
+/* 한글로 부르는 영문 종목명 — 앞부분만 바꿔 끼운다 (엘지화학 → LG화학) */
+var _SALIAS=[['에스케이','sk'],['엘지','lg'],['케이티앤지','kt&g'],['케이티','kt'],['씨제이','cj'],['에이치디','hd'],['지에스','gs'],['케이비','kb'],['에스오일','soil'],['네이버','naver'],['포스코','posco'],['엔씨소프트','엔씨소프트'],['디비','db'],['비엔케이','bnk'],['제이비','jb'],['에스디','sd'],['에이치엘비','hlb'],['삼전','삼성전자'],['하닉','sk하이닉스'],['현차','현대차'],['기아차','기아']];
+function _skeys(raw){ var k=_skey(raw), out=[k]; _SALIAS.forEach(function(a){ if(k.indexOf(a[0])===0)out.push(a[1]+k.slice(a[0].length)); }); return out; }
+/* 후보 고르기 — 정확 일치 > 앞부분 일치 > 포함. 같은 등급이면 목록 순서(시가총액 순) */
+function _stkMatches(raw,lim){ lim=lim||8; var keys=_skeys(raw); if(!keys[0])return [];
+  var res=[], seen={};
+  function add(c,n,mk,rank,ord){ if(seen[c]){ if(rank<seen[c].rank){ seen[c].rank=rank; seen[c].ord=ord; } return; } var o={c:c,n:n,mk:mk,rank:rank,ord:ord}; seen[c]=o; res.push(o); }
+  function rankOf(nk){ var best=9; keys.forEach(function(k){ if(nk===k)best=Math.min(best,0); else if(nk.indexOf(k)===0)best=Math.min(best,1); else if(nk.indexOf(k)>-1)best=Math.min(best,2); }); return best; }
+  var digits=/^\d[0-9a-z]{0,5}$/.test(keys[0])&&/\d/.test(keys[0].slice(0,1));
+  (_STKLIST||[]).forEach(function(x,i){ var xc=x[0].toLowerCase(), r=digits?(xc===keys[0]?0:(xc.indexOf(keys[0])===0?1:9)):rankOf(x._k||_skey(x[1])); if(r<9)add(x[0],x[1],x[2]||'KR',r,i); });
+  var pool=(typeof ALLSTK!=='undefined'?ALLSTK:STK)||[];
+  pool.forEach(function(x,i){ var r=Math.min(rankOf(_skey(x.n)), _skey(x.c)===keys[0]?0:(!digits&&_skey(x.c).indexOf(keys[0])===0?1:9)); if(r<9)add(x.c,x.n,x.mk,r,100000+i); });
+  res.sort(function(a,b){ return a.rank-b.rank||a.ord-b.ord; });
+  return res.slice(0,lim); }
+function _stkListMk(code){ var L=_STKLIST||[]; for(var i=0;i<L.length;i++){ if(L[i][0]===code)return L[i]; } return null; }
+function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false;
   function open(code){ if(coinMode)setMode('stock'); openStock(code); return true; }
-  // 1) 정확 코드/이름 일치
-  var exact=pool.find(function(s){return s.c.toLowerCase()===t||s.n.toLowerCase()===t;});
-  if(exact) return open(exact.c);
-  // 2) 티커 형태 우선 (6자리 숫자=국내 / 전부 대문자 영문=미국 티커 의도)
-  if(/^\d{6}$/.test(raw)) return open(raw);
+  // 1) 국내 종목 목록·보유 풀에서 찾기 (SK·LG·KT·NAVER 같은 영문 이름도 국내 종목이 먼저)
+  var m=_stkMatches(raw,1)[0];
+  if(m&&m.rank<=1) return open(m.c);
+  // 2) 6자리 숫자 = 국내 코드
+  if(_isKRCode(raw.toUpperCase())) return open(raw.toUpperCase());
+  // 3) 영문 대문자 = 미국 티커
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw) && raw===raw.toUpperCase()) return open(raw.toUpperCase());
-  // 3) 부분 일치(이름/코드 포함)
-  var part=pool.find(function(s){return s.n.toLowerCase().includes(t)||s.c.toLowerCase().includes(t);});
-  if(part) return open(part.c);
-  // 3-2) 전체 국내 종목 목록(이름)
-  var lc=_findInList(t); if(lc) return open(lc);
-  // 4) 그래도 영문이면 미국 티커로 시도
+  // 4) 이름 중간 일치
+  if(m) return open(m.c);
+  // 5) 그래도 영문이면 미국 티커로 시도
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw)) return open(raw.toUpperCase());
   return false;
 }
-$('#q').onfocus=function(){ _loadStockList(); };
-$('#q').onkeydown=function(e){ if(e.key!=='Enter')return; var self0=this; if(!_STKLIST&&!/^[A-Za-z0-9]+$/.test(this.value.trim())){ _loadStockList().then(function(){ if(doSearch(self0.value))self0.blur(); else { self0.style.borderColor='var(--down)'; setTimeout(function(){self0.style.borderColor='';},900); } }); return; }
-  if(doSearch(this.value)){ this.blur(); }
-  else { this.style.borderColor='var(--down)'; var self=this; setTimeout(function(){self.style.borderColor='';},900); } };
+/* 검색 자동완성 — 입력하면 아래에 후보 8개, ↑↓ 로 고르고 Enter */
+(function(){
+  var q=$('#q'); if(!q)return;
+  var box=document.createElement('div'); box.id='qSug';
+  box.style.cssText='position:absolute;right:0;width:100%;min-width:min(320px,92vw);top:42px;z-index:60;background:var(--panel,#121821);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);overflow:hidden;display:none';
+  q.parentNode.appendChild(box);
+  var items=[], cur=-1;
+  function hide(){ box.style.display='none'; items=[]; cur=-1; }
+  function paint(){ box.innerHTML=items.map(function(it,i){ var kr=_isKRCode(it.c);
+      return '<div class="qs" data-i="'+i+'" style="display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-size:13px;'+(i===cur?'background:var(--panel2);':'')+(i?'border-top:1px solid var(--line2);':'')+'">'
+        +'<span style="font-weight:700;color:var(--ink);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(it.n)+'</span>'
+        +'<span style="color:var(--faint);font-size:11.5px;flex:none">'+esc(it.c)+'</span>'
+        +'<span style="flex:none;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:5px;background:var(--panel2);color:'+(kr?'var(--sub)':'#4a9eff')+'">'+esc(it.mk||(kr?'KR':'US'))+'</span></div>'; }).join('');
+    box.style.display=items.length?'':'none'; }
+  function pick(it){ hide(); q.value=''; q.blur(); if(coinMode)setMode('stock'); openStock(it.c); }
+  function refresh(){ var v=q.value.trim(); if(!v){ hide(); return; }
+    var go=function(){ if(q.value.trim()!==v)return; items=_stkMatches(v,8); cur=items.length?0:-1; paint(); };
+    if(_STKLIST)go(); else _loadStockList().then(go); }
+  q.addEventListener('input',refresh);
+  q.addEventListener('focus',function(){ _loadStockList(); if(q.value.trim())refresh(); });
+  q.addEventListener('blur',function(){ setTimeout(hide,150); });
+  box.addEventListener('mousedown',function(e){ var el=e.target.closest('.qs'); if(!el)return; e.preventDefault(); pick(items[+el.dataset.i]); });
+  q.addEventListener('keydown',function(e){
+    if(e.key==='ArrowDown'||e.key==='ArrowUp'){ if(!items.length)return; e.preventDefault(); cur=(cur+(e.key==='ArrowDown'?1:-1)+items.length)%items.length; paint(); return; }
+    if(e.key==='Escape'){ hide(); return; }
+    if(e.key!=='Enter')return;
+    e.preventDefault();
+    if(items.length&&cur>=0){ pick(items[cur]); return; }
+    var self=this, v=self.value;
+    var run=function(){ if(doSearch(v)){ hide(); self.value=''; self.blur(); } else { self.style.borderColor='var(--down)'; setTimeout(function(){self.style.borderColor='';},900); } };
+    _loadStockList().then(run); }); // 목록을 받은 뒤에 찾는다 — 안 그러면 SK·LG 가 미국 티커로 간다
+  setTimeout(_loadStockList,3000); // 홈 질문 상자도 같은 목록을 쓰도록 미리 받아 둔다
+})();
 
 /* ═══════════ 초기화 ═══════════ */
 /* ═══════════ 코인 모드 (CoinGecko 실시간) ═══════════ */

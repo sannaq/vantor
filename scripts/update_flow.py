@@ -81,11 +81,14 @@ LIST = os.path.join(ROOT, "feeds", "stock-list.json")
 
 
 def stock_list():
-    """검색용 전체 국내 종목 [[코드, 이름], ...] (코스피·코스닥, ETF 포함). 일주일에 한 번만 다시 만든다."""
+    """검색용 전체 국내 종목 [[코드, 이름, 시장], ...] (코스피·코스닥, ETF 포함). 일주일에 한 번만 다시 만든다."""
     try:
-        if time.time() - os.path.getmtime(LIST) < 6 * 86400 and os.path.getsize(LIST) > 10000:
+        with open(LIST, encoding="utf-8") as f:
+            old = json.load(f)
+        # 시장 구분([코드, 이름, 시장])이 없는 옛 형식이면 기간과 무관하게 다시 만든다
+        if time.time() - os.path.getmtime(LIST) < 6 * 86400 and len(old) > 1500 and len(old[0]) >= 3:
             return False
-    except OSError:
+    except (OSError, ValueError, IndexError, TypeError):
         pass
     rows, seen = [], set()
     for mkt in ("KOSPI", "KOSDAQ"):
@@ -95,7 +98,7 @@ def stock_list():
             for st in d.get("stocks", []):
                 if st["itemCode"] not in seen:
                     seen.add(st["itemCode"])
-                    rows.append([st["itemCode"], st["stockName"]])
+                    rows.append([st["itemCode"], st["stockName"], mkt])
             if page * 50 >= int(d.get("totalCount") or 0) or not d.get("stocks"):
                 break
             page += 1
