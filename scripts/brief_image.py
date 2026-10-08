@@ -183,6 +183,29 @@ def level_block(cur, sup, res):
             f'{cur_mark}</div><div class="lvw">{E(where)}</div>')
 
 
+def fetch_news(n=6):
+    """네이버 증권 주요뉴스(기업 기사) — 이미지를 찍는 그 순간의 것을 받는다. 실패하면 저장소 feeds/news-main.json."""
+    try:
+        req = urllib.request.Request("https://m.stock.naver.com/api/news/list?category=mainnews&pageSize=12", headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            rows = json.loads(r.read().decode("utf-8"))
+        return [{"t": x.get("tit"), "src": x.get("ohnm"), "dt": x.get("dt")} for x in rows if x.get("tit")][:n]
+    except Exception:
+        d = load("feeds/news-main.json") or {}
+        return [x for x in d.get("items", []) if x.get("cat") == "mainnews"][:n]
+
+
+def news_block(items):
+    if not items:
+        return '<div class="empty">주요 뉴스 없음</div>'
+    out = []
+    for x in items:
+        t = str(x.get("dt") or "")
+        tm = f"{t[8:10]}:{t[10:12]}" if len(t) >= 12 else ""
+        out.append(f'<div class="nw"><span class="nwt">{E(tm)}</span><span class="nwn">{E(x.get("t"))}</span><span class="nws">{E(x.get("src"))}</span></div>')
+    return "".join(out)
+
+
 def events_block(ev, date):
     rows = [e for e in (ev or {}).get("events") or [] if e.get("date") == date and (e.get("imp") or 0) >= 2]
     if not rows:
@@ -245,11 +268,14 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 .evt{width:58px;color:#7d8796;font-weight:700;font-size:12px}.evn{flex:1;color:#d6dce5}
 .evs{color:#f0b90b;font-size:11px;letter-spacing:-1px}.evr{color:#4a9eff;font-weight:800;font-size:12px}
 .empty{font-size:12.5px;color:#6f7a89}
+.nw{display:flex;gap:10px;align-items:baseline;font-size:13px;line-height:1.85}
+.nwt{width:40px;color:#7d8796;font-size:12px;font-weight:700;flex:none}.nwn{flex:1;color:#d6dce5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nws{color:#6f7a89;font-size:11.5px;flex:none}
 .ft{margin-top:14px;font-size:11px;color:#5f6a79;text-align:center}
 """
 
 
-def build(brief, flow, ev):
+def build(brief, flow, ev, news=None):
     flow = flow or {}
     tr = flow.get("trend") or {}
     kv, kc = pill_val(brief, "코스피")
@@ -293,6 +319,7 @@ def build(brief, flow, ev):
  <div class="box"><div class="bh">간밤 미국장</div><div class="uss">{us_block(brief, flow)}</div></div>
  <div class="box"><div class="bh">코스피 관찰선</div>{level_block(kv, sup, res)}</div>
 </div>
+<div class="row"><div class="box"><div class="bh">주요 뉴스 · 기업 <small>네이버 증권 주요뉴스</small></div>{news_block(news)}</div></div>
 <div class="row"><div class="box"><div class="bh">오늘 일정 <small>★★ 이상 · 한국 시각</small></div>{events_block(ev, brief.get("date"))}</div></div>
 <div class="ft">VANTOR 브리핑 · 수급 갱신 {E(upd)} · 교육용 참고이며 매매 신호가 아닙니다</div>
 </div></body></html>"""
@@ -326,7 +353,7 @@ def main(paths):
     os.makedirs(out_dir, exist_ok=True)
     if not webhook:
         print("DISCORD_BRIEF_WEBHOOK 비어 있음 → 이미지만 만들고 전송 안 함")
-    flow, ev = load("feeds/flow.json"), load("events.json")
+    flow, ev, news = load("feeds/flow.json"), load("events.json"), fetch_news()
     failed = 0
     with sync_playwright() as p:
         browser = p.chromium.launch()
@@ -337,7 +364,7 @@ def main(paths):
                 if not data:
                     raise ValueError("브리핑 파일을 읽지 못함")
                 out = os.path.join(out_dir, os.path.basename(rel).replace(".json", ".png"))
-                page.set_content(build(data, flow, ev), wait_until="load")
+                page.set_content(build(data, flow, ev, news), wait_until="load")
                 page.evaluate("document.fonts.ready")
                 page.locator("#card").screenshot(path=out)
                 print(f"{rel} → {out} ({os.path.getsize(out) // 1024}KB)")

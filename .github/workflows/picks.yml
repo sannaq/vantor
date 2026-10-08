@@ -50,7 +50,7 @@ jobs:
       - name: 결과 올리기
         if: steps.day.outputs.open == '1'
         run: |
-          git add feeds/stock-scores.json feeds/stock-picks.json
+          git add feeds/stock-scores.json feeds/stock-picks.json feeds/stock-news.json feeds/stock-detail.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 종합 평점"

@@ -56,7 +56,15 @@ async function one(s) {
   const candles = [...xml.matchAll(/data="(\d{8})\|(\d+)\|(\d+)\|(\d+)\|(\d+)\|(\d+)"/g)].map((m) => [m[1], +m[2], +m[3], +m[4], +m[5], +m[6]]);
   const ti = {}; for (const x of (info && info.totalInfos) || []) ti[x.code] = x.value;
   const flows = (Array.isArray(trend) ? trend : []).slice().reverse().map((x) => ({ f: n(x.foreignerPureBuyQuant), i: n(x.organPureBuyQuant), v: n(x.accumulatedTradingVolume) }));
-  return features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks), flows });
+  const f = features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks), flows });
+  if (f) {
+    f._ind = info && info.industryCode != null ? String(info.industryCode) : null;
+    // 거래대금 대비 외국인·기관 순매수 금액 비율(%) — 순매수 수량 × 그날 종가 ÷ (거래량 × 종가)
+    const tr = (Array.isArray(trend) ? trend : []).map((x) => ({ f: n(x.foreignerPureBuyQuant) || 0, i: n(x.organPureBuyQuant) || 0, v: n(x.accumulatedTradingVolume) || 0, c: n(x.closePrice) || 0 }));
+    const ratio = (k, d) => { const a = tr.slice(0, d), tv = a.reduce((s2, x) => s2 + x.v * x.c, 0); return tv ? +(a.reduce((s2, x) => s2 + x[k] * x.c, 0) / tv * 100).toFixed(1) : null; };
+    f._fr = [ratio('f', 5), ratio('i', 5), ratio('f', 20), ratio('i', 20)];
+  }
+  return f;
 }
 
 const t0 = Date.now();
@@ -88,8 +96,8 @@ fresh.forEach((x, i) => { x.rank = i + 1; });
 const r1 = (v, k) => v == null ? null : +v.toFixed(k);
 const scores = { v: 2, date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
   bp: { vol: bp.vol.map((x) => r1(x, 5)), hiGap: bp.hiGap.map((x) => r1(x, 4)), ep: bp.ep.map((x) => r1(x, 4)), cut: bp.cut }, // 사이트가 목록에 없는 종목을 같은 기준으로 채점할 때 씀
-  // 코드: [총점, 관점, 순위, [안정성,고점근접,이익], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%, 참고[]]
-  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.view, x.rank, x.r.parts, x.r.good, x.r.bad, r1(x.f.tv20, 1), r1(x.f.day, 2), x.r.ref]])) };
+  // 코드: [총점, 관점, 순위, [안정성,고점근접,이익], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%, 참고[], 하루변동%, 52주고점대비%, PER]
+  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.view, x.rank, x.r.parts, x.r.good, x.r.bad, r1(x.f.tv20, 1), r1(x.f.day, 2), x.r.ref, r1(x.f.vol * 100, 2), r1(x.f.hiGap * 100, 1), x.f.per]])) };
 const liquid = fresh.filter((x) => x.f.tv20 >= MIN_TV);
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, tv20: Math.round(x.f.tv20) });
@@ -97,6 +105,32 @@ const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x
 const picks = { v: 2, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 
+// 종목 뉴스 — 추천 화면에서 종목을 펼치면 보여준다 (거래 활발한 종목마다 최근 3건, 네이버 증권 종목 뉴스)
+const news = {}, detail = {}; let ni = 0;
+// 종목별 상세(추천 화면 펼침): 업종 코드 · 거래대금 대비 순매수 비율 [외국인5일, 기관5일, 외국인20일, 기관20일]
+fresh.forEach((x) => { detail[x.c] = { ind: x.f._ind, fr: x.f._fr }; });
+await Promise.all(Array.from({ length: CONC }, async () => {
+  while (ni < liquid.length) {
+    const x = liquid[ni++];
+    try {
+      const fin = await get(`${API}/stock/${x.c}/finance/annual`).catch(() => null);
+      const fi = fin && fin.financeInfo;
+      if (fi && fi.trTitleList) {
+        const ys = fi.trTitleList.map((t) => [t.key, t.isConsensus === 'Y']);
+        const row = (nm) => { const r = (fi.rowList || []).find((z) => z.title === nm); return ys.map(([k]) => (r && r.columns[k] ? n(r.columns[k].value) : null)); };
+        detail[x.c] = { ...(detail[x.c] || {}), fin: { y: ys.map((v) => v[0].slice(0, 4) + (v[1] ? 'E' : '')), rev: row('매출액'), op: row('영업이익'), eps: row('EPS') } };
+      }
+    } catch { /* 재무는 없어도 된다 */ }
+    try {
+      const g = await get(`${API}/news/stock/${x.c}?pageSize=3`);
+      const its = (Array.isArray(g) ? g : []).flatMap((b) => b.items || []).slice(0, 3);
+      if (its.length) news[x.c] = its.map((a) => [String(a.titleFull || a.title || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'), a.officeName, a.datetime, `https://n.news.naver.com/mnews/article/${a.officeId}/${a.articleId}`]);
+    } catch { /* 뉴스는 없어도 된다 */ }
+  }
+}));
+fs.writeFileSync(path.join(ROOT, 'feeds/stock-news.json'), JSON.stringify({ date, updated: scores.updated, items: news }));
+fs.writeFileSync(path.join(ROOT, 'feeds/stock-detail.json'), JSON.stringify({ date, updated: scores.updated, items: detail }));
+console.log('종목 뉴스', Object.keys(news).length, '종목 · 재무', Object.values(detail).filter((d) => d.fin).length, '종목');
 fs.writeFileSync(path.join(ROOT, 'feeds/stock-scores.json'), JSON.stringify(scores));
 fs.writeFileSync(path.join(ROOT, 'feeds/stock-picks.json'), JSON.stringify(picks, null, 1));
 console.log(`완료 ${fresh.length}종목 (실패 ${fail}, 옛 날짜 ${rows.length - fresh.length}) · ${date} · ${Math.round((Date.now() - t0) / 1000)}초`);

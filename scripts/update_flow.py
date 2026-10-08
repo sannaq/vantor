@@ -7,6 +7,8 @@ GitHub Actions(.github/workflows/flow.yml)가 장중 30분마다 + 저녁에 실
 - trend : 지수(코스피·코스닥·코스피200)·환율 최근 20거래일 종가 — 지수 카드 그래프
 - us    : QQQ·SPY 종가·등락률 (워커 /quotes 가 값을 빠뜨릴 때 대체)
 - stock-list.json : 검색용 전체 종목 코드·이름 (주 1회)
+- industries.json : 업종별 등락 (추천 화면 섹터 칸)
+- news-main.json  : 주요 뉴스·속보 (브리핑 화면)
 - smart : 외국인·기관 순매수/순매도 TOP5 (억원) — 시가총액 상위 종목의 '확정된 직전 거래일' 수급으로 계산.
           날짜가 바뀌었을 때만 다시 계산한다(종목마다 1번씩 요청하므로).
 표준 라이브러리만 사용.
@@ -144,7 +146,47 @@ def smart():
             "foreignSell": top(2, False), "instSell": top(3, False), "n": len(rows)}
 
 
+IND = os.path.join(ROOT, "feeds", "industries.json")
+NEWS = os.path.join(ROOT, "feeds", "news-main.json")
+
+
+def industries():
+    """업종별 등락 [[번호, 이름, 등락률, 상승수, 하락수, 종목수], ...] — 추천 화면 '섹터' 칸."""
+    out = []
+    for page in range(1, 6):
+        d = get(f"/stocks/industry?page={page}&pageSize=100")
+        for g in d.get("groups", []):
+            out.append([str(g["no"]), g["name"], float(g.get("changeRate") or 0), g.get("riseCount", 0), g.get("fallCount", 0), g.get("totalCount", 0)])
+        if page * 100 >= int(d.get("totalCount") or 0):
+            break
+    return out
+
+
+def main_news():
+    """주요 뉴스(네이버 증권 '주요뉴스' + '실시간 속보' 기업 기사) — 브리핑 화면·브리핑 이미지."""
+    seen, out = set(), []
+    for cat, lim in (("mainnews", 10), ("flashnews", 10)):
+        for x in get(f"/news/list?category={cat}&pageSize={lim}") or []:
+            t = (x.get("tit") or "").strip()
+            if not t or t in seen:
+                continue
+            seen.add(t)
+            out.append({"t": t, "src": x.get("ohnm"), "dt": x.get("dt"), "cat": cat,
+                        "sum": (x.get("subcontent") or "").strip()[:120],
+                        "url": f"https://n.news.naver.com/mnews/article/{x.get('oid')}/{x.get('aid')}"})
+    return out
+
+
 def main():
+    for path, fn in ((IND, industries), (NEWS, main_news)):
+        try:
+            data = fn()
+            if len(data) >= 5:
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump({"updated": datetime.now(KST).strftime("%Y-%m-%d %H:%M"), "items": data}, f, ensure_ascii=False, separators=(",", ":"))
+                print(os.path.basename(path), len(data))
+        except Exception as e:  # noqa
+            print(os.path.basename(path), "실패:", e, file=sys.stderr)
     try:
         old = json.load(open(OUT, encoding="utf-8"))
     except Exception:  # noqa
