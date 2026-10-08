@@ -82,13 +82,13 @@ fresh.forEach((x, i) => { x.rank = i + 1; });
 
 const P = (r) => [r.parts.trend[0], r.parts.flow[0], r.parts.value[0], r.parts.risk[0]];
 const scores = { date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
-  // 코드: [총점, 등급, 관점, 순위, [추세,수급,가치,위험], 좋은점[], 약한점[]]
-  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.grade, x.r.view, x.rank, P(x.r), x.r.good, x.r.bad]])) };
+  // 코드: [총점, 등급, 관점, 순위, [추세,수급,가치,위험], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%]
+  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.grade, x.r.view, x.rank, P(x.r), x.r.good, x.r.bad, Math.round(x.r.m.tv20), x.r.m.day == null ? null : +x.r.m.day.toFixed(2)]])) };
 const liquid = fresh.filter((x) => x.r.m.tv20 >= MIN_TV);
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, grade: x.r.grade, view: x.r.view, parts: P(x.r),
   good: x.r.good, bad: x.r.bad, px: x.r.m.px, day: x.r.m.day, ret20: x.r.m.ret20, rsi: x.r.m.rsi, per: x.r.m.per, pbr: x.r.m.pbr, tv20: Math.round(x.r.m.tv20) });
 const dist = { '긍정': 0, '중립': 0, '주의': 0 }; fresh.forEach((x) => dist[x.r.view]++);
-const picks = { date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
+const picks = { date, minTvNote: '추천 목록은 20일 평균 거래대금 ' + MIN_TV + '억 이상만', n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 
 fs.writeFileSync(path.join(ROOT, 'feeds/stock-scores.json'), JSON.stringify(scores));

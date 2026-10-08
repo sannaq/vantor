@@ -639,6 +639,7 @@
     <a data-v="market"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span class="lbl">마켓</span></a>
     <a data-v="radar"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/></svg><span class="lbl">레이더</span></a>
     <a data-v="stock"><svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg><span class="lbl">종목</span></a>
+    <a data-v="reco"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span class="lbl">추천</span></a>
     <a data-v="news"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h6M7 13h6M16 9h1.5M16 13h1.5"/></svg><span class="lbl">뉴스</span></a>
     <a data-v="watch"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9L6.3 20l1.1-6L3 9.8l6-.8z"/></svg><span class="lbl">관심</span></a>
     <a data-v="events"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><span class="lbl">이벤트</span></a>
@@ -686,6 +687,7 @@
         <div class="ch"><h2>📈 실시간 시장</h2><div class="r"><span class="mktseg" id="homeMktSeg"><button class="on" data-mk="all">전체</button><button data-mk="KR">국내</button><button data-mk="US">해외</button></span></div></div>
         <div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table id="homeMarket"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
       </div>
+      <div id="homeReco"></div>
       <div class="card off"><!-- 커뮤니티 연동 전까지 숨김 -->
         <div class="ch"><h2>💬 오늘의 이슈 · 커뮤니티</h2><div class="r"><span class="more" data-v="brief">더보기 ›</span></div></div>
         <div class="pad feed" style="padding-top:8px">
@@ -765,6 +767,7 @@
 
   <!-- ===== STOCK ===== -->
   <div class="view" id="v-stock"><div class="card"><div class="pad" id="stockPanel"></div></div></div>
+  <div class="view" id="v-reco"><div id="recoBoard"></div></div>
   <div class="view" id="v-watch">
     <div class="card"><div class="ch"><h2>⭐ 관심종목</h2><div class="r"><span id="watchupd">–</span></div></div>
       <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><div id="watchPanel"></div></div></div>
@@ -861,7 +864,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=1"></script>
-<script src="app.js?v=115"></script>
+<script src="app.js?v=116"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

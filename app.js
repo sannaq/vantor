@@ -1338,6 +1338,66 @@ function renderVScore(r){
     });
   });
 }
+/* ═══════════ 추천 (종합 평점 순위) — 메뉴 '추천' + 홈 TOP 5 ═══════════ */
+var _recoF={view:'긍정',mk:'all',liq:true,sort:0,show:50};
+var _RECO_SORTS=[['종합',-1],['추세',0],['수급',1],['가치',2],['위험',3]];
+function _vsDate(d){ d=String(d||''); return d.length===8?(+d.slice(4,6))+'/'+(+d.slice(6,8)):''; }
+function _recoRows(j){ var L={}; (_STKLIST||[]).forEach(function(x){ L[x[0]]=x; });
+  return Object.keys(j.items||{}).map(function(c){ var it=j.items[c], l=L[c]||[];
+    return {c:c,n:l[1]||c,mk:l[2]||'',total:it[0],grade:it[1],view:it[2],rank:it[3],parts:it[4],good:it[5]||[],bad:it[6]||[],tv:it[7],day:it[8]}; }); }
+function _recoMini(parts){ return _VS_PARTS.map(function(p,i){ var w=Math.max(0,Math.min(100,(parts[i]||0)/p[1]*100));
+  return '<div title="'+p[0]+' '+parts[i]+'/'+p[1]+'" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)"><span style="width:22px">'+p[0]+'</span><div style="width:52px;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff"></div></div></div>'; }).join(''); }
+function _recoRow(x,i){ var gc=_VS_GC[x.grade]||'var(--faint)', vc=_VS_VC[x.view]||'var(--faint)';
+  var why=(x.view==='주의'?x.bad:x.good).concat(x.view==='주의'?x.good:x.bad).slice(0,2);
+  var dy=x.day==null?'':'<span class="'+(x.day>=0?'up':'down')+'" style="font-size:12px;font-weight:700">'+(x.day>=0?'+':'')+x.day.toFixed(2)+'%</span>';
+  return '<div onclick="openStock(\''+x.c+'\')" style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-top:1px solid var(--line2);cursor:pointer;flex-wrap:wrap">'
+    +'<div style="width:26px;text-align:center;font-weight:800;color:var(--faint);font-size:13px">'+i+'</div>'
+    +'<div style="width:48px;height:48px;border-radius:11px;border:2px solid '+gc+';display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none"><b style="font-size:18px;line-height:1">'+x.total+'</b><span style="font-size:10.5px;font-weight:800;color:'+gc+'">'+x.grade+'</span></div>'
+    +'<div style="flex:1;min-width:180px"><div style="font-weight:800;font-size:14.5px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+x.c+' · '+esc(x.mk)+'</span> '+dy+'</div>'
+      +'<div style="font-size:12px;color:var(--sub);margin-top:2px"><b style="color:'+vc+'">'+x.view+'</b>'+(why.length?' · '+why.map(esc).join(' · '):'')+'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px">'+_recoMini(x.parts)+'</div></div>'; }
+function renderReco(){
+  var el=$('#recoBoard'); if(!el)return;
+  if(!_VSC||!_STKLIST){ el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 불러오는 중…</div></div>'; Promise.all([_loadVScores(),_loadStockList()]).then(function(a){ if(a[0])renderReco(); else el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
+  var j=_VSC, F=_recoF, all=_recoRows(j);
+  var dist={'긍정':0,'중립':0,'주의':0}; all.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
+  var list=all.filter(function(x){ return (F.view==='all'||x.view===F.view)&&(F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=5)); });
+  var si=_RECO_SORTS[F.sort][1];
+  list.sort(function(a,b){ return si<0?(F.view==='주의'?a.total-b.total:b.total-a.total):(b.parts[si]-a.parts[si]||b.total-a.total); });
+  function seg(key,opts){ return '<div style="display:inline-flex;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:2px;gap:2px">'+opts.map(function(o){ var on=String(F[key])===String(o[0]);
+    return '<button onclick="_recoSet(\''+key+'\',\''+o[0]+'\')" style="border:none;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:transparent;color:var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</div>'; }
+  var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
+    +seg('view',[['긍정','긍정 '+dist['긍정']],['중립','중립 '+dist['중립']],['주의','주의 '+dist['주의']],['all','전체']])
+    +seg('mk',[['all','전체'],['KOSPI','코스피'],['KOSDAQ','코스닥']])
+    +seg('sort',_RECO_SORTS.map(function(s,i){return [i,s[0]+(i?'':'순')];}))
+    +'<label style="font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" '+(F.liq?'checked':'')+' onchange="_recoSet(\'liq\',this.checked?1:0)"> 거래 활발한 종목만 (20일 평균 거래대금 5억↑)</label></div>';
+  var rows=list.slice(0,F.show).map(function(x,i){ return _recoRow(x,i+1); }).join('');
+  el.innerHTML='<div class="card"><div class="ch"><h2>🧭 종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
+    +'<div class="pad" style="padding-top:6px">'+bar
+    +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 종목 화면으로 가요 · 추세 40 · 수급 25 · 가치 20 · 위험 15 = 100점</div>'
+    +(rows||'<div style="padding:16px;color:var(--faint);font-size:13px">조건에 맞는 종목이 없어요</div>')
+    +(list.length>F.show?'<button class="tf" onclick="_recoSet(\'show\','+(F.show+50)+')" style="width:100%;margin-top:10px">더 보기 ('+(list.length-F.show).toLocaleString()+'종목 남음)</button>':'')
+    +'<div style="font-size:11px;color:var(--faint);margin-top:12px">교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 평일 16:40 갱신</div></div></div>';
+}
+window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==='liq')v=!!v; _recoF[k]=v; if(k!=='show')_recoF.show=50; renderReco(); };
+/* 홈 — 추천 TOP 5 (디스코드로 가는 것과 같은 목록: feeds/stock-picks.json) */
+function renderHomeReco(){
+  var el=$('#homeReco'); if(!el)return;
+  fetch('feeds/stock-picks.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(p){
+    if(!p||!p.top||!p.top.length){ el.innerHTML=''; return; }
+    var rows=p.top.slice(0,5).map(function(x,i){ var gc=_VS_GC[x.grade]||'var(--faint)';
+      return '<div onclick="openStock(\''+x.c+'\')" style="display:flex;align-items:center;gap:10px;padding:8px 2px;border-top:'+(i?'1px solid var(--line2)':'none')+';cursor:pointer">'
+        +'<div style="width:20px;text-align:center;font-weight:800;color:var(--faint)">'+(i+1)+'</div>'
+        +'<div style="width:40px;height:40px;border-radius:10px;border:2px solid '+gc+';display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none"><b style="font-size:15px;line-height:1">'+x.total+'</b><span style="font-size:9.5px;font-weight:800;color:'+gc+'">'+x.grade+'</span></div>'
+        +'<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:14px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+esc(x.mk)+'</span></div>'
+        +'<div style="font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc((x.good||[]).slice(0,2).join(' · ')||'—')+'</div></div>'
+        +'<div style="text-align:right;font-size:12px;font-weight:700" class="'+((x.day||0)>=0?'up':'down')+'">'+((x.day||0)>=0?'+':'')+(+x.day||0).toFixed(2)+'%</div></div>'; }).join('');
+    el.innerHTML='<div class="card"><div class="ch"><h2>🧭 오늘의 추천 TOP 5</h2><div class="r"><span class="more" onclick="showView(\'reco\')">전체 보기 ›</span></div></div>'
+      +'<div class="pad" style="padding-top:4px">'+rows+'<div style="font-size:11px;color:var(--faint);margin-top:8px">'+_vsDate(p.date)+' 장마감 기준 종합 평점 · 교육용 참고, 매매 신호 아님</div></div></div>';
+    if(typeof initCards==='function')setTimeout(initCards,0);
+  }).catch(function(){ el.innerHTML=''; });
+}
+setTimeout(renderHomeReco,800);
 /* ═══════════ 종목 상세 실데이터 보강 (/candles·/info·/flow·/orderbook) ═══════════
    스펙 §0-1(기존 기능 보존): 프록시 미연결·조회 실패 시 데모 화면을 그대로 두고,
    응답이 도착한 항목만 제자리에서 교체한다. 종목을 바꾸면 이전 응답은 버린다. */
@@ -1650,6 +1710,7 @@ function showView(v,noScroll){
   if(v==='stock'&&!noScroll)renderStockBrowse();
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
+  if(v==='reco')renderReco();
   if(v==='events'){ if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
   if(v==='brief'){ if(typeof renderBriefBoard==='function')renderBriefBoard('#briefPanel'); if(typeof renderBriefing==='function')renderBriefing(); }
   if(v==='market')renderHeatmap();
