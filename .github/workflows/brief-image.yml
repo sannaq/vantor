@@ -1,6 +1,6 @@
 name: 브리핑 이미지 → 디스코드
 
-# 워커가 briefs/<날짜>-<am|noon|pm>.json 을 올리면 사이트와 같은 모양으로 그려 디스코드에 보낸다.
+# 워커가 briefs/<날짜>-<am|noon|pm>.json 을 올리면 수급·일정까지 담은 요약판으로 그려 디스코드에 보낸다.
 # 웹후크 주소는 저장소 비밀값 DISCORD_BRIEF_WEBHOOK (없으면 이미지만 만들고 전송은 건너뜀).
 on:
   push:
