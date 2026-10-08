@@ -1344,7 +1344,7 @@ function renderVScore(r){
 /* ═══════════ 추천 (종합 평점 순위) — 메뉴 '추천' + 홈 TOP 5 ═══════════ */
 var _recoF={view:'추천',mk:'all',liq:true,sort:0,show:50};
 var _RECO_SORTS=[['종합',-1],['안정성',0],['고점 근접',1],['이익',2]];
-var _BT=null;
+var _BT=null, _BT60=null, _BTL60=null;
 function _recoRows(j){ var L={}; (_STKLIST||[]).forEach(function(x){ L[x[0]]=x; });
   return Object.keys(j.items||{}).map(function(c){ var it=j.items[c], l=L[c]||[];
     return {c:c,n:l[1]||c,mk:l[2]||'',total:it[0],view:it[1],rank:it[2],parts:it[3],good:it[4]||[],bad:it[5]||[],tv:it[6],day:it[7],ref:it[8]||[]}; }); }
@@ -1363,9 +1363,9 @@ function _btHTML(b){ if(!b||!b.all)return '';
   var P=function(x){ return '<b class="'+(x>=0?'up':'down')+'">'+(x>=0?'+':'')+x.toFixed(2)+'%</b>'; };
   var row=function(lab,r){ return '<tr><td class="l">'+lab+'<div style="font-size:10.5px;color:var(--faint)">'+_vsDate(r.from)+'~'+_vsDate(r.to)+' · '+r.n+'주</div></td><td>'+P(r.groups['추천'].x20)+'</td><td>'+P(r.groups['중립'].x20)+'</td><td>'+P(r.groups['매수 금지'].x20)+'</td><td>'+r.beatWeeks['추천']+'%</td><td>'+r.beatWeeks['매수 금지']+'%</td></tr>'; };
   var fac=(b.factors||[]).map(function(f){ return '<tr><td class="l">'+(f.used?'● ':'○ ')+esc(f.nm)+'</td><td>'+f.first.toFixed(3)+'</td><td>'+f.second.toFixed(3)+'</td><td>'+(f.used?'점수에 사용':'제외 — 예측력 없음')+'</td></tr>'; }).join('');
-  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🧪 검증 결과 (백테스트)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
+  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🧪 검증 결과 (백테스트 · '+b.horizon+'일 보유)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
     +'<div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--sub);line-height:1.65">'
-    +'매주 1번 그날까지의 자료로만 채점하고, 이후 <b>20일 수익률</b>을 같은 날 전체 종목 평균과 비교했어요 (20일 평균 거래대금 '+b.minTv+'억↑, '+b.nObs.toLocaleString()+'건).'
+    +'매주 1번 그날까지의 자료로만 채점하고, 이후 <b>'+b.horizon+'거래일 수익률</b>을 같은 날 전체 종목 평균과 비교했어요 (20일 평균 거래대금 '+b.minTv+'억↑, '+b.nObs.toLocaleString()+'건).'
     +'<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">기간</th><th>추천</th><th>중립</th><th>매수 금지</th><th>추천이 시장을 이긴 주</th><th>매수 금지가 시장에 진 주</th></tr></thead><tbody>'
     +row('전체',b.all)+row('앞 절반',b.first)+row('뒤 절반',b.second)+'</tbody></table></div>'
     +'<div style="margin-top:6px">점수와 이후 수익률의 순위 상관(예측력) <b>'+b.all.ic+'</b> (앞 '+b.first.ic+' · 뒤 '+b.second.ic+'). 0이면 무관, 0.05만 넘어도 의미 있는 편이에요. <b>매수 금지 쪽이 더 확실</b>하고, 추천은 평균으로는 낫지만 주마다 들쭉날쭉해요.</div>'
@@ -1374,7 +1374,7 @@ function _btHTML(b){ if(!b||!b.all)return '';
 function renderReco(){
   var el=$('#recoBoard'); if(!el)return;
   if(!_VSC||!_STKLIST){ el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 불러오는 중…</div></div>';
-    Promise.all([_loadVScores(),_loadStockList(),fetch('feeds/backtest.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;})]).then(function(a){ _BT=a[2]; if(a[0])renderReco(); else el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
+    Promise.all([_loadVScores(),_loadStockList(),_loadJ('feeds/backtest.json'),_loadJ('feeds/backtest-60.json'),_loadJ('feeds/backtest-levels-60.json')]).then(function(a){ _BT=a[2]; _BT60=a[3]; _BTL60=a[4]; if(a[0])renderReco(); else el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
   var j=_VSC, F=_recoF, all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{};
   var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=5)); });
   var dist={'추천':0,'중립':0,'매수 금지':0}; pool.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
@@ -1395,7 +1395,7 @@ function renderReco(){
     +(rows||'<div style="padding:16px;color:var(--faint);font-size:13px">조건에 맞는 종목이 없어요</div>')
     +(list.length>F.show?'<button class="tf" onclick="_recoSet(\'show\','+(F.show+50)+')" style="width:100%;margin-top:10px">더 보기 ('+(list.length-F.show).toLocaleString()+'종목 남음)</button>':'')
     +'<div style="font-size:11px;color:var(--faint);margin-top:12px">교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 평일 16:40 갱신</div></div></div>'
-    +_btHTML(_BT)+_btlHTML(_BTL);
+    +_btHTML(_BT60)+_btHTML(_BT)+_btlHTML(_BTL60)+_btlHTML(_BTL);
   if(typeof initCards==='function')setTimeout(initCards,0);
 }
 window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==='liq')v=!!v; _recoF[k]=v; if(k!=='show')_recoF.show=50; renderReco(); };
@@ -1421,7 +1421,7 @@ function _rxChart(c,cs,L){ return '<canvas id="rxc-'+c+'" style="width:100%;heig
 function _rxDraw(cv,cs,L){
   var dpr=window.devicePixelRatio||1, W=cv.clientWidth||600, H=230; cv.width=W*dpr; cv.height=H*dpr; var g=cv.getContext('2d'); g.scale(dpr,dpr);
   var css=getComputedStyle(document.documentElement), up=(css.getPropertyValue('--up')||'#f6465d').trim()||'#f6465d', dn=(css.getPropertyValue('--down')||'#4a9eff').trim()||'#4a9eff', fa=(css.getPropertyValue('--faint')||'#888').trim(), ln=(css.getPropertyValue('--line2')||'#333').trim();
-  var d=cs.slice(W<500?-60:-120), VPW=W<500?50:70, PW=W-VPW-46, ph=H-18;
+  var d=cs.slice(-60), VPW=W<500?50:70, PW=W-VPW-46, ph=H-18;
   var lo=Math.min.apply(null,d.map(function(v){return v[3];}).concat(L?[L.st]:[])), hi=Math.max.apply(null,d.map(function(v){return v[2];}));
   var pad=(hi-lo)*0.04; lo-=pad; hi+=pad;
   var y=function(p){ return 6+(hi-p)/(hi-lo)*(ph-6); }, bw=PW/d.length;
@@ -1438,7 +1438,7 @@ function _rxDraw(cv,cs,L){
     var txt=z[2]+' '+z[0].toLocaleString(); g.font='bold 10.5px sans-serif'; var tw=g.measureText(txt).width; g.fillStyle='rgba(0,0,0,.0)';
     g.fillStyle=getComputedStyle(cv).backgroundColor&&getComputedStyle(cv).backgroundColor!=='rgba(0, 0, 0, 0)'?getComputedStyle(cv).backgroundColor:'rgba(127,127,127,.12)'; g.fillRect(PW-tw-8,ty-10,tw+6,13);
     g.fillStyle=z[1]; g.fillText(txt,PW-tw-5,ty); }); }
-  g.fillStyle=fa; g.font='10px sans-serif'; g.fillText(d.length+'일 · ━ 20일선(노랑) ━ 60일선(보라) · 오른쪽 막대 = 매물대',4,H-4);
+  g.fillStyle=fa; g.font='10px sans-serif'; g.fillText(d.length+'일 · ━ 20일선(노랑) ━ 60일선(보라) · 오른쪽 막대 = 매물대(120일)',4,H-4);
 }
 function _rxHTML(x,DT,NW,IN,cs){
   var P=function(v,d){ return v==null?'—':'<b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+(+v).toFixed(d==null?1:d)+'%</b>'; };
@@ -1459,7 +1459,7 @@ function _rxHTML(x,DT,NW,IN,cs){
   // ② 수급 비율
   var bar=function(lab,v){ var w=Math.min(50,Math.abs(v||0)*2); return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0"><span style="width:76px;color:var(--sub)">'+lab+'</span><div style="flex:1;position:relative;height:9px;background:var(--panel,#0000);border-radius:5px"><div style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line2)"></div>'
     +(v==null?'':'<div style="position:absolute;top:0;bottom:0;border-radius:5px;'+(v>=0?'left:50%;':'right:50%;')+'width:'+w+'%;background:'+(v>=0?'var(--up)':'var(--down)')+'"></div>')+'</div><span style="width:58px;text-align:right">'+P(v)+'</span></div>'; };
-  var flowBox=fr.length?(bar('외국인 5일',fr[0])+bar('기관 5일',fr[1])+bar('외국인 20일',fr[2])+bar('기관 20일',fr[3])+'<div style="font-size:11px;color:var(--faint);margin-top:4px">순매수 금액 ÷ 같은 기간 거래대금 · '+_vsDate(DT.date)+' 기준</div>'):'<div style="font-size:12px;color:var(--faint)">수급 자료 없음</div>';
+  var flowBox=fr.length?(bar('외국인 5일',fr[0])+bar('기관 5일',fr[1])+bar('외국인 20일',fr[2])+bar('기관 20일',fr[3])+(fr.length>4?bar('외국인 60일',fr[4])+bar('기관 60일',fr[5]):'')+'<div style="font-size:11px;color:var(--faint);margin-top:4px">순매수 금액 ÷ 같은 기간 거래대금 · '+_vsDate(DT.date)+' 기준</div>'):'<div style="font-size:12px;color:var(--faint)">수급 자료 없음</div>';
   // ③ 매수·손절 가격
   var lv=function(lab,p,col){ var d=L?(p/L.px-1)*100:null; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line2)"><span style="font-weight:800;color:'+col+'">'+lab+'</span><span><b style="font-size:15px">'+p.toLocaleString()+'원</b> <span style="font-size:11.5px;color:var(--faint)">현재가 대비 '+(d>=0?'+':'')+d.toFixed(1)+'%</span></span></div>'; };
   var lvBox=L?('<div style="font-size:12px;color:var(--faint);margin-bottom:4px">현재가 '+L.px.toLocaleString()+'원 · 하루 평균 변동폭(ATR) '+Math.round(L.atr).toLocaleString()+'원</div>'+lv('1차 매수',L.b1,'#2ebd85')+lv('2차 매수',L.b2,'#22a06b')+lv('손절',L.st,'#f6465d')
@@ -1490,13 +1490,14 @@ function _rxHTML(x,DT,NW,IN,cs){
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="openStock(\''+x.c+'\')">종목 화면 열기 →</button><button class="tf" onclick="_recoToggle(\''+x.c+'\')">접기</button></div>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:8px">교육용 참고 정보이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다.</div></div>';
 }
-var _BTL=null; _loadJ('feeds/backtest-levels.json').then(function(j){ _BTL=j; });
-function _lvVerify(){ var r=_BTL&&(_BTL.rules||[]).filter(function(x){return x.adopt;})[0]; if(!r)return '';
+var _BTL=null; _loadJ('feeds/backtest-levels.json').then(function(j){ _BTL=j; }); _loadJ('feeds/backtest-levels-60.json').then(function(j){ _BTL60=j; });
+function _lvVerify(){ return _lvVerify1(_BTL)+_lvVerify1(_BTL60); }
+function _lvVerify1(_BTL){ var r=_BTL&&(_BTL.rules||[]).filter(function(x){return x.adopt;})[0]; if(!r)return '';
   return '<div style="font-size:11.5px;color:var(--sub);margin-top:6px;padding:7px 9px;border-radius:8px;background:var(--panel,transparent);border:1px solid var(--line2)">🧪 검증('+_vsDate(_BTL.period[0])+'~'+_vsDate(_BTL.period[1])+', 추천 종목 '+(r.n||0).toLocaleString()+'건, '+_BTL.horizon+'일): 1차 체결 '+r.fill1+'% · 2차 '+r.fill2+'% · 손절 '+r.stopRate+'% · 승률 '+r.win+'% · 평균 <b class="'+(r.retInv>=0?'up':'down')+'">'+(r.retInv>=0?'+':'')+r.retInv.toFixed(2)+'%</b> · 하위 5% '+r.worst5+'%</div>'; }
 function _btlHTML(b){ if(!b||!b.rules)return ''; var P=function(x){ return '<b class="'+(x>=0?'up':'down')+'">'+(x>=0?'+':'')+x.toFixed(2)+'%</b>'; };
   var rows=b.rules.map(function(r){ return '<tr'+(r.adopt?' style="background:var(--panel2)"':'')+'><td class="l">'+(r.adopt?'✅ ':'')+esc(r.nm)+'</td><td>'+r.stopRate+'%</td><td>'+(r.recovered==null?'—':r.recovered+'%')+'</td><td>'+P(r.retInv)+'</td><td>'+r.win+'%</td><td>'+r.worst5+'%</td><td>'+P(r.first.retInv)+' / '+P(r.second.retInv)+'</td></tr>'; }).join('');
   var h=b.rules[0];
-  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🎯 매수·손절 가격 검증</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
+  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🎯 매수·손절 가격 검증 ('+b.horizon+'일 보유)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
     +'<div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--sub);line-height:1.65">매주 \'추천\' 종목 '+b.nPicks.toLocaleString()+'건을 그날까지의 일봉으로 가격을 정해 다음 날부터 '+b.horizon+'거래일 모의매매했어요 (1차 50%·2차 50% 지정가, 손절가 닿으면 매도, '+b.horizon+'일째 종가 정리). 비교: 같은 종목을 다음 날 시가에 사서 보유 '+P(h.hold)+' · 같은 날 전 종목 평균 '+P(h.mkt)+'.'
     +'<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">규칙</th><th>손절</th><th>손절 후 회복</th><th>평균 수익</th><th>승률</th><th>하위 5%</th><th>앞 / 뒤 절반</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:6px">평균 수익 = 실제로 산 돈 기준 · 손절 후 회복 = 손절된 것 중 '+b.horizon+'일 뒤 손절가 위로 돌아온 비율 · 거래 비용·세금 미반영 · 체결은 일봉 시가·저가로 가정</div></div></div>'; }

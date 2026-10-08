@@ -16,7 +16,7 @@ const { features, breakpoints, score, cuts } = require(path.join(ROOT, 'score-co
 const API = 'https://m.stock.naver.com/api';
 const CACHE = process.env.BT_CACHE || '/tmp/vantor-bt';
 const REFRESH = process.argv.includes('--refresh');
-const MIN_TV = 5, STEP = 5, WARM = 160, HZ = [5, 20];
+const MIN_TV = 5, STEP = 5, WARM = 160, H = +(process.env.BT_H || 20), HZ = [5, H]; // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-60.json)
 fs.mkdirSync(CACHE, { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -91,7 +91,7 @@ for (const dt of evalDates) {
     if (!f || f.tv20 < MIN_TV) return;
     const fl = fdates[si].filter((x) => x <= dt).slice(-20).map((x) => d.flows[x]), sv = fl.reduce((s, x) => s + (x.v || 0), 0);
     const cc = c.map((x) => x[4]);
-    arr.push({ f, px: c[i][4], f5: c[i + 5][4] / c[i][4] - 1, f20: c[i + 20][4] / c[i][4] - 1,
+    arr.push({ f, px: c[i][4], f5: c[i + 5][4] / c[i][4] - 1, f20: c[i + H][4] / c[i][4] - 1,
       trend: cc[i] / mean(cc.slice(i - 59, i + 1)) - 1, mom: cc[i] / cc[i - 60] - 1, flow: sv ? fl.reduce((s, x) => s + (x.f || 0) + (x.i || 0), 0) / sv : null });
   });
   if (arr.length < 100) continue;
@@ -126,7 +126,7 @@ function report(ds) {
 function factorIC(fx) { const v = (ds) => mean(ds.map((d) => { const a = byDate.get(d).filter((o) => fx(o) != null && isFinite(fx(o))); return corr(rank(a.map(fx)), rank(a.map((o) => o.x20))); }));
   const h = Math.floor(dates.length / 2); return { all: +v(dates).toFixed(3), first: +v(dates.slice(0, h)).toFixed(3), second: +v(dates.slice(h)).toFixed(3) }; }
 const h = Math.floor(dates.length / 2);
-const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), minTv: MIN_TV, horizon: 20, step: STEP, nObs,
+const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), minTv: MIN_TV, horizon: H, step: STEP, nObs,
   formula: '안정성 40 · 고점 근접 30 · 이익 30', all: report(dates), first: report(dates.slice(0, h)), second: report(dates.slice(h)),
   factors: [
     { nm: '안정성(20일 변동성 낮음)', used: true, ...factorIC((o) => -o.f.vol) },
@@ -137,7 +137,7 @@ const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().sli
     { nm: '외국인·기관 20일 순매수', used: false, ...factorIC((o) => o.flow) },
   ],
   limits: ['PER 은 과거 값이 없어 현재 값으로 계산(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영', '검증 기간 약 1년'] };
-fs.writeFileSync(path.join(ROOT, 'feeds/backtest.json'), JSON.stringify(res, null, 1));
+fs.writeFileSync(path.join(ROOT, H === 20 ? 'feeds/backtest.json' : `feeds/backtest-${H}.json`), JSON.stringify(res, null, 1));
 const P = (x) => (x >= 0 ? '+' : '') + x.toFixed(2) + '%';
 for (const k of ['all', 'first', 'second']) { const r = res[k];
   console.log(`${k.padEnd(6)} ${r.from}~${r.to} 5분위 ${r.q20.map(P).join(' ')} | 추천 ${P(r.groups['추천'].x20)} (이긴 주 ${r.beatWeeks['추천']}%) 중립 ${P(r.groups['중립'].x20)} 매수금지 ${P(r.groups['매수 금지'].x20)} (진 주 ${r.beatWeeks['매수 금지']}%) | IC ${r.ic} t=${r.icT}`); }

@@ -14,7 +14,7 @@ const require = createRequire(import.meta.url);
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const V = require(path.join(ROOT, 'score-core.js'));
 const CACHE = process.env.BT_CACHE || '/tmp/vantor-bt';
-const MIN_TV = 5, STEP = 5, H = 20;
+const MIN_TV = 5, STEP = 5, H = +(process.env.BT_H || 20); // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-levels-60.json)
 
 const files = fs.readdirSync(CACHE).filter((f) => f.endsWith('.json'));
 if (files.length < 1000) { console.error('캐시가 없어요 — 먼저 node scripts/backtest.mjs'); process.exit(1); }
@@ -67,6 +67,8 @@ const RULES = [
   { key: 'stop15', nm: '손절 2차−1.5ATR', o: { stopAtr: 1.5 } },
   { key: 'stop3', nm: '손절 2차−3ATR', o: { stopAtr: 3 } },
   { key: 'nostop', nm: '손절 없음', o: { stopAtr: 0 } },
+  { key: 'ma60', nm: '1차 = 60일선 부근 · 손절 2차−2ATR', o: { b1: 'ma60' } },
+  { key: 'ma60s3', nm: '1차 = 60일선 부근 · 손절 2차−3ATR', o: { b1: 'ma60', stopAtr: 3 } },
   { key: 'mkt1', nm: '1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR', o: { b1: 'now', stopAtr: 1 } },
   { key: 'mkt1s2', nm: '1차 = 다음 날 시가 · 손절 2차−2ATR', o: { b1: 'now', stopAtr: 2 } },
   { key: 'mkt1ns', nm: '1차 = 다음 날 시가 · 손절 없음', o: { b1: 'now', stopAtr: 0 } },
@@ -90,7 +92,7 @@ function run(rule, sel) {
 const ds = [...mkt.keys()].sort(), half = ds[Math.floor(ds.length / 2)];
 const res = { v: 1, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), horizon: H, period: [ds[0], ds[ds.length - 1]], nPicks: picks.length,
   rules: RULES.map((rule) => ({ ...run(rule, picks), first: run(rule, picks.filter((p) => p.d < half)), second: run(rule, picks.filter((p) => p.d >= half)) })) };
-fs.writeFileSync(path.join(ROOT, 'feeds/backtest-levels.json'), JSON.stringify(res, null, 1));
+fs.writeFileSync(path.join(ROOT, H === 20 ? 'feeds/backtest-levels.json' : `feeds/backtest-levels-${H}.json`), JSON.stringify(res, null, 1));
 const P = (x) => (x >= 0 ? '+' : '') + x.toFixed(2) + '%';
 console.log(`기준: 같은 추천 종목을 다음 날 시가에 사서 ${H}일 보유 ${P(res.rules[0].hold)} · 같은 날 전 종목 평균 ${P(res.rules[0].mkt)}\n`);
 console.log('규칙'.padEnd(34), '1차체결 2차체결 미체결 손절 손절후회복 | 들어간돈수익 승률 하위5% | 배정돈수익 | 앞절반 뒤절반');

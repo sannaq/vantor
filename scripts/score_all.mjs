@@ -51,7 +51,7 @@ async function one(s) {
   const [xml, info, trend] = await Promise.all([
     get(`https://fchart.stock.naver.com/sise.nhn?symbol=${s.c}&timeframe=day&count=160&requestType=0`, true),
     get(`${API}/stock/${s.c}/integration`).catch(() => null),
-    get(`${API}/stock/${s.c}/trend?pageSize=30`).catch(() => []),
+    get(`${API}/stock/${s.c}/trend?pageSize=60`).catch(() => []),
   ]);
   const candles = [...xml.matchAll(/data="(\d{8})\|(\d+)\|(\d+)\|(\d+)\|(\d+)\|(\d+)"/g)].map((m) => [m[1], +m[2], +m[3], +m[4], +m[5], +m[6]]);
   const ti = {}; for (const x of (info && info.totalInfos) || []) ti[x.code] = x.value;
@@ -62,7 +62,7 @@ async function one(s) {
     // 거래대금 대비 외국인·기관 순매수 금액 비율(%) — 순매수 수량 × 그날 종가 ÷ (거래량 × 종가)
     const tr = (Array.isArray(trend) ? trend : []).map((x) => ({ f: n(x.foreignerPureBuyQuant) || 0, i: n(x.organPureBuyQuant) || 0, v: n(x.accumulatedTradingVolume) || 0, c: n(x.closePrice) || 0 }));
     const ratio = (k, d) => { const a = tr.slice(0, d), tv = a.reduce((s2, x) => s2 + x.v * x.c, 0); return tv ? +(a.reduce((s2, x) => s2 + x[k] * x.c, 0) / tv * 100).toFixed(1) : null; };
-    f._fr = [ratio('f', 5), ratio('i', 5), ratio('f', 20), ratio('i', 20)];
+    f._fr = [ratio('f', 5), ratio('i', 5), ratio('f', 20), ratio('i', 20), ratio('f', 60), ratio('i', 60)];
   }
   return f;
 }
@@ -107,7 +107,7 @@ const picks = { v: 2, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length
 
 // 종목 뉴스 — 추천 화면에서 종목을 펼치면 보여준다 (거래 활발한 종목마다 최근 3건, 네이버 증권 종목 뉴스)
 const news = {}, detail = {}; let ni = 0;
-// 종목별 상세(추천 화면 펼침): 업종 코드 · 거래대금 대비 순매수 비율 [외국인5일, 기관5일, 외국인20일, 기관20일]
+// 종목별 상세(추천 화면 펼침): 업종 코드 · 거래대금 대비 순매수 비율 [외국인5일, 기관5일, 외국인20일, 기관20일, 외국인60일, 기관60일]
 fresh.forEach((x) => { detail[x.c] = { ind: x.f._ind, fr: x.f._fr }; });
 await Promise.all(Array.from({ length: CONC }, async () => {
   while (ni < liquid.length) {

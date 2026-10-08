@@ -82,7 +82,8 @@
     for (var b = 0; b < B; b++) vp.push(0);
     w.forEach(function (v) { var tp = (v[2] + v[3] + v[4]) / 3; vp[Math.min(B - 1, Math.floor((tp - lo) / step))] += v[5]; });
     var tot = vp.reduce(function (s, v) { return s + v; }, 0) || 1;
-    var b1 = b1Mode === 'now' ? px : (m20 && px > m20) ? Math.max(m20, px - atr) : px;
+    var mb = b1Mode === 'ma60' ? m60 : m20;
+    var b1 = b1Mode === 'now' ? px : (mb && px > mb) ? Math.max(mb, b1Mode === 'ma60' ? px - 3 * atr : px - atr) : px;
     var below = vp.map(function (v, k) { return { v: v, p: lo + (k + 0.5) * step }; }).filter(function (z) { return z.p < b1 * 0.99 && z.p > b1 - b2Win * atr; }).sort(function (p, q) { return q.v - p.v; })[0];
     var b2 = below ? below.p : b1 - b2Fb * atr; if (m60 && m60 < b1 && m60 > b2) b2 = Math.max(b2, m60 * 0.995);
     var st = stopAtr > 0 ? b2 - stopAtr * atr : null;

@@ -24,10 +24,10 @@ jobs:
         with:
           node-version: "20"
       - name: 백테스트
-        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs
+        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs
       - name: 결과 올리기
         run: |
-          git add feeds/backtest.json feeds/backtest-levels.json
+          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F') 백테스트"
