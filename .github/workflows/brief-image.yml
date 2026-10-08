@@ -1,0 +1,60 @@
+name: 브리핑 이미지 → 디스코드
+
+# 워커가 briefs/<날짜>-<am|noon|pm>.json 을 올리면 사이트와 같은 모양으로 그려 디스코드에 보낸다.
+# 웹후크 주소는 저장소 비밀값 DISCORD_BRIEF_WEBHOOK (없으면 이미지만 만들고 전송은 건너뜀).
+on:
+  push:
+    branches: [main]
+    paths: ["briefs/20*.json"]
+  workflow_dispatch:
+    inputs:
+      files:
+        description: "보낼 브리핑 파일 (공백 구분, 예: briefs/2026-10-08-am.json). 비우면 가장 최근 1건"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: brief-image
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 보낼 브리핑 찾기
+        id: pick
+        env:
+          BEFORE: ${{ github.event.before }}
+          INPUT_FILES: ${{ github.event.inputs.files }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            files="$INPUT_FILES"
+            [ -z "$files" ] && files=$(ls briefs/20*.json | sort | tail -1)
+          else
+            base="$BEFORE"
+            if [ -z "$base" ] || [ "$base" = "0000000000000000000000000000000000000000" ]; then base="HEAD~1"; fi
+            files=$(git diff --name-only --diff-filter=AM "$base" HEAD -- 'briefs/20*.json' | tr '\n' ' ')
+          fi
+          echo "files=$files" >> "$GITHUB_OUTPUT"
+          echo "보낼 브리핑: ${files:-없음}"
+      - uses: actions/setup-python@v5
+        if: steps.pick.outputs.files != ''
+        with:
+          python-version: "3.12"
+      - name: 브라우저·한글 글꼴 준비
+        if: steps.pick.outputs.files != ''
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk fonts-noto-color-emoji
+          pip install -q playwright
+          python -m playwright install --with-deps chromium
+      - name: 이미지 만들어 보내기
+        if: steps.pick.outputs.files != ''
+        env:
+          DISCORD_BRIEF_WEBHOOK: ${{ secrets.DISCORD_BRIEF_WEBHOOK }}
+        run: python3 scripts/brief_image.py ${{ steps.pick.outputs.files }}
