@@ -1291,6 +1291,53 @@ function scoredOf(code,opt){
 function priceFmt(r,v){ if(v==null)v=r.px; return r.ccy==='USD'?('$'+(+v).toLocaleString('en-US',{maximumFractionDigits:2})):won(v); }
 function backToBrowse(){ stopDetailLive(); var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal)_db.style.display=''; renderStockBrowse(); window.scrollTo(0,_stkScroll); }
 window.backToBrowse=backToBrowse;
+/* ═══════════ 종합 평점 (추세·수급·가치·위험) ═══════════
+   국내 종목은 매일 장마감 채점 결과(feeds/stock-scores.json, scripts/score_all.mjs)를 쓰고,
+   거기 없는 종목(ETF·미국 등)은 워커 일봉·지표로 같은 공식(score-core.js)을 그 자리에서 돌린다. */
+var _VSC=null, _vscP=null;
+function _loadVScores(){ if(_vscP)return _vscP; _vscP=fetch('feeds/stock-scores.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ _VSC=j; return j; }).catch(function(){ return null; }); return _vscP; }
+var _VS_PARTS=[['추세',40],['수급',25],['가치',20],['위험',15]];
+var _VS_GC={A:'#2ebd85',B:'#7bd389',C:'#f0b90b',D:'#f08a4b',E:'#f6465d'}, _VS_VC={'긍정':'#2ebd85','중립':'#f0b90b','주의':'#f6465d'};
+function _vsHTML(v,src){
+  var gc=_VS_GC[v.grade]||'var(--faint)', vc=_VS_VC[v.view]||'var(--faint)';
+  var parts=_VS_PARTS.map(function(p,i){ var x=v.parts[i], w=Math.max(0,Math.min(100,x/p[1]*100)), miss=(i===1&&v.miss&&v.miss.flow)||(i===2&&v.miss&&v.miss.value);
+    return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0"><span style="width:30px;color:var(--sub)">'+p[0]+'</span>'
+      +'<div style="flex:1;height:7px;background:var(--panel2);border-radius:4px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff;border-radius:4px;'+(miss?'opacity:.35':'')+'"></div></div>'
+      +'<b style="width:52px;text-align:right">'+(+x).toFixed(0)+'<span style="color:var(--faint);font-weight:600">/'+p[1]+'</span></b>'+(miss?'<span style="font-size:10.5px;color:var(--faint)">자료 없음</span>':'')+'</div>'; }).join('');
+  var li=function(a,c,ic){ return (a||[]).map(function(t){ return '<div style="font-size:12.5px;line-height:1.7;color:var(--sub)"><span style="color:'+c+';font-weight:800">'+ic+'</span> '+esc(t)+'</div>'; }).join(''); };
+  var why=li(v.good,'#2ebd85','＋')+li(v.bad,'#f6465d','－');
+  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🧭 종합 평점</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+src+'</span></div></div>'
+    +'<div class="pad" style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">'
+      +'<div style="display:flex;gap:12px;align-items:center;min-width:200px">'
+        +'<div style="width:74px;height:74px;border-radius:16px;border:3px solid '+gc+';display:flex;flex-direction:column;align-items:center;justify-content:center"><b style="font-size:28px;line-height:1">'+v.total+'</b><span style="font-size:12px;font-weight:800;color:'+gc+'">'+v.grade+'등급</span></div>'
+        +'<div><div style="font-size:18px;font-weight:800;color:'+vc+'">'+v.view+' 관점</div><div style="font-size:12px;color:var(--faint);margin-top:2px">'+esc((VScore.VIEW_DESC||{})[v.view]||'')+'</div>'+(v.rank?'<div style="font-size:12px;color:var(--sub);margin-top:4px">전체 '+v.n.toLocaleString()+'종목 중 <b>'+v.rank.toLocaleString()+'위</b></div>':'')+'</div>'
+      +'</div>'
+      +'<div style="flex:1;min-width:220px">'+parts+'</div>'
+      +'<div style="flex:1.3;min-width:240px">'+(why||'<div style="font-size:12.5px;color:var(--faint)">뚜렷한 특징이 없어요</div>')+'</div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--faint);padding:0 20px 14px">추세 40 · 수급 25 · 가치 20 · 위험 15 = 100점 · A 75↑ B 62↑ C 50↑ D 38↑ · 교육용 참고 지표이며 매매 신호가 아닙니다.</div></div>';
+}
+function renderVScore(r){
+  var el=$('#vscore'); if(!el||typeof VScore==='undefined')return;
+  var code=r.c, isUS=r.ccy==='USD';
+  el.innerHTML='<div class="card" style="margin-top:14px"><div class="pad" style="font-size:12.5px;color:var(--faint)">🧭 종합 평점 계산 중…</div></div>';
+  function still(){ var e=$('#vscore'); return e&&SEL&&SEL.c===code?e:null; }
+  _loadVScores().then(function(j){
+    var it=j&&j.items&&j.items[code];
+    if(it){ var e=still(); if(!e)return; var d=String(j.date||'');
+      e.innerHTML=_vsHTML({total:it[0],grade:it[1],view:it[2],rank:it[3],n:j.n,parts:it[4],good:it[5],bad:it[6]}, (d.length===8?(+d.slice(4,6))+'/'+(+d.slice(6,8))+' 장마감 기준':'장마감 기준')); return; }
+    if(typeof proxyJson!=='function'){ var e0=still(); if(e0)e0.innerHTML=''; return; }
+    var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(code)+(isUS?'&exch='+usExch(r.mk):'');
+    Promise.all([ proxyJson('/candles?'+base+'&tf=D&limit=200').catch(function(){return null;}), proxyJson('/info?'+base).catch(function(){return null;}) ]).then(function(a){
+      var e=still(); if(!e)return;
+      var cs=(a[0]&&a[0].candles)||[], inf=a[1]||{};
+      var v=VScore.score({candles:cs, per:inf.per||null, pbr:inf.pbr||null, h52:inf.h52||null, l52:inf.l52||null, flows:[]});
+      if(!v){ e.innerHTML='<div class="card" style="margin-top:14px"><div class="pad" style="font-size:12.5px;color:var(--faint)">🧭 종합 평점 — 일봉 자료가 부족해 계산하지 못했어요</div></div>'; return; }
+      v.parts=[v.parts.trend[0],v.parts.flow[0],v.parts.value[0],v.parts.risk[0]];
+      e.innerHTML=_vsHTML(v,'지금 시세로 계산 · 수급 자료 없음');
+    });
+  });
+}
 /* ═══════════ 종목 상세 실데이터 보강 (/candles·/info·/flow·/orderbook) ═══════════
    스펙 §0-1(기존 기능 보존): 프록시 미연결·조회 실패 시 데모 화면을 그대로 두고,
    응답이 도착한 항목만 제자리에서 교체한다. 종목을 바꾸면 이전 응답은 버린다. */
@@ -1525,6 +1572,7 @@ function openStock(code){
       +met('프로그램',numOrDash(r.progPct,function(v){return (v>=0?'+':'')+v.toFixed(1)+'%';}),hasNum(r.progPct)?'거래대금 대비':'데이터 없음',hasNum(r.progPct)?cls(r.progPct):'','m-prog')
       +met('외국인·기관',r.invest==null?'—':r.invest==='both'?'동반매수':r.invest==='sell'?'동반매도':'혼조',r.invest==null?'데이터 없음':(r.invest==='both'?'수급 양호':''),r.invest==='both'?'up':r.invest==='sell'?'down':'','m-inv')
     +'</div>'
+    +'<div id="vscore"></div>'
     +'<div class="sgrid">'
       +'<div>'
         +'<div class="stabs"><button class="on" data-t="chart">차트</button><button data-t="flow">투자자 수급</button><button data-t="book">호가</button><button data-t="score">점수 구성</button></div>'
@@ -1580,6 +1628,7 @@ function openStock(code){
   renderPressureFlow(r); // 초기(RADAR 값) → /flow 도착 시 실데이터로 교체
   attachChartCrosshair($('#sChart')); // 크로스헤어+OHLC 툴팁
   _attachChartZoom($('#sChart')); // 휠 줌 + 드래그 팬
+  renderVScore(r); // 종합 평점 카드 (score-core.js)
   enrichStock(r); // 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
   startDetailLive(r); // 열어둔 동안 15초마다 가격·매수매도세·투자자 자동 갱신
   var _is=$('#idxstrip'); if(_is)_is.style.display='none'; var _db=$('#demoban'); if(_db)_db.style.display='none'; // 상세 땐 시장 지수 스트립 숨김 → 상세가 네비 바로 아래

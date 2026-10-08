@@ -1,0 +1,67 @@
+name: 종합 평점 → 사이트·디스코드
+
+# 평일 장마감 후 코스피·코스닥 전 종목을 채점(score-core.js)해
+# feeds/stock-scores.json(사이트 종목 화면)·feeds/stock-picks.json 을 올리고,
+# 추천 이미지를 DISCORD_RECO_WEBHOOK 으로 보낸다. 휴장일(오늘 거래 없음)엔 보내지 않는다.
+on:
+  schedule:
+    - cron: "40 7 * * 1-5"   # 16:40 KST
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "디스코드로 보낼까요? (yes/no)"
+        required: false
+        default: "yes"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: picks
+  cancel-in-progress: false
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 전 종목 채점
+        run: node scripts/score_all.mjs
+      - name: 오늘 장이 열렸는지
+        id: day
+        run: |
+          d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks.json'))['date'])")
+          today=$(TZ=Asia/Seoul date +%Y%m%d)
+          echo "채점 기준일 $d · 오늘 $today"
+          if [ "$d" = "$today" ]; then echo "open=1" >> "$GITHUB_OUTPUT"; else echo "open=0" >> "$GITHUB_OUTPUT"; fi
+      - name: 결과 올리기
+        if: steps.day.outputs.open == '1'
+        run: |
+          git add feeds/stock-scores.json feeds/stock-picks.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 종합 평점"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1
+      - uses: actions/setup-python@v5
+        if: steps.day.outputs.open == '1'
+        with:
+          python-version: "3.12"
+      - name: 추천 이미지 만들어 보내기
+        if: steps.day.outputs.open == '1'
+        env:
+          DISCORD_RECO_WEBHOOK: ${{ (github.event_name == 'schedule' || github.event.inputs.send == 'yes') && secrets.DISCORD_RECO_WEBHOOK || '' }}
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk fonts-noto-color-emoji
+          pip install -q playwright && python -m playwright install --with-deps chromium
+          python3 scripts/picks_image.py
+      - name: 만든 이미지 보관 (7일)
+        if: steps.day.outputs.open == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: picks-image
+          path: /tmp/brief-img/*.png
+          retention-days: 7
