@@ -4,7 +4,7 @@ name: 종합 평점 백테스트 (매달)
 # 사이트 '추천' 화면의 '검증 결과' 칸이 이 파일을 읽는다. 공식 자체를 자동으로 바꾸지는 않는다.
 on:
   schedule:
-    - cron: "0 22 L * *"   # 매달 말일 22:00 UTC = 1일 07:00 KST
+    - cron: "0 0 1 * *"   # 매달 1일 09:00 KST
   workflow_dispatch: {}
 
 permissions:
