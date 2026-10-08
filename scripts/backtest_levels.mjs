@@ -62,12 +62,12 @@ function sim(c, i, L) {
 
 // ③ 규칙 후보
 const RULES = [
-  { key: 'now', nm: '지금 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−1ATR)', o: {} },
+  { key: 'adopt', nm: '채택 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−2ATR)', o: {}, adopt: true },
+  { key: 'stop1', nm: '손절 2차−1ATR (10/8 이전 규칙)', o: { stopAtr: 1 } },
   { key: 'stop15', nm: '손절 2차−1.5ATR', o: { stopAtr: 1.5 } },
-  { key: 'stop2', nm: '손절 2차−2ATR', o: { stopAtr: 2 } },
   { key: 'stop3', nm: '손절 2차−3ATR', o: { stopAtr: 3 } },
   { key: 'nostop', nm: '손절 없음', o: { stopAtr: 0 } },
-  { key: 'mkt1', nm: '1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR', o: { b1: 'now' } },
+  { key: 'mkt1', nm: '1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR', o: { b1: 'now', stopAtr: 1 } },
   { key: 'mkt1s2', nm: '1차 = 다음 날 시가 · 손절 2차−2ATR', o: { b1: 'now', stopAtr: 2 } },
   { key: 'mkt1ns', nm: '1차 = 다음 날 시가 · 손절 없음', o: { b1: 'now', stopAtr: 0 } },
 ];
@@ -79,7 +79,7 @@ function run(rule, sel) {
     const s = sim(c, p.i, L); s.hold = c[p.i + H][4] / (c[p.i + 1][1] || c[p.i + 1][4]) - 1; s.m = mkt.get(p.d); r.push(s);
   }
   const inv = r.filter((s) => s.ret != null), st = r.filter((s) => s.stopped);
-  return { key: rule.key, nm: rule.nm, n: r.length,
+  return { key: rule.key, nm: rule.nm, adopt: !!rule.adopt, n: r.length,
     fill1: +(mean(r.map((s) => (s.f1 ? 1 : 0))) * 100).toFixed(0), fill2: +(mean(r.map((s) => (s.f2 ? 1 : 0))) * 100).toFixed(0),
     noFill: +(mean(r.map((s) => (s.w ? 0 : 1))) * 100).toFixed(0), stopRate: +(mean(r.map((s) => (s.stopped ? 1 : 0))) * 100).toFixed(0),
     recovered: st.length ? +(mean(st.map((s) => (s.recovered ? 1 : 0))) * 100).toFixed(0) : null,

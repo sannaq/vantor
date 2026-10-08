@@ -9,8 +9,60 @@
  "nPicks": 14467,
  "rules": [
   {
-   "key": "now",
-   "nm": "지금 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−1ATR)",
+   "key": "adopt",
+   "nm": "채택 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−2ATR)",
+   "adopt": true,
+   "n": 14467,
+   "fill1": 91,
+   "fill2": 64,
+   "noFill": 9,
+   "stopRate": 22,
+   "recovered": 56,
+   "retInv": 1.91,
+   "win": 52,
+   "worst5": -12.9,
+   "retAlloc": 0.54,
+   "hold": 0.73,
+   "mkt": -0.16,
+   "first": {
+    "key": "adopt",
+    "nm": "채택 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−2ATR)",
+    "adopt": true,
+    "n": 7210,
+    "fill1": 89,
+    "fill2": 59,
+    "noFill": 11,
+    "stopRate": 19,
+    "recovered": 67,
+    "retInv": 3.47,
+    "win": 56,
+    "worst5": -9.6,
+    "retAlloc": 1.77,
+    "hold": 2.61,
+    "mkt": 2.26
+   },
+   "second": {
+    "key": "adopt",
+    "nm": "채택 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−2ATR)",
+    "adopt": true,
+    "n": 7257,
+    "fill1": 92,
+    "fill2": 68,
+    "noFill": 8,
+    "stopRate": 26,
+    "recovered": 47,
+    "retInv": 0.41,
+    "win": 47,
+    "worst5": -14.6,
+    "retAlloc": -0.68,
+    "hold": -1.14,
+    "mkt": -2.57
+   }
+  },
+  {
+   "key": "stop1",
+   "nm": "손절 2차−1ATR (10/8 이전 규칙)",
+   "adopt": false,
    "n": 14467,
    "fill1": 91,
    "fill2": 64,
@@ -24,8 +76,9 @@
    "hold": 0.73,
    "mkt": -0.16,
    "first": {
-    "key": "now",
-    "nm": "지금 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−1ATR)",
+    "key": "stop1",
+    "nm": "손절 2차−1ATR (10/8 이전 규칙)",
+    "adopt": false,
     "n": 7210,
     "fill1": 89,
     "fill2": 59,
@@ -40,8 +93,9 @@
     "mkt": 2.26
    },
    "second": {
-    "key": "now",
-    "nm": "지금 규칙 (1차 20일선 · 2차 매물대 · 손절 2차−1ATR)",
+    "key": "stop1",
+    "nm": "손절 2차−1ATR (10/8 이전 규칙)",
+    "adopt": false,
     "n": 7257,
     "fill1": 92,
     "fill2": 68,
@@ -59,6 +113,7 @@
   {
    "key": "stop15",
    "nm": "손절 2차−1.5ATR",
+   "adopt": false,
    "n": 14467,
    "fill1": 91,
    "fill2": 64,
@@ -74,6 +129,7 @@
    "first": {
     "key": "stop15",
     "nm": "손절 2차−1.5ATR",
+    "adopt": false,
     "n": 7210,
     "fill1": 89,
     "fill2": 59,
@@ -90,6 +146,7 @@
    "second": {
     "key": "stop15",
     "nm": "손절 2차−1.5ATR",
+    "adopt": false,
     "n": 7257,
     "fill1": 92,
     "fill2": 68,
@@ -105,56 +162,9 @@
    }
   },
   {
-   "key": "stop2",
-   "nm": "손절 2차−2ATR",
-   "n": 14467,
-   "fill1": 91,
-   "fill2": 64,
-   "noFill": 9,
-   "stopRate": 22,
-   "recovered": 56,
-   "retInv": 1.91,
-   "win": 52,
-   "worst5": -12.9,
-   "retAlloc": 0.54,
-   "hold": 0.73,
-   "mkt": -0.16,
-   "first": {
-    "key": "stop2",
-    "nm": "손절 2차−2ATR",
-    "n": 7210,
-    "fill1": 89,
-    "fill2": 59,
-    "noFill": 11,
-    "stopRate": 19,
-    "recovered": 67,
-    "retInv": 3.47,
-    "win": 56,
-    "worst5": -9.6,
-    "retAlloc": 1.77,
-    "hold": 2.61,
-    "mkt": 2.26
-   },
-   "second": {
-    "key": "stop2",
-    "nm": "손절 2차−2ATR",
-    "n": 7257,
-    "fill1": 92,
-    "fill2": 68,
-    "noFill": 8,
-    "stopRate": 26,
-    "recovered": 47,
-    "retInv": 0.41,
-    "win": 47,
-    "worst5": -14.6,
-    "retAlloc": -0.68,
-    "hold": -1.14,
-    "mkt": -2.57
-   }
-  },
-  {
    "key": "stop3",
    "nm": "손절 2차−3ATR",
+   "adopt": false,
    "n": 14467,
    "fill1": 91,
    "fill2": 64,
@@ -170,6 +180,7 @@
    "first": {
     "key": "stop3",
     "nm": "손절 2차−3ATR",
+    "adopt": false,
     "n": 7210,
     "fill1": 89,
     "fill2": 59,
@@ -186,6 +197,7 @@
    "second": {
     "key": "stop3",
     "nm": "손절 2차−3ATR",
+    "adopt": false,
     "n": 7257,
     "fill1": 92,
     "fill2": 68,
@@ -203,6 +215,7 @@
   {
    "key": "nostop",
    "nm": "손절 없음",
+   "adopt": false,
    "n": 14467,
    "fill1": 91,
    "fill2": 64,
@@ -218,6 +231,7 @@
    "first": {
     "key": "nostop",
     "nm": "손절 없음",
+    "adopt": false,
     "n": 7210,
     "fill1": 89,
     "fill2": 59,
@@ -234,6 +248,7 @@
    "second": {
     "key": "nostop",
     "nm": "손절 없음",
+    "adopt": false,
     "n": 7257,
     "fill1": 92,
     "fill2": 68,
@@ -251,6 +266,7 @@
   {
    "key": "mkt1",
    "nm": "1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR",
+   "adopt": false,
    "n": 14467,
    "fill1": 100,
    "fill2": 70,
@@ -266,6 +282,7 @@
    "first": {
     "key": "mkt1",
     "nm": "1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR",
+    "adopt": false,
     "n": 7210,
     "fill1": 100,
     "fill2": 67,
@@ -282,6 +299,7 @@
    "second": {
     "key": "mkt1",
     "nm": "1차 = 다음 날 시가(바로 매수) · 손절 2차−1ATR",
+    "adopt": false,
     "n": 7257,
     "fill1": 100,
     "fill2": 73,
@@ -299,6 +317,7 @@
   {
    "key": "mkt1s2",
    "nm": "1차 = 다음 날 시가 · 손절 2차−2ATR",
+   "adopt": false,
    "n": 14467,
    "fill1": 100,
    "fill2": 70,
@@ -314,6 +333,7 @@
    "first": {
     "key": "mkt1s2",
     "nm": "1차 = 다음 날 시가 · 손절 2차−2ATR",
+    "adopt": false,
     "n": 7210,
     "fill1": 100,
     "fill2": 67,
@@ -330,6 +350,7 @@
    "second": {
     "key": "mkt1s2",
     "nm": "1차 = 다음 날 시가 · 손절 2차−2ATR",
+    "adopt": false,
     "n": 7257,
     "fill1": 100,
     "fill2": 73,
@@ -347,6 +368,7 @@
   {
    "key": "mkt1ns",
    "nm": "1차 = 다음 날 시가 · 손절 없음",
+   "adopt": false,
    "n": 14467,
    "fill1": 100,
    "fill2": 70,
@@ -362,6 +384,7 @@
    "first": {
     "key": "mkt1ns",
     "nm": "1차 = 다음 날 시가 · 손절 없음",
+    "adopt": false,
     "n": 7210,
     "fill1": 100,
     "fill2": 67,
@@ -378,6 +401,7 @@
    "second": {
     "key": "mkt1ns",
     "nm": "1차 = 다음 날 시가 · 손절 없음",
+    "adopt": false,
     "n": 7257,
     "fill1": 100,
     "fill2": 73,

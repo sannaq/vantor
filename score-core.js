@@ -67,10 +67,11 @@
     return { buy: a[Math.floor(a.length * 0.8)], ban: a[Math.floor(a.length * 0.2)] }; }
   /* 매수·손절 가격 (교육용 규칙) — 사이트 추천 펼침과 scripts/backtest_levels.mjs 가 같이 쓴다.
      cs = [[t,o,h,l,c,v],...] 오래된→최근. o(선택)로 규칙 숫자를 바꿔 시험한다.
-     기본: 1차 = 20일선 부근(현재가가 아래면 현재가) · 2차 = 그 아래 4ATR 안의 최대 매물대(없으면 1차−1.5ATR) · 손절 = 2차 − 1ATR */
+     기본: 1차 = 20일선 부근(현재가가 아래면 현재가) · 2차 = 그 아래 4ATR 안의 최대 매물대(없으면 1차−1.5ATR) · 손절 = 2차 − 2ATR
+     (2026-10-08 백테스트: 손절 −1ATR 은 39% 가 걸리고 그중 54% 가 다시 올라와 너무 촘촘 → −2ATR 채택, scripts/backtest_levels.mjs) */
   function tick(p) { var t = p < 2000 ? 1 : p < 5000 ? 5 : p < 20000 ? 10 : p < 50000 ? 50 : p < 200000 ? 100 : p < 500000 ? 500 : 1000; return Math.round(p / t) * t; }
   function levels(cs, o) {
-    o = o || {}; var b1Mode = o.b1 || 'ma20', b2Fb = o.b2Fb != null ? o.b2Fb : 1.5, b2Win = o.b2Win != null ? o.b2Win : 4, stopAtr = o.stopAtr != null ? o.stopAtr : 1;
+    o = o || {}; var b1Mode = o.b1 || 'ma20', b2Fb = o.b2Fb != null ? o.b2Fb : 1.5, b2Win = o.b2Win != null ? o.b2Win : 4, stopAtr = o.stopAtr != null ? o.stopAtr : 2;
     if (!cs || cs.length < 30) return null;
     var n = cs.length, px = cs[n - 1][4], tr = [];
     for (var i = Math.max(1, n - 14); i < n; i++) { var h = cs[i][2], l = cs[i][3], pc = cs[i - 1][4]; tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))); }
