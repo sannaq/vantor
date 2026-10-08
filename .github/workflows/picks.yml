@@ -25,13 +25,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+      - name: 오늘 이미 보냈는지 (예약 실행이 늦게 깨어나 두 번 가는 것 막기)
+        id: dup
+        run: |
+          today=$(TZ=Asia/Seoul date +%F)
+          if [ "${{ github.event_name }}" = "schedule" ] && git log -20 --format=%s | grep -qE "^auto $today 1[6-9]:[0-9]{2} 종합 평점"; then
+            echo "오늘 장마감 평점은 이미 보냄 → 건너뜀"; echo "skip=1" >> "$GITHUB_OUTPUT"; else echo "skip=0" >> "$GITHUB_OUTPUT"; fi
       - name: 전 종목 채점
+        if: steps.dup.outputs.skip != '1'
         run: node scripts/score_all.mjs
       - name: 오늘 장이 열렸는지
         id: day
+        if: steps.dup.outputs.skip != '1'
         run: |
           d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks.json'))['date'])")
           today=$(TZ=Asia/Seoul date +%Y%m%d)
