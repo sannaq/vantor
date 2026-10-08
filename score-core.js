@@ -65,7 +65,30 @@
   /* 채점한 점수들로 추천·매수 금지 경계(상위·하위 20%)를 정한다 */
   function cuts(totals) { var a = totals.slice().sort(function (x, y) { return x - y; }); if (!a.length) return CUT;
     return { buy: a[Math.floor(a.length * 0.8)], ban: a[Math.floor(a.length * 0.2)] }; }
-  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, W: W, CUT: CUT,
+  /* 매수·손절 가격 (교육용 규칙) — 사이트 추천 펼침과 scripts/backtest_levels.mjs 가 같이 쓴다.
+     cs = [[t,o,h,l,c,v],...] 오래된→최근. o(선택)로 규칙 숫자를 바꿔 시험한다.
+     기본: 1차 = 20일선 부근(현재가가 아래면 현재가) · 2차 = 그 아래 4ATR 안의 최대 매물대(없으면 1차−1.5ATR) · 손절 = 2차 − 1ATR */
+  function tick(p) { var t = p < 2000 ? 1 : p < 5000 ? 5 : p < 20000 ? 10 : p < 50000 ? 50 : p < 200000 ? 100 : p < 500000 ? 500 : 1000; return Math.round(p / t) * t; }
+  function levels(cs, o) {
+    o = o || {}; var b1Mode = o.b1 || 'ma20', b2Fb = o.b2Fb != null ? o.b2Fb : 1.5, b2Win = o.b2Win != null ? o.b2Win : 4, stopAtr = o.stopAtr != null ? o.stopAtr : 1;
+    if (!cs || cs.length < 30) return null;
+    var n = cs.length, px = cs[n - 1][4], tr = [];
+    for (var i = Math.max(1, n - 14); i < n; i++) { var h = cs[i][2], l = cs[i][3], pc = cs[i - 1][4]; tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))); }
+    var atr = avg(tr);
+    var mk = function (k) { var a = cs.slice(-k); return a.length < k ? null : avg(a.map(function (v) { return v[4]; })); };
+    var m20 = mk(20), m60 = mk(60);
+    var w = cs.slice(-120), lo = Math.min.apply(null, w.map(function (v) { return v[3]; })), hi = Math.max.apply(null, w.map(function (v) { return v[2]; })), B = 24, step = (hi - lo) / B || 1, vp = [];
+    for (var b = 0; b < B; b++) vp.push(0);
+    w.forEach(function (v) { var tp = (v[2] + v[3] + v[4]) / 3; vp[Math.min(B - 1, Math.floor((tp - lo) / step))] += v[5]; });
+    var tot = vp.reduce(function (s, v) { return s + v; }, 0) || 1;
+    var b1 = b1Mode === 'now' ? px : (m20 && px > m20) ? Math.max(m20, px - atr) : px;
+    var below = vp.map(function (v, k) { return { v: v, p: lo + (k + 0.5) * step }; }).filter(function (z) { return z.p < b1 * 0.99 && z.p > b1 - b2Win * atr; }).sort(function (p, q) { return q.v - p.v; })[0];
+    var b2 = below ? below.p : b1 - b2Fb * atr; if (m60 && m60 < b1 && m60 > b2) b2 = Math.max(b2, m60 * 0.995);
+    var st = stopAtr > 0 ? b2 - stopAtr * atr : null;
+    var zones = vp.map(function (v, k) { return { v: v, share: v / tot, lo: lo + k * step, hi: lo + (k + 1) * step }; }).sort(function (p, q) { return q.v - p.v; }).slice(0, 3);
+    return { px: px, atr: atr, m20: m20, m60: m60, b1: tick(b1), b2: tick(b2), st: st == null ? null : tick(st), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
+  }
+  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, W: W, CUT: CUT,
     PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]],
     VIEW_DESC: { '추천': '전 종목 상위 20% — 검증 기간에 시장보다 나았던 구간', '중립': '뚜렷한 우위 없음', '매수 금지': '전 종목 하위 20% — 검증 기간에 시장보다 못했던 구간' } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VScore = api;
