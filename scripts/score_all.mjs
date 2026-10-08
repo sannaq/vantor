@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
-const { score } = require(path.join(ROOT, 'score-core.js'));
+const { features, breakpoints, score, cuts } = require(path.join(ROOT, 'score-core.js'));
 const API = 'https://m.stock.naver.com/api';
 const LIMIT = +process.argv[2] || 0;
 const CONC = 8;
@@ -56,7 +56,7 @@ async function one(s) {
   const candles = [...xml.matchAll(/data="(\d{8})\|(\d+)\|(\d+)\|(\d+)\|(\d+)\|(\d+)"/g)].map((m) => [m[1], +m[2], +m[3], +m[4], +m[5], +m[6]]);
   const ti = {}; for (const x of (info && info.totalInfos) || []) ti[x.code] = x.value;
   const flows = (Array.isArray(trend) ? trend : []).slice().reverse().map((x) => ({ f: n(x.foreignerPureBuyQuant), i: n(x.organPureBuyQuant), v: n(x.accumulatedTradingVolume) }));
-  return score({ candles, per: n(ti.per), pbr: n(ti.pbr), div: n(ti.dividendYieldRatio), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks), flows });
+  return features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks), flows });
 }
 
 const t0 = Date.now();
@@ -73,22 +73,28 @@ await Promise.all(Array.from({ length: CONC }, async () => {
   }
 }));
 
-const rows = list.map((s, i) => ({ ...s, r: res[i] })).filter((x) => x.r);
+const rows = list.map((s, i) => ({ ...s, f: res[i] })).filter((x) => x.f);
 if (rows.length < list.length * 0.8) { console.error(`채점 성공이 너무 적음 (${rows.length}/${list.length}) → 저장 안 함`); process.exit(1); }
-const date = rows.map((x) => x.r.m.date).sort().pop(); // 가장 최근 거래일(YYYYMMDD)
-const fresh = rows.filter((x) => x.r.m.date === date);
+const date = rows.map((x) => x.f.date).sort().pop(); // 가장 최근 거래일(YYYYMMDD)
+const fresh = rows.filter((x) => x.f.date === date);
+// 기준표는 거래가 있는 종목(백테스트와 같은 모집단)으로 만들고, 그 표로 전 종목을 채점한다
+const liq0 = fresh.filter((x) => x.f.tv20 >= MIN_TV);
+const bp = breakpoints(liq0.map((x) => x.f));
+bp.cut = cuts(liq0.map((x) => score(x.f, bp).total)); // 상위 20% = 추천, 하위 20% = 매수 금지
+fresh.forEach((x) => { x.r = score(x.f, bp); });
 fresh.sort((a, b) => b.r.total - a.r.total);
 fresh.forEach((x, i) => { x.rank = i + 1; });
 
-const P = (r) => [r.parts.trend[0], r.parts.flow[0], r.parts.value[0], r.parts.risk[0]];
-const scores = { date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
-  // 코드: [총점, 등급, 관점, 순위, [추세,수급,가치,위험], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%]
-  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.grade, x.r.view, x.rank, P(x.r), x.r.good, x.r.bad, Math.round(x.r.m.tv20), x.r.m.day == null ? null : +x.r.m.day.toFixed(2)]])) };
-const liquid = fresh.filter((x) => x.r.m.tv20 >= MIN_TV);
-const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, grade: x.r.grade, view: x.r.view, parts: P(x.r),
-  good: x.r.good, bad: x.r.bad, px: x.r.m.px, day: x.r.m.day, ret20: x.r.m.ret20, rsi: x.r.m.rsi, per: x.r.m.per, pbr: x.r.m.pbr, tv20: Math.round(x.r.m.tv20) });
-const dist = { '긍정': 0, '중립': 0, '주의': 0 }; fresh.forEach((x) => dist[x.r.view]++);
-const picks = { date, minTvNote: '추천 목록은 20일 평균 거래대금 ' + MIN_TV + '억 이상만', n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
+const r1 = (v, k) => v == null ? null : +v.toFixed(k);
+const scores = { v: 2, date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
+  bp: { vol: bp.vol.map((x) => r1(x, 5)), hiGap: bp.hiGap.map((x) => r1(x, 4)), ep: bp.ep.map((x) => r1(x, 4)), cut: bp.cut }, // 사이트가 목록에 없는 종목을 같은 기준으로 채점할 때 씀
+  // 코드: [총점, 관점, 순위, [안정성,고점근접,이익], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%, 참고[]]
+  items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.view, x.rank, x.r.parts, x.r.good, x.r.bad, r1(x.f.tv20, 1), r1(x.f.day, 2), x.r.ref]])) };
+const liquid = fresh.filter((x) => x.f.tv20 >= MIN_TV);
+const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
+  px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, tv20: Math.round(x.f.tv20) });
+const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x) => dist[x.r.view]++);
+const picks = { v: 2, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 
 fs.writeFileSync(path.join(ROOT, 'feeds/stock-scores.json'), JSON.stringify(scores));

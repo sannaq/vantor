@@ -1,113 +1,72 @@
-/* VANTOR 종합 평점 — 추세 40 · 수급 25 · 가치 20 · 위험 15 = 100점
-   사이트(브라우저)와 매일 장마감 채점(scripts/score_all.mjs, Node)이 같은 공식을 쓰도록 이 파일 하나만 둔다.
-   입력: { candles:[[t,o,h,l,c,v],...] 오래된→최근, per, pbr, div, h52, l52,
-           flows:[{f:외국인순매수수량, i:기관순매수수량, v:거래량}, ...] 오래된→최근 }
+/* VANTOR 종합 평점 v2 — 백테스트(scripts/backtest.mjs)로 고른 공식
+   안정성 40 (20일 변동성이 낮을수록) · 고점 근접 30 (52주 최고가에 가까울수록) · 이익 30 (이익 대비 주가가 쌀수록, 적자는 최하)
+   점수 = 세 지표를 그날 전 종목(거래대금 5억↑) 안에서 줄 세운 위치(0~1)의 가중합 × 100
+   → 그날 전 종목 상위 20% 점수 이상 추천 · 하위 20% 점수 미만 매수 금지 · 그 사이 중립 (경계 점수는 매일 기준표 bp.cut 에 담긴다)
+   2025-09~2026-09 주간 검증: 상위 20% 는 이후 20일 평균 +0.8%p, 하위 20% 는 −1.7%p (같은 날 전체 평균 대비).
+   추세(이평·RSI)·외국인·기관 수급은 같은 검증에서 예측력이 없어 점수에서 빼고 참고 정보로만 보여준다.
+   사이트(브라우저)와 매일 채점(scripts/score_all.mjs)·백테스트가 이 파일 하나를 같이 쓴다.
    교육용 참고 지표이며 매매 신호가 아니다. */
 (function (root) {
+  var W = { stab: 40, high: 30, earn: 30 }, CUT = { buy: 68, ban: 33 }; // CUT 은 기준표가 없을 때만 쓰는 대략값
   function num(v) { return v == null || v === '' || isNaN(+v) ? null : +v; }
   function avg(a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : null; }
-  function ma(c, n, end) { end = end == null ? c.length : end; return end >= n ? avg(c.slice(end - n, end)) : null; }
-  function rsi(c, n) {
-    n = n || 14; if (c.length <= n) return null;
-    var g = 0, l = 0;
-    for (var i = 1; i <= n; i++) { var d = c[i] - c[i - 1]; if (d > 0) g += d; else l -= d; }
-    g /= n; l /= n;
-    for (var j = n + 1; j < c.length; j++) { var e = c[j] - c[j - 1]; g = (g * (n - 1) + Math.max(e, 0)) / n; l = (l * (n - 1) + Math.max(-e, 0)) / n; }
-    return l === 0 ? 100 : 100 - 100 / (1 + g / l);
-  }
-  function ema(a, n) { var k = 2 / (n + 1), out = [], p = a[0]; a.forEach(function (x) { p = x * k + p * (1 - k); out.push(p); }); return out; }
+  function ma(c, n) { return c.length >= n ? avg(c.slice(-n)) : null; }
   function pct(a, b) { return a && b ? (a / b - 1) * 100 : null; }
-  function f1(v) { return (v >= 0 ? '+' : '') + v.toFixed(1); }
 
-  function score(d) {
+  /* 원자료 → 지표. candles=[[t,o,h,l,c,v],...] 오래된→최근, flows=[{f,i,v}] (참고용) */
+  function features(d) {
     var cs = (d.candles || []).filter(function (x) { return x && x[4] > 0; });
     if (cs.length < 30) return null;
-    var c = cs.map(function (x) { return +x[4]; }), v = cs.map(function (x) { return +x[5] || 0; });
-    var n = c.length, px = c[n - 1];
-    var m20 = ma(c, 20), m60 = ma(c, 60), m120 = ma(c, 120), m20p = ma(c, 20, n - 5);
-    var r = rsi(c, 14);
-    var e12 = ema(c, 12), e26 = ema(c, 26), macd = c.map(function (_, i) { return e12[i] - e26[i]; }), sig = ema(macd, 9);
-    var hist = macd[n - 1] - sig[n - 1], histP = macd[n - 2] - sig[n - 2];
-    var v5 = avg(v.slice(-5)), v20 = avg(v.slice(-20));
-    var ret5 = pct(px, c[n - 6]), ret20 = pct(px, c[n - 21] || c[0]), day = pct(px, c[n - 2]);
-    var rets = []; for (var i = Math.max(1, n - 20); i < n; i++) rets.push((c[i] / c[i - 1] - 1) * 100);
-    var vol = Math.sqrt(avg(rets.map(function (x) { return x * x; })) - Math.pow(avg(rets), 2));
-    var tv20 = avg(cs.slice(-20).map(function (x) { return x[4] * x[5]; })) / 1e8; // 20일 평균 거래대금(억)
-    var good = [], bad = [];
-
-    /* 추세 40 */
-    var t = 0;
-    if (m20 && px > m20) t += 6; if (m20 && m60 && m20 > m60) t += 6; if (m120 && px > m120) t += 4;
-    var slope = pct(m20, m20p);
-    if (slope != null) t += slope >= 1 ? 6 : slope > 0 ? 3 : 0;
-    if (r != null) t += (r >= 50 && r <= 65) ? 8 : ((r >= 45 && r < 50) || (r > 65 && r <= 70)) ? 5 : ((r >= 40 && r < 45) || (r > 70 && r <= 75)) ? 2 : 0;
-    t += hist > 0 && hist > histP ? 5 : hist > 0 ? 3 : 0;
-    var vr = v20 ? v5 / v20 : null;
-    t += vr != null && vr >= 1.2 && ret5 > 0 ? 5 : vr != null && vr >= 1 ? 3 : 0;
-    if (m20 && m60 && m120 && px > m20 && m20 > m60 && m60 > m120) good.push('이평선 정배열(20>60>120일)');
-    else if (m20 && m60 && px < m20 && m20 < m60) bad.push('20일선 아래·역배열');
-    if (slope != null && slope >= 1) good.push('20일선 상승 중(' + f1(slope) + '%/주)');
-    if (hist > 0 && histP <= 0) good.push('MACD 상향 전환');
-    if (vr != null && vr >= 1.5 && ret5 > 0) good.push('거래량 증가 동반 상승(' + vr.toFixed(1) + '배)');
-
-    /* 수급 25 */
-    var fl = (d.flows || []).filter(function (x) { return x && x.v != null; }), f = null, fbuy = 0, ibuy = 0;
-    if (fl.length >= 5) {
-      var last = fl.slice(-20), sumFI = 0, sumV = 0;
-      last.forEach(function (x) { sumFI += (+x.f || 0) + (+x.i || 0); sumV += +x.v || 0; });
-      var ratio = sumV ? sumFI / sumV : 0;
-      f = ratio >= 0.10 ? 15 : ratio >= 0.05 ? 12 : ratio >= 0.02 ? 9 : ratio >= 0 ? 6 : ratio >= -0.05 ? 3 : 0;
-      var l5 = fl.slice(-5), f5 = 0, i5 = 0;
-      l5.forEach(function (x) { f5 += +x.f || 0; i5 += +x.i || 0; });
-      f += f5 > 0 && i5 > 0 ? 5 : (f5 > 0 || i5 > 0) ? 3 : 0;
-      for (var k = fl.length - 1; k >= 0 && (+fl[k].f || 0) > 0; k--) fbuy++;
-      for (var q = fl.length - 1; q >= 0 && (+fl[q].i || 0) > 0; q--) ibuy++;
-      f += Math.max(fbuy, ibuy) >= 3 ? 5 : Math.max(fbuy, ibuy) >= 1 ? 2 : 0;
-      if (f5 > 0 && i5 > 0) good.push('최근 5일 외국인·기관 동반 순매수');
-      else if (f5 < 0 && i5 < 0) bad.push('최근 5일 외국인·기관 동반 순매도');
-      if (fbuy >= 3) good.push('외국인 ' + fbuy + '일 연속 순매수');
-      if (ibuy >= 3) good.push('기관 ' + ibuy + '일 연속 순매수');
-      if (ratio <= -0.05) bad.push('20일 외국인·기관 순매도 우위');
-    }
-    var fMiss = f == null; if (fMiss) f = 12.5;
-
-    /* 가치 20 */
-    var per = num(d.per), pbr = num(d.pbr), dv = num(d.div), val = 0, vMiss = per == null && pbr == null;
-    if (vMiss) val = 10;
-    else {
-      val += per == null ? 5 : per <= 0 ? 2 : per < 8 ? 10 : per < 12 ? 8 : per < 20 ? 6 : per < 35 ? 3 : 1;
-      val += pbr == null ? 3 : pbr < 0.7 ? 6 : pbr < 1 ? 5 : pbr < 1.5 ? 4 : pbr < 3 ? 2 : 1;
-      val += dv == null ? 0 : dv >= 4 ? 4 : dv >= 2 ? 3 : dv >= 1 ? 2 : dv > 0 ? 1 : 0;
-      if (per != null && per > 0 && per < 10) good.push('PER ' + per.toFixed(1) + '배 (낮음)');
-      if (per != null && per <= 0) bad.push('적자(PER 음수)');
-      if (pbr != null && pbr < 1) good.push('PBR ' + pbr.toFixed(2) + '배 (자산가치 이하)');
-      if (dv != null && dv >= 3) good.push('배당수익률 ' + dv.toFixed(1) + '%');
-    }
-
-    /* 위험 15 — 높을수록 안전 */
-    var rk = 0;
-    rk += vol < 1.5 ? 6 : vol < 2.5 ? 5 : vol < 3.5 ? 3 : vol < 5 ? 1 : 0;
-    var h52 = num(d.h52) || Math.max.apply(null, c.slice(-250)), l52 = num(d.l52) || Math.min.apply(null, c.slice(-250));
-    var pos = h52 > l52 ? (px - l52) / (h52 - l52) : 0.5;
-    rk += pos >= 0.4 && pos <= 0.85 ? 5 : pos > 0.85 ? 3 : pos >= 0.2 ? 3 : 1;
-    var hot = (r != null && r > 75) || (ret5 != null && ret5 > 20) || (day != null && day > 15);
-    rk += hot ? 0 : 4;
-    if (vol >= 5) bad.push('변동성 큼(하루 ±' + vol.toFixed(1) + '%)');
-    if (hot) bad.push(r > 75 ? 'RSI ' + Math.round(r) + ' 과열' : '단기 급등(5일 ' + f1(ret5) + '%)');
-    if (pos < 0.2) bad.push('52주 최저가 부근');
-
-    var total = Math.round(t + f + val + rk);
-    var grade = total >= 75 ? 'A' : total >= 62 ? 'B' : total >= 50 ? 'C' : total >= 38 ? 'D' : 'E';
-    var view = total >= 62 ? '긍정' : total >= 50 ? '중립' : '주의';
+    var c = cs.map(function (x) { return +x[4]; }), n = c.length, px = c[n - 1];
+    var rets = []; for (var i = Math.max(1, n - 20); i < n; i++) rets.push(c[i] / c[i - 1] - 1);
+    var m = avg(rets), vol = Math.sqrt(avg(rets.map(function (x) { return (x - m) * (x - m); })));
+    var w = c.slice(-250), hi = num(d.h52) || Math.max.apply(null, w), lo = num(d.l52) || Math.min.apply(null, w);
+    hi = Math.max(hi, px);
+    var per = num(d.per);
+    var tv20 = avg(cs.slice(-20).map(function (x) { return x[4] * x[5]; })) / 1e8;
+    // 참고 정보(점수 미반영)
+    var m20 = ma(c, 20), m60 = ma(c, 60), fl = (d.flows || []).slice(-5), f5 = 0, i5 = 0;
+    fl.forEach(function (x) { f5 += +x.f || 0; i5 += +x.i || 0; });
     return {
-      total: total, grade: grade, view: view,
-      parts: { trend: [t, 40], flow: [Math.round(f), 25], value: [val, 20], risk: [rk, 15] },
-      miss: { flow: fMiss, value: vMiss },
-      good: good.slice(0, 4), bad: bad.slice(0, 3),
-      m: { px: px, day: day, ret5: ret5, ret20: ret20, rsi: r, vol: vol, pos: pos, per: per, pbr: pbr, div: dv, tv20: tv20,
-           ma20: m20, ma60: m60, date: cs[n - 1][0] }
+      vol: vol, hiGap: px / hi - 1, ep: per != null && per > 0 ? 1 / per : -1, per: per,
+      tv20: tv20, px: px, day: pct(px, c[n - 2]), ret20: pct(px, c[Math.max(0, n - 21)]), date: cs[n - 1][0],
+      trend: m20 && m60 ? (px > m20 && m20 > m60 ? '상승 추세' : px < m20 && m20 < m60 ? '하락 추세' : '횡보') : null,
+      flow5: fl.length >= 5 ? (f5 > 0 && i5 > 0 ? '외국인·기관 동반 순매수' : f5 < 0 && i5 < 0 ? '외국인·기관 동반 순매도' : '외국인·기관 엇갈림') : null
     };
   }
-  var api = { score: score, VIEW_DESC: { '긍정': '추세·수급이 받쳐주는 편', '중립': '방향이 뚜렷하지 않음', '주의': '추세·수급·위험 중 약한 곳이 많음' } };
+
+  /* 기준표: 지표마다 0~100 분위 경계값 (그날 전 종목에서) */
+  function breakpoints(list) {
+    function q(arr) { arr = arr.filter(function (x) { return x != null && isFinite(x); }).sort(function (a, b) { return a - b; });
+      var out = []; for (var k = 0; k <= 100; k++) out.push(arr.length ? arr[Math.min(arr.length - 1, Math.round(k / 100 * (arr.length - 1)))] : 0); return out; }
+    return { vol: q(list.map(function (f) { return f.vol; })), hiGap: q(list.map(function (f) { return f.hiGap; })), ep: q(list.map(function (f) { return f.ep; })) };
+  }
+  function rankIn(bp, v) { // 기준표 안 위치 0~1
+    if (v == null || !bp || !bp.length) return 0.5;
+    var lo = 0, hi = bp.length - 1;
+    if (v <= bp[0]) return 0; if (v >= bp[hi]) return 1;
+    while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (bp[mid] <= v) lo = mid; else hi = mid; }
+    var span = bp[hi] - bp[lo]; return (lo + (span ? (v - bp[lo]) / span : 0.5)) / (bp.length - 1);
+  }
+
+  function score(f, bp) {
+    if (!f || !bp) return null;
+    var rs = 1 - rankIn(bp.vol, f.vol), rh = rankIn(bp.hiGap, f.hiGap), re = f.ep < 0 ? 0 : rankIn(bp.ep, f.ep);
+    var parts = [Math.round(W.stab * rs), Math.round(W.high * rh), Math.round(W.earn * re)];
+    var total = Math.round(W.stab * rs + W.high * rh + W.earn * re);
+    var cut = bp.cut || CUT, view = total >= cut.buy ? '추천' : total < cut.ban ? '매수 금지' : '중립';
+    var good = [], bad = [], gp = (f.hiGap * 100).toFixed(1);
+    if (rs >= 0.7) good.push('주가 흔들림 작음(하루 ±' + (f.vol * 100).toFixed(1) + '%)'); else if (rs <= 0.3) bad.push('변동성 큼(하루 ±' + (f.vol * 100).toFixed(1) + '%)');
+    if (rh >= 0.7) good.push('52주 고점 대비 덜 빠짐(' + gp + '%)'); else if (rh <= 0.3) bad.push('52주 고점 대비 ' + gp + '%');
+    if (f.ep < 0) bad.push('적자(PER 없음)'); else if (re >= 0.7) good.push('이익 대비 주가 쌈(PER ' + f.per.toFixed(1) + '배)'); else if (re <= 0.3) bad.push('이익 대비 비쌈(PER ' + f.per.toFixed(1) + '배)');
+    return { total: total, view: view, cut: cut, parts: parts, good: good, bad: bad, ref: [f.trend, f.flow5].filter(Boolean), m: f };
+  }
+
+  /* 채점한 점수들로 추천·매수 금지 경계(상위·하위 20%)를 정한다 */
+  function cuts(totals) { var a = totals.slice().sort(function (x, y) { return x - y; }); if (!a.length) return CUT;
+    return { buy: a[Math.floor(a.length * 0.8)], ban: a[Math.floor(a.length * 0.2)] }; }
+  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, W: W, CUT: CUT,
+    PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]],
+    VIEW_DESC: { '추천': '전 종목 상위 20% — 검증 기간에 시장보다 나았던 구간', '중립': '뚜렷한 우위 없음', '매수 금지': '전 종목 하위 20% — 검증 기간에 시장보다 못했던 구간' } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VScore = api;
 })(typeof window !== 'undefined' ? window : globalThis);
