@@ -91,7 +91,22 @@
     var zones = vp.map(function (v, k) { return { v: v, share: v / tot, lo: lo + k * step, hi: lo + (k + 1) * step }; }).sort(function (p, q) { return q.v - p.v; }).slice(0, 3);
     return { px: px, atr: atr, m20: m20, m60: m60, b1: tick(b1), b2: tick(b2), st: st == null ? null : tick(st), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
   }
-  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, W: W, CUT: CUT,
+  /* 한 건 모의매매 — 1차 50%·2차 50% 지정가, 손절가 닿으면 매도, H거래일째 종가 정리.
+     c = 일봉, i = 가격을 정한 날(그날 장마감 뒤), L = levels() 결과. 체결: 시가가 지정가 이하면 시가, 아니면 저가가 닿으면 지정가.
+     같은 날 손절가도 닿으면 그날 손절(보수적). 시가·저가 0 = 거래 없던 날 → 종가로. */
+  function simulate(c, i, L, H) {
+    var legs = [{ p: L.b1, w: 0.5, fill: null }, { p: L.b2, w: 0.5, fill: null }], exit = null, stopped = false;
+    for (var k = i + 1; k <= i + H; k++) {
+      var cl = c[k][4], o = c[k][1] > 0 ? c[k][1] : cl, l = c[k][3] > 0 ? c[k][3] : Math.min(o, cl);
+      legs.forEach(function (g) { if (g.fill == null && l <= g.p) g.fill = o <= g.p ? o : g.p; });
+      if (legs.some(function (g) { return g.fill != null; }) && L.st != null && l <= L.st) { exit = o <= L.st ? o : L.st; stopped = true; break; }
+    }
+    if (exit == null) exit = c[i + H][4];
+    var filled = legs.filter(function (g) { return g.fill != null; }), w = filled.reduce(function (s, g) { return s + g.w; }, 0);
+    var ret = w ? filled.reduce(function (s, g) { return s + g.w * (exit / g.fill - 1); }, 0) / w : null;
+    return { f1: legs[0].fill != null, f2: legs[1].fill != null, w: w, ret: ret, alloc: ret == null ? 0 : ret * w, stopped: stopped, recovered: stopped ? c[i + H][4] > L.st : null };
+  }
+  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, simulate: simulate, W: W, CUT: CUT,
     PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]],
     VIEW_DESC: { '추천': '전 종목 상위 20% — 검증 기간 60일 보유 시 시장보다 나았던 구간', '중립': '뚜렷한 우위 없음', '매수 금지': '전 종목 하위 20% — 검증 기간 60일 보유 시 시장보다 못했던 구간' } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VScore = api;

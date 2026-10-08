@@ -39,7 +39,7 @@ function cross(dt, H, opt) { // 그날 채점 → 각 종목 {view, ret(다음 �
   return arr;
 }
 function measure(H, step, opt = {}) {
-  const ds = []; for (let k = 160; k + H + 1 < ref.length; k += step) ds.push(ref[k]);
+  const ds = []; for (let k = +(process.env.BT_WARM || 160); k + H + 1 < ref.length; k += step) ds.push(ref[k]);
   const rows = [];
   for (const dt of ds) {
     const a = cross(dt, H, opt); if (!a) continue;

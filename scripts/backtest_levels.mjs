@@ -21,7 +21,7 @@ if (files.length < 1000) { console.error('캐시가 없어요 — 먼저 node sc
 const data = files.map((f) => JSON.parse(fs.readFileSync(path.join(CACHE, f), 'utf8'))).filter((d) => d.candles.length >= 200);
 const mean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
 const ref = data.reduce((a, d) => (d.candles.length > a.length ? d.candles : a), []).map((x) => x[0]);
-const dates = []; for (let k = 160; k + H + 1 < ref.length; k += STEP) dates.push(ref[k]);
+const dates = []; for (let k = +(process.env.BT_WARM || 160); k + H + 1 < ref.length; k += STEP) dates.push(ref[k]);
 const idx = data.map((d) => new Map(d.candles.map((x, i) => [x[0], i])));
 
 // ① 날짜마다 추천 종목 고르기 (사이트·매일 채점과 같은 길)
@@ -43,22 +43,8 @@ for (const dt of dates) {
 }
 console.log(`평가일 ${mkt.size}개 · 추천 종목-주 ${picks.length.toLocaleString()}건`);
 
-// ② 한 건 모의매매
-function sim(c, i, L) {
-  const legs = [{ p: L.b1, w: 0.5, fill: null }, { p: L.b2, w: 0.5, fill: null }];
-  let exit = null, stopped = false, stopDay = null;
-  for (let k = i + 1; k <= i + H; k++) {
-    const [, o0, h, l0, cl] = c[k]; const o = o0 > 0 ? o0 : cl, l = l0 > 0 ? l0 : Math.min(o, cl); // 시가·저가 0 = 거래 없던 날
-    for (const g of legs) if (g.fill == null && l <= g.p) g.fill = o <= g.p ? o : g.p;
-    const inPos = legs.some((g) => g.fill != null);
-    if (inPos && L.st != null && l <= L.st) { exit = o <= L.st ? o : L.st; stopped = true; stopDay = k; break; }
-  }
-  if (exit == null) exit = c[i + H][4];
-  const filled = legs.filter((g) => g.fill != null), w = filled.reduce((s, g) => s + g.w, 0);
-  const ret = w ? filled.reduce((s, g) => s + g.w * (exit / g.fill - 1), 0) / w : null; // 들어간 돈 기준
-  return { f1: legs[0].fill != null, f2: legs[1].fill != null, w, ret, alloc: ret == null ? 0 : ret * w, stopped,
-    recovered: stopped ? c[i + H][4] > L.st : null };
-}
+// ② 한 건 모의매매 — score-core.js simulate() (실제 성과 기록 scripts/track.mjs 와 같은 계산)
+const sim = (c, i, L) => V.simulate(c, i, L, H);
 
 // ③ 규칙 후보
 const RULES = [

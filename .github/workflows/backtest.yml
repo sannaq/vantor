@@ -17,17 +17,21 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
+    env:
+      BT_CACHE: /tmp/vantor-bt3
+      BT_DAYS: "1000"   # 약 4년치 일봉 → 3년 검증 (2026-10-08 사용자 결정)
+      BT_WARM: "250"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
       - name: 백테스트
-        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs
+        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs && node scripts/audit_backtest.mjs
       - name: 결과 올리기
         run: |
-          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json
+          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json feeds/backtest-audit.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F') 백테스트"

@@ -16,7 +16,7 @@ const { features, breakpoints, score, cuts } = require(path.join(ROOT, 'score-co
 const API = 'https://m.stock.naver.com/api';
 const CACHE = process.env.BT_CACHE || '/tmp/vantor-bt';
 const REFRESH = process.argv.includes('--refresh');
-const MIN_TV = 5, STEP = 5, WARM = 160, H = +(process.env.BT_H || 20), HZ = [5, H]; // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-60.json)
+const MIN_TV = 5, STEP = 5, WARM = +(process.env.BT_WARM || 160), H = +(process.env.BT_H || 20), HZ = [5, H]; // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-60.json)
 fs.mkdirSync(CACHE, { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -43,7 +43,7 @@ async function universe() {
 async function fetchOne(s) {
   const f = path.join(CACHE, s.c + '.json');
   if (!REFRESH && fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8'));
-  const xml = await get(`https://fchart.stock.naver.com/sise.nhn?symbol=${s.c}&timeframe=day&count=420&requestType=0`, true);
+  const xml = await get(`https://fchart.stock.naver.com/sise.nhn?symbol=${s.c}&timeframe=day&count=${process.env.BT_DAYS || 420}&requestType=0`, true);
   const candles = [...xml.matchAll(/data="(\d{8})\|(\d+)\|(\d+)\|(\d+)\|(\d+)\|(\d+)"/g)].map((m) => [m[1], +m[2], +m[3], +m[4], +m[5], +m[6]]);
   const info = await get(`${API}/stock/${s.c}/integration`).catch(() => null);
   const ti = {}; for (const x of (info && info.totalInfos) || []) ti[x.code] = x.value;
@@ -136,7 +136,7 @@ const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().sli
     { nm: '60일 상승률', used: false, ...factorIC((o) => o.mom) },
     { nm: '외국인·기관 20일 순매수', used: false, ...factorIC((o) => o.flow) },
   ],
-  limits: ['PER 은 과거 값이 없어 현재 값으로 계산(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영', '검증 기간 약 1년'] };
+  limits: ['PER 은 과거 값이 없어 현재 값으로 계산(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영'] };
 fs.writeFileSync(path.join(ROOT, H === 20 ? 'feeds/backtest.json' : `feeds/backtest-${H}.json`), JSON.stringify(res, null, 1));
 const P = (x) => (x >= 0 ? '+' : '') + x.toFixed(2) + '%';
 for (const k of ['all', 'first', 'second']) { const r = res[k];

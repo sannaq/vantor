@@ -39,6 +39,12 @@ jobs:
       - name: 전 종목 채점
         if: steps.dup.outputs.skip != '1'
         run: node scripts/score_all.mjs
+      - name: 실제 성과 기록 (오늘 추천 저장 · 지난 추천 결과 계산)
+        if: steps.dup.outputs.skip != '1'
+        run: |
+          d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks.json'))['date'])")
+          if [ "$d" = "$(TZ=Asia/Seoul date +%Y%m%d)" ]; then node scripts/track.mjs record; fi
+          node scripts/track.mjs eval
       - name: 오늘 장이 열렸는지
         id: day
         if: steps.dup.outputs.skip != '1'
@@ -50,7 +56,7 @@ jobs:
       - name: 결과 올리기
         if: steps.day.outputs.open == '1'
         run: |
-          git add feeds/stock-scores.json feeds/stock-picks.json feeds/stock-news.json feeds/stock-detail.json
+          git add feeds/stock-scores.json feeds/stock-picks.json feeds/stock-news.json feeds/stock-detail.json feeds/track feeds/track-summary.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 종합 평점"
