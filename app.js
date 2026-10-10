@@ -1297,13 +1297,19 @@ window.backToBrowse=backToBrowse;
 var _VSC=null, _vscP=null;
 function _loadVScores(){ if(_vscP)return _vscP; _vscP=fetch('feeds/stock-scores.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ _VSC=(j&&j.v===2)?j:null; return _VSC; }).catch(function(){ return null; }); return _vscP; }
 var _VS_PARTS=(typeof VScore!=='undefined')?VScore.PARTS:[['안정성',40],['고점 근접',30],['이익',30]];
+var _VS_PARTS_US=(typeof VScore!=='undefined'&&VScore.PARTS_US)?VScore.PARTS_US:[['모멘텀',67],['흑자',33]];
+/* 미장 채점 (feeds/stock-scores-us.json, 미국 장마감 뒤 아침 7시 KST 갱신, 종목 키 = 티커) — 2026-10-10 미장 전용 공식 */
+var _VSCU=null, _vscPU=null;
+function _loadVScoresUS(){ if(_vscPU)return _vscPU; _vscPU=fetch('feeds/stock-scores-us.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ _VSCU=(j&&j.v===2)?j:null; return _VSCU; }).catch(function(){ return null; }); return _vscPU; }
+function _vsPartsOf(us){ return us?_VS_PARTS_US:_VS_PARTS; }
+function _usd(v){ v=+v; return '$'+v.toLocaleString('en-US',{minimumFractionDigits:v<100?2:0,maximumFractionDigits:2}); }
 var _VS_VC={'추천':'#2ebd85','중립':'#f0b90b','매수 금지':'#f6465d'};
 function _vsDate(d){ d=String(d||''); return d.length===8?(+d.slice(4,6))+'/'+(+d.slice(6,8)):''; }
 function _vsBadge(total,view,size){ var vc=_VS_VC[view]||'var(--faint)', s=size||74;
   return '<div style="width:'+s+'px;height:'+s+'px;border-radius:'+Math.round(s/4.5)+'px;border:'+(s>60?3:2)+'px solid '+vc+';display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none"><b style="font-size:'+Math.round(s*0.37)+'px;line-height:1">'+total+'</b><span style="font-size:'+Math.max(9.5,Math.round(s*0.15))+'px;font-weight:800;color:'+vc+'">'+(view==='매수 금지'?'금지':view)+'</span></div>'; }
-function _vsHTML(v,src,cut){
+function _vsHTML(v,src,cut,us){
   var vc=_VS_VC[v.view]||'var(--faint)';
-  var parts=_VS_PARTS.map(function(p,i){ var x=v.parts[i]||0, w=Math.max(0,Math.min(100,x/p[1]*100));
+  var parts=_vsPartsOf(us).map(function(p,i){ var x=v.parts[i]||0, w=Math.max(0,Math.min(100,x/p[1]*100));
     return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0"><span style="width:58px;color:var(--sub)">'+p[0]+'</span>'
       +'<div style="flex:1;height:7px;background:var(--panel2);border-radius:4px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff;border-radius:4px"></div></div>'
       +'<b style="width:52px;text-align:right">'+x+'<span style="color:var(--faint);font-weight:600">/'+p[1]+'</span></b></div>'; }).join('');
@@ -1319,36 +1325,40 @@ function _vsHTML(v,src,cut){
       +'<div style="flex:1;min-width:220px">'+parts+'</div>'
       +'<div style="flex:1.3;min-width:240px">'+(why||'<div style="font-size:12.5px;color:var(--faint)">뚜렷한 특징이 없어요</div>')+'</div>'
     +'</div>'
-    +'<div style="font-size:11px;color:var(--faint);padding:0 20px 14px">안정성 40 · 고점 근접 30 · 이익 30 = 100점 · '+cutTxt+' · 백테스트로 고른 공식 · 60일 보유 기준(추천 화면 \'검증 결과\') · 교육용 참고 지표이며 매매 신호가 아닙니다.</div></div>';
+    +'<div style="font-size:11px;color:var(--faint);padding:0 20px 14px">'+(us?'미장 공식: 1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30')+' = 100점 · '+cutTxt+' · 백테스트로 고른 공식 · 60일 보유 기준(추천 화면 \'검증 결과\') · 교육용 참고 지표이며 매매 신호가 아닙니다.</div></div>';
 }
 function renderVScore(r){
   var el=$('#vscore'); if(!el||typeof VScore==='undefined')return;
   var code=r.c, isUS=r.ccy==='USD';
   el.innerHTML='<div class="card" style="margin-top:14px"><div class="pad" style="font-size:12.5px;color:var(--faint)">🧭 종합 평점 계산 중…</div></div>';
   function still(){ var e=$('#vscore'); return e&&SEL&&SEL.c===code?e:null; }
-  _loadVScores().then(function(j){
+  (isUS?_loadVScoresUS():_loadVScores()).then(function(j){
     var it=j&&j.items&&j.items[code];
     if(it){ var e=still(); if(!e)return;
-      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8]}, _vsDate(j.date)+' 장마감 기준', j.bp&&j.bp.cut); return; }
+      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8]}, (isUS?'미국 ':'')+_vsDate(j.date)+' 장마감 기준', j.bp&&j.bp.cut, isUS); return; }
     if(!j||!j.bp||typeof proxyJson!=='function'){ var e0=still(); if(e0)e0.innerHTML=''; return; }
     var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(code)+(isUS?'&exch='+usExch(r.mk):'');
-    Promise.all([ proxyJson('/candles?'+base+'&tf=D&limit=250').catch(function(){return null;}), proxyJson('/info?'+base).catch(function(){return null;}) ]).then(function(a){
+    Promise.all([ proxyJson('/candles?'+base+'&tf=D&limit=260').catch(function(){return null;}), proxyJson('/info?'+base).catch(function(){return null;}) ]).then(function(a){
       var e=still(); if(!e)return;
-      var inf=a[1]||{}, f=VScore.features({candles:(a[0]&&a[0].candles)||[], per:inf.per||null, h52:inf.h52||null, l52:inf.l52||null});
+      var inf=a[1]||{}, f=VScore.features({candles:(a[0]&&a[0].candles)||[], per:inf.per||null, h52:inf.h52||null, l52:inf.l52||null}); // 미장 모멘텀은 일봉 251개 이상 필요
       var v=f&&VScore.score(f,j.bp);
       if(!v){ e.innerHTML='<div class="card" style="margin-top:14px"><div class="pad" style="font-size:12.5px;color:var(--faint)">🧭 종합 평점 — 일봉 자료가 부족해 계산하지 못했어요</div></div>'; return; }
-      e.innerHTML=_vsHTML(v,'지금 시세로 계산 · 국내 '+_vsDate(j.date)+' 기준표', j.bp.cut);
+      e.innerHTML=_vsHTML(v,'지금 시세로 계산 · '+(isUS?'미국':'국내')+' '+_vsDate(j.date)+' 기준표', j.bp.cut, isUS);
     });
   });
 }
 /* ═══════════ 추천 (종합 평점 순위) — 메뉴 '추천' + 홈 TOP 5 ═══════════ */
-var _recoF={view:'추천',mk:'all',liq:true,sort:0,show:50};
-var _RECO_SORTS=[['종합',-1],['안정성',0],['고점 근접',1],['이익',2]];
+var _recoF={m:'KR',view:'추천',mk:'all',liq:true,sort:0,show:50};
+var _RECO_SORTS=[['종합',-1],['안정성',0],['고점 근접',1],['이익',2]], _RECO_SORTS_US=[['종합',-1],['모멘텀',0],['흑자',1]];
+var _US={}; // 미장 검증·성과 (feeds/*-us.json)
+function _recoUS(){ return _recoF.m==='US'; }
+function _recoSc(){ return _recoUS()?_VSCU:_VSC; }
 var _BT=null, _BT60=null, _BTL60=null;
-function _recoRows(j){ var L={}; (_STKLIST||[]).forEach(function(x){ L[x[0]]=x; });
-  return Object.keys(j.items||{}).map(function(c){ var it=j.items[c], l=L[c]||[];
-    return {c:c,n:l[1]||c,mk:l[2]||'',total:it[0],view:it[1],rank:it[2],parts:it[3],good:it[4]||[],bad:it[5]||[],tv:it[6],day:it[7],ref:it[8]||[]}; }); }
-function _recoMini(parts){ return _VS_PARTS.map(function(p,i){ var w=Math.max(0,Math.min(100,(parts[i]||0)/p[1]*100));
+function _recoRows(j){ var L={}; if(j&&j.market!=='US')(_STKLIST||[]).forEach(function(x){ L[x[0]]=x; });
+  return Object.keys((j&&j.items)||{}).map(function(c){ var it=j.items[c], l=L[c]||[];
+    if(j.market==='US')l=[c,it[12]||c,it[13]||''];
+    return {c:c,us:j.market==='US',n:l[1]||c,mk:l[2]||'',total:it[0],view:it[1],rank:it[2],parts:it[3],good:it[4]||[],bad:it[5]||[],tv:it[6],day:it[7],ref:it[8]||[]}; }); }
+function _recoMini(parts,us){ return _vsPartsOf(us).map(function(p,i){ var w=Math.max(0,Math.min(100,(parts[i]||0)/p[1]*100));
   return '<div title="'+p[0]+' '+parts[i]+'/'+p[1]+'" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)"><span style="width:48px">'+p[0]+'</span><div style="width:56px;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff"></div></div></div>'; }).join(''); }
 function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
   var why=(x.view==='매수 금지'?x.bad.concat(x.good):x.good.concat(x.bad)).slice(0,2);
@@ -1357,7 +1367,7 @@ function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
     +'<div style="width:26px;text-align:center;font-weight:800;color:var(--faint);font-size:13px">'+i+'</div>'+_vsBadge(x.total,x.view,48)
     +'<div style="flex:1;min-width:180px"><div style="font-weight:800;font-size:14.5px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+x.c+' · '+esc(x.mk)+'</span> '+dy+'</div>'
       +'<div style="font-size:12px;color:var(--sub);margin-top:2px"><b style="color:'+vc+'">'+x.view+'</b>'+(why.length?' · '+why.map(esc).join(' · '):'')+'</div></div>'
-    +'<div style="display:flex;flex-direction:column;gap:2px">'+_recoMini(x.parts)+'</div><div style="color:var(--faint);font-size:12px">▾</div></div>'
+    +'<div style="display:flex;flex-direction:column;gap:2px">'+_recoMini(x.parts,x.us)+'</div><div style="color:var(--faint);font-size:12px">▾</div></div>'
     +'<div id="rx-'+x.c+'" style="display:none"></div>'; }
 /* 실제 성과 (feeds/track-summary.json — 매일 그날 추천을 기록하고 20·60거래일 뒤 실제 결과를 계산, scripts/track.mjs) */
 var _TRK=null, _AUD=null;
@@ -1383,43 +1393,52 @@ function _ymd(d){ d=String(d||''); return d.length===8?d.slice(2,4)+'.'+(+d.slic
 function _btHTML(b){ if(!b||!b.all)return '';
   var P=function(x){ return '<b class="'+(x>=0?'up':'down')+'">'+(x>=0?'+':'')+x.toFixed(2)+'%</b>'; };
   var row=function(lab,r){ return '<tr><td class="l">'+lab+'<div style="font-size:10.5px;color:var(--faint)">'+_ymd(r.from)+'~'+_ymd(r.to)+' · '+r.n+'주</div></td><td>'+P(r.groups['추천'].x20)+'</td><td>'+P(r.groups['중립'].x20)+'</td><td>'+P(r.groups['매수 금지'].x20)+'</td><td>'+r.beatWeeks['추천']+'%</td><td>'+r.beatWeeks['매수 금지']+'%</td></tr>'; };
-  var fac=(b.factors||[]).map(function(f){ return '<tr><td class="l">'+(f.used?'● ':'○ ')+esc(f.nm)+'</td><td>'+f.first.toFixed(3)+'</td><td>'+f.second.toFixed(3)+'</td><td>'+(f.used?'점수에 사용':'제외 — 예측력 없음')+'</td></tr>'; }).join('');
-  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🧪 검증 결과 (백테스트 · '+b.horizon+'일 보유)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
+  var fac=(b.factors||[]).map(function(f){ return '<tr><td class="l">'+(f.used?'● ':'○ ')+esc(f.nm)+'</td><td>'+f.first.toFixed(3)+'</td><td>'+f.second.toFixed(3)+'</td><td>'+(f.used?'점수에 사용':(b.market==='US'?'제외 — 최근 예측력 약함':'제외 — 예측력 없음'))+'</td></tr>'; }).join('');
+  return '<div class="card" style="margin-top:14px"><div class="ch"><h2>🧪 '+(b.market==='US'?'미장 ':'')+'검증 결과 (백테스트 · '+b.horizon+'일 보유)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+esc(b.updated)+' 검증 · 매달 1일 다시 검증</span></div></div>'
     +'<div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--sub);line-height:1.65">'
-    +'<b>'+_ymd(b.all.from)+' ~ '+_ymd(b.all.to)+'</b> 동안 매주 1번 그날까지의 자료로만 채점하고, 이후 <b>'+b.horizon+'거래일 수익률</b>을 같은 날 전체 종목 평균과 비교했어요 (20일 평균 거래대금 '+b.minTv+'억↑, '+b.nObs.toLocaleString()+'건).'
+    +'<b>'+_ymd(b.all.from)+' ~ '+_ymd(b.all.to)+'</b> 동안 매주 1번 그날까지의 자료로만 채점하고, 이후 <b>'+b.horizon+'거래일 수익률</b>을 같은 날 전체 종목 평균과 비교했어요 (20일 평균 거래대금 '+(b.market==='US'?'$'+Math.round(b.minTv*100)+'M':b.minTv+'억')+'↑, '+b.nObs.toLocaleString()+'건).'
     +'<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">기간</th><th>추천</th><th>중립</th><th>매수 금지</th><th>추천이 시장을 이긴 주</th><th>매수 금지가 시장에 진 주</th></tr></thead><tbody>'
     +row('전체',b.all)+row('앞 절반',b.first)+row('뒤 절반',b.second)+'</tbody></table></div>'
-    +'<div style="margin-top:6px">점수와 이후 수익률의 순위 상관(예측력) <b>'+b.all.ic+'</b> (앞 '+b.first.ic+' · 뒤 '+b.second.ic+'). 0이면 무관, 0.05만 넘어도 의미 있는 편이에요. <b>매수 금지 쪽이 더 확실</b>하고, 추천은 평균으로는 낫지만 주마다 들쭉날쭉해요.</div>'
+    +'<div style="margin-top:6px">점수와 이후 수익률의 순위 상관(예측력) <b>'+b.all.ic+'</b> (앞 '+b.first.ic+' · 뒤 '+b.second.ic+'). 0이면 무관, 0.05만 넘어도 의미 있는 편이에요. '+(b.market==='US'?'미장 공식은 앞 1.5년으로 고르고 <b>뒤 1.5년이 확인 구간</b>이에요. 국장 공식(안정성·고점 근접·이익)은 미장 뒤 1.5년에 추천이 시장보다 못해서 쓰지 않아요.':'<b>매수 금지 쪽이 더 확실</b>하고, 추천은 평균으로는 낫지만 주마다 들쭉날쭉해요.')+'</div>'
     +'<div style="overflow-x:auto;margin-top:10px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">지표</th><th>앞 절반 예측력</th><th>뒤 절반</th><th></th></tr></thead><tbody>'+fac+'</tbody></table></div>'
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">한계: '+(b.limits||[]).map(esc).join(' · ')+'</div></div></div>'; }
 function renderReco(){
   var el=$('#recoBoard'); if(!el)return;
-  if(!_VSC||!_STKLIST){ el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 불러오는 중…</div></div>';
-    Promise.all([_loadVScores(),_loadStockList(),_loadJ('feeds/backtest.json'),_loadJ('feeds/backtest-60.json'),_loadJ('feeds/backtest-levels-60.json'),_loadJ('feeds/track-summary.json'),_loadJ('feeds/backtest-audit.json')]).then(function(a){ _BT=a[2]; _BT60=a[3]; _BTL60=a[4]; _TRK=a[5]; _AUD=a[6]; if(a[0])renderReco(); else el.innerHTML='<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
-  var j=_VSC, F=_recoF, all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{};
-  var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=5)); });
+  var US=_recoUS(), F=_recoF;
+  var tabs='<div style="display:flex;gap:6px;margin-bottom:12px">'+[['KR','🇰🇷 국장'],['US','🇺🇸 미장']].map(function(o){ var on=F.m===o[0];
+    return '<button onclick="_recoSet(\'m\',\''+o[0]+'\')" style="border:1px solid '+(on?'#2b6cff':'var(--line2)')+';border-radius:10px;padding:8px 18px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:var(--panel2);color:var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</div>';
+  if(!US&&(!_VSC||!_STKLIST)){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 불러오는 중…</div></div>';
+    Promise.all([_loadVScores(),_loadStockList(),_loadJ('feeds/backtest.json'),_loadJ('feeds/backtest-60.json'),_loadJ('feeds/backtest-levels-60.json'),_loadJ('feeds/track-summary.json'),_loadJ('feeds/backtest-audit.json')]).then(function(a){ _BT=a[2]; _BT60=a[3]; _BTL60=a[4]; _TRK=a[5]; _AUD=a[6]; if(_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
+  if(US&&!_VSCU){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 불러오는 중…</div></div>';
+    Promise.all([_loadVScoresUS(),_loadJ('feeds/backtest-us.json'),_loadJ('feeds/backtest-us-60.json'),_loadJ('feeds/backtest-levels-us-60.json'),_loadJ('feeds/track-summary-us.json'),_loadJ('feeds/backtest-levels-us.json')]).then(function(a){ _US={bt:a[1],bt60:a[2],btl60:a[3],trk:a[4],btl:a[5]}; if(!_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 자료를 불러오지 못했어요 · 화~토 아침 7시에 갱신돼요</div></div>'; }); return; }
+  var j=_recoSc(), all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{}, minTv=US?0.1:5, SORTS=US?_RECO_SORTS_US:_RECO_SORTS;
+  var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=minTv)); });
   var dist={'추천':0,'중립':0,'매수 금지':0}; pool.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
   var list=pool.filter(function(x){ return F.view==='all'||x.view===F.view; });
-  var si=_RECO_SORTS[F.sort][1];
+  var si=(SORTS[F.sort]||SORTS[0])[1];
   list.sort(function(a,b){ return si<0?(F.view==='매수 금지'?a.total-b.total:b.total-a.total):(b.parts[si]-a.parts[si]||b.total-a.total); });
   function seg(key,opts){ return '<div style="display:inline-flex;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:2px;gap:2px">'+opts.map(function(o){ var on=String(F[key])===String(o[0]);
     return '<button onclick="_recoSet(\''+key+'\',\''+o[0]+'\')" style="border:none;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:transparent;color:var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</div>'; }
   var bar='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px">'
     +seg('view',[['추천','추천 '+dist['추천']],['중립','중립 '+dist['중립']],['매수 금지','매수 금지 '+dist['매수 금지']],['all','전체']])
-    +seg('mk',[['all','전체'],['KOSPI','코스피'],['KOSDAQ','코스닥']])
-    +seg('sort',_RECO_SORTS.map(function(s,i){return [i,s[0]+(i?'':'순')];}))
-    +'<label style="font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" '+(F.liq?'checked':'')+' onchange="_recoSet(\'liq\',this.checked?1:0)"> 거래 활발한 종목만 (20일 평균 거래대금 5억↑)</label></div>';
+    +seg('mk',US?[['all','전체'],['NASDAQ','나스닥'],['NYSE','NYSE'],['AMEX','AMEX']]:[['all','전체'],['KOSPI','코스피'],['KOSDAQ','코스닥']])
+    +seg('sort',SORTS.map(function(s,i){return [i,s[0]+(i?'':'순')];}))
+    +'<label style="font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" '+(F.liq?'checked':'')+' onchange="_recoSet(\'liq\',this.checked?1:0)"> 거래 활발한 종목만 (20일 평균 거래대금 '+(US?'1천만 달러':'5억')+'↑)</label></div>';
   var rows=list.slice(0,F.show).map(function(x,i){ return _recoRow(x,i+1); }).join('');
-  el.innerHTML='<div class="card"><div class="ch"><h2>🧭 종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
+  var formula=US?'1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30';
+  var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};
+  el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
     +'<div class="pad" style="padding-top:6px">'+bar
-    +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · 안정성 40 · 고점 근접 30 · 이익 30 = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
+    +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
+    +(US?'<div style="font-size:11.5px;color:var(--sub);margin:2px 0 4px">미장은 국장과 공식이 달라요 — 국장 공식은 미장 최근 1.5년에 통하지 않아 미장 데이터로 따로 골랐어요(아래 검증 결과).</div>':'')
     +(rows||'<div style="padding:16px;color:var(--faint);font-size:13px">조건에 맞는 종목이 없어요</div>')
     +(list.length>F.show?'<button class="tf" onclick="_recoSet(\'show\','+(F.show+50)+')" style="width:100%;margin-top:10px">더 보기 ('+(list.length-F.show).toLocaleString()+'종목 남음)</button>':'')
-    +'<div style="font-size:11px;color:var(--faint);margin-top:12px">교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 평일 16:40 갱신</div></div></div>'
-    +_trkHTML(_TRK)+_btHTML(_BT60)+_audHTML(_AUD)+_btHTML(_BT)+_btlHTML(_BTL60)+_btlHTML(_BTL);
+    +'<div style="font-size:11px;color:var(--faint);margin-top:12px">교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · '+(US?'화~토 아침 7시(미국 장마감 뒤) 갱신':'평일 16:40 갱신')+'</div></div></div>'
+    +(D.trk?_trkHTML(D.trk):(US?'<div class="card" style="margin-top:14px"><div class="ch"><h2>📈 실제 성과 (기록)</h2></div><div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--faint)">미장 기록은 10/9(미국) 추천부터 시작해요. 20일 결과는 11월 초에 나와요.</div></div>':''))
+    +_btHTML(D.bt60)+_audHTML(D.aud)+_btHTML(D.bt)+_btlHTML(D.btl60)+_btlHTML(D.btl);
   if(typeof initCards==='function')setTimeout(initCards,0);
 }
-window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==='liq')v=!!v; _recoF[k]=v; if(k!=='show')_recoF.show=50; renderReco(); };
+window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==='liq')v=!!v; if(k==='m'&&_recoF.m!==v){ _recoF.mk='all'; _recoF.sort=0; _recoOpen=null; } _recoF[k]=v; if(k!=='show')_recoF.show=50; renderReco(); };
 /* ═══════════ 추천 — 종목 펼침 (이유·수급·매수/손절 가격·차트·매물대·섹터·성장률·뉴스) ═══════════
    자료: feeds/stock-detail.json(수급 비율·업종·재무, 매일) · stock-news.json(종목 뉴스, 매일) · industries.json(업종 등락, 장중 30분)
          + 워커 일봉(차트·매물대·가격 계산, 지금 시세) */
@@ -1430,14 +1449,15 @@ window._recoToggle=function(c){ var box=document.getElementById('rx-'+c); if(!bo
   if(_recoOpen&&_recoOpen!==c){ var ob=document.getElementById('rx-'+_recoOpen); if(ob){ ob.style.display='none'; ob.innerHTML=''; } }
   if(box.style.display!=='none'){ box.style.display='none'; box.innerHTML=''; _recoOpen=null; return; }
   _recoOpen=c; box.style.display='block'; box.innerHTML='<div style="padding:14px;color:var(--faint);font-size:12.5px">분석 불러오는 중…</div>';
-  var x=(_recoRows(_VSC)||[]).filter(function(r){return r.c===c;})[0]; if(!x)return;
-  Promise.all([_loadJ('feeds/stock-detail.json'),_loadJ('feeds/stock-news.json'),_loadJ('feeds/industries.json'),
-    (typeof proxyJson==='function'?proxyJson('/candles?mkt=KR&code='+encodeURIComponent(c)+'&tf=D&limit=200').catch(function(){return null;}):Promise.resolve(null))]).then(function(a){
+  var x=(_recoRows(_recoSc())||[]).filter(function(r){return r.c===c;})[0]; if(!x)return;
+  var sf=x.us?'-us':'', cq=x.us?'/candles?mkt=US&code='+encodeURIComponent(c)+'&exch='+usExch(x.mk)+'&tf=D&limit=200':'/candles?mkt=KR&code='+encodeURIComponent(c)+'&tf=D&limit=200';
+  Promise.all([_loadJ('feeds/stock-detail'+sf+'.json'),_loadJ('feeds/stock-news'+sf+'.json'),x.us?Promise.resolve(null):_loadJ('feeds/industries.json'),
+    (typeof proxyJson==='function'?proxyJson(cq).catch(function(){return null;}):Promise.resolve(null))]).then(function(a){
     if(_recoOpen!==c)return; box.innerHTML=_rxHTML(x,a[0],a[1],a[2],(a[3]&&a[3].candles)||[]);
     var cv=document.getElementById('rxc-'+c); if(cv&&cv._draw)cv._draw(); });
 };
 function _tick(p){ var t=p<2000?1:p<5000?5:p<20000?10:p<50000?50:p<200000?100:p<500000?500:1000; return Math.round(p/t)*t; }
-function _rxLevels(cs){ return (typeof VScore!=='undefined'&&VScore.levels)?VScore.levels(cs):null; } // 규칙은 score-core.js levels() — 백테스트와 같은 계산
+function _rxLevels(cs,us){ return (typeof VScore!=='undefined'&&VScore.levels)?VScore.levels(cs,us?{usd:true}:undefined):null; } // 규칙은 score-core.js levels() — 백테스트와 같은 계산
 function _rxChart(c,cs,L){ return '<canvas id="rxc-'+c+'" style="width:100%;height:230px;display:block"></canvas>'; }
 function _rxDraw(cv,cs,L){
   var dpr=window.devicePixelRatio||1, W=cv.clientWidth||600, H=230; cv.width=W*dpr; cv.height=H*dpr; var g=cv.getContext('2d'); g.scale(dpr,dpr);
@@ -1446,7 +1466,7 @@ function _rxDraw(cv,cs,L){
   var lo=Math.min.apply(null,d.map(function(v){return v[3];}).concat(L?[L.st]:[])), hi=Math.max.apply(null,d.map(function(v){return v[2];}));
   var pad=(hi-lo)*0.04; lo-=pad; hi+=pad;
   var y=function(p){ return 6+(hi-p)/(hi-lo)*(ph-6); }, bw=PW/d.length;
-  g.strokeStyle=ln; g.lineWidth=1; for(var k=0;k<=4;k++){ var yy=6+k*(ph-6)/4; g.beginPath(); g.moveTo(0,yy); g.lineTo(PW,yy); g.stroke(); g.fillStyle=fa; g.font='10px sans-serif'; g.fillText(Math.round(hi-(hi-lo)*k/4).toLocaleString(),PW+VPW+4,yy+3); }
+  g.strokeStyle=ln; g.lineWidth=1; for(var k=0;k<=4;k++){ var yy=6+k*(ph-6)/4; g.beginPath(); g.moveTo(0,yy); g.lineTo(PW,yy); g.stroke(); g.fillStyle=fa; g.font='10px sans-serif'; var av=hi-(hi-lo)*k/4; g.fillText(L&&L.usd?(av<100?av.toFixed(2):Math.round(av).toLocaleString()):Math.round(av).toLocaleString(),PW+VPW+4,yy+3); }
   // 매물대(오른쪽 가로 막대)
   if(L){ var mx=Math.max.apply(null,L.vp)||1; L.vp.forEach(function(v,i){ var p0=L.lo+i*L.step, p1=p0+L.step, y0=y(p1), y1=y(p0); g.fillStyle='rgba(74,158,255,'+(0.15+0.45*v/mx)+')'; g.fillRect(PW+2,y0,(VPW-6)*v/mx,Math.max(1,y1-y0-1)); }); }
   d.forEach(function(v,i){ var x=i*bw+bw/2, o=v[1],h=v[2],l=v[3],c=v[4], col=c>=o?up:dn; g.strokeStyle=col; g.beginPath(); g.moveTo(x,y(h)); g.lineTo(x,y(l)); g.stroke();
@@ -1456,47 +1476,50 @@ function _rxDraw(cv,cs,L){
   mline(20,'#f0b90b'); mline(60,'#a78bfa');
   if(L){ var ly=-99; [[L.b1,'#2ebd85','1차'],[L.b2,'#22a06b','2차'],[L.st,'#f6465d','손절']].forEach(function(z){ var yy=y(z[0]); g.setLineDash([5,4]); g.strokeStyle=z[1]; g.beginPath(); g.moveTo(0,yy); g.lineTo(PW,yy); g.stroke(); g.setLineDash([]);
     var ty=Math.max(yy-3,ly+12); ly=ty; // 가격이 붙어 있으면 이름표가 겹치지 않게 아래로 민다
-    var txt=z[2]+' '+z[0].toLocaleString(); g.font='bold 10.5px sans-serif'; var tw=g.measureText(txt).width; g.fillStyle='rgba(0,0,0,.0)';
+    var txt=z[2]+' '+(L.usd?_usd(z[0]):z[0].toLocaleString()); g.font='bold 10.5px sans-serif'; var tw=g.measureText(txt).width; g.fillStyle='rgba(0,0,0,.0)';
     g.fillStyle=getComputedStyle(cv).backgroundColor&&getComputedStyle(cv).backgroundColor!=='rgba(0, 0, 0, 0)'?getComputedStyle(cv).backgroundColor:'rgba(127,127,127,.12)'; g.fillRect(PW-tw-8,ty-10,tw+6,13);
     g.fillStyle=z[1]; g.fillText(txt,PW-tw-5,ty); }); }
   g.fillStyle=fa; g.font='10px sans-serif'; g.fillText(d.length+'일 · ━ 20일선(노랑) ━ 60일선(보라) · 오른쪽 막대 = 매물대(120일)',4,H-4);
 }
 function _rxHTML(x,DT,NW,IN,cs){
   var P=function(v,d){ return v==null?'—':'<b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+(+v).toFixed(d==null?1:d)+'%</b>'; };
-  var dt=(DT&&DT.items&&DT.items[x.c])||{}, fr=dt.fr||[], fin=dt.fin, it=(_VSC.items||{})[x.c]||[];
+  var US=!!x.us, sc=_recoSc()||{}, dt=(DT&&DT.items&&DT.items[x.c])||{}, fr=dt.fr||[], fin=dt.fin, it=(sc.items||{})[x.c]||[];
+  var M=function(v){ return US?_usd(v):(+v).toLocaleString()+'원'; };
   var ind=null; if(dt.ind&&IN&&IN.items)IN.items.forEach(function(r){ if(r[0]===dt.ind)ind=r; });
   var news=(NW&&NW.items&&NW.items[x.c])||[];
   if(!news.length&&typeof relatedNews==='function')news=relatedNews(x.n).slice(0,3).map(function(n){return [n.title,'',null,n.link];});
-  var L=_rxLevels(cs);
+  var L=_rxLevels(cs,US); if(L)L.usd=US;
   var sec=function(t,body){ return '<div style="flex:1;min-width:250px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:12px 14px"><div style="font-weight:800;font-size:13px;margin-bottom:8px">'+t+'</div>'+body+'</div>'; };
   // ① 왜 (점수 이유 + 섹터·수급·뉴스를 한 문단으로)
   var why=[];
   if(x.view==='추천')why.push('전 종목 상위 20% 점수('+x.total+'점)라 <b>추천</b>이에요.'); else if(x.view==='매수 금지')why.push('전 종목 하위 20% 점수('+x.total+'점)라 <b>매수 금지</b>예요.'); else why.push(x.total+'점으로 <b>중립</b>이에요.');
   if(x.good.length)why.push('강점: '+x.good.map(esc).join(', ')+'.'); if(x.bad.length)why.push('약점: '+x.bad.map(esc).join(', ')+'.');
+  if(US&&dt.indN)why.push('업종은 '+esc(dt.indN)+'이에요.');
+  if(US&&it[15]!=null)why.push('1년 전부터 한 달 전까지 '+(it[15]>=0?'+':'')+it[15]+'% 움직였어요.');
   if(ind)why.push('업종('+esc(ind[1])+')은 오늘 '+(ind[2]>=0?'+':'')+ind[2].toFixed(2)+'%, 이 종목은 '+(x.day==null?'—':((x.day>=0?'+':'')+x.day.toFixed(2)+'%'))+(x.day!=null?(x.day>ind[2]?' — 업종보다 강해요.':' — 업종보다 약해요.'):''));
   if(fr[0]!=null&&fr[1]!=null){ var s5=fr[0]+fr[1]; why.push('최근 5일 외국인·기관 순매수는 거래대금의 '+(s5>=0?'+':'')+s5.toFixed(1)+'%'+(s5>=3?'로 매수 우위예요.':s5<=-3?'로 매도 우위예요.':'로 뚜렷하지 않아요.')); }
   if(news.length)why.push('최근 기사: "'+esc(news[0][0])+'"');
-  var whyBox='<div style="font-size:13px;line-height:1.75;color:var(--sub)">'+why.join(' ')+'</div><div style="font-size:11px;color:var(--faint);margin-top:6px">점수는 안정성·고점 근접·이익만으로 매겨요. 업종·수급·뉴스는 상황 설명용이에요(백테스트에서 예측력 없음).</div>';
+  var whyBox='<div style="font-size:13px;line-height:1.75;color:var(--sub)">'+why.join(' ')+'</div><div style="font-size:11px;color:var(--faint);margin-top:6px">'+(US?'점수는 1년 모멘텀·흑자 여부만으로 매겨요. 업종·뉴스는 상황 설명용이에요.':'점수는 안정성·고점 근접·이익만으로 매겨요. 업종·수급·뉴스는 상황 설명용이에요(백테스트에서 예측력 없음).')+'</div>';
   // ② 수급 비율
   var bar=function(lab,v){ var w=Math.min(50,Math.abs(v||0)*2); return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0"><span style="width:76px;color:var(--sub)">'+lab+'</span><div style="flex:1;position:relative;height:9px;background:var(--panel,#0000);border-radius:5px"><div style="position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--line2)"></div>'
     +(v==null?'':'<div style="position:absolute;top:0;bottom:0;border-radius:5px;'+(v>=0?'left:50%;':'right:50%;')+'width:'+w+'%;background:'+(v>=0?'var(--up)':'var(--down)')+'"></div>')+'</div><span style="width:58px;text-align:right">'+P(v)+'</span></div>'; };
-  var flowBox=fr.length?(bar('외국인 5일',fr[0])+bar('기관 5일',fr[1])+bar('외국인 20일',fr[2])+bar('기관 20일',fr[3])+(fr.length>4?bar('외국인 60일',fr[4])+bar('기관 60일',fr[5]):'')+'<div style="font-size:11px;color:var(--faint);margin-top:4px">순매수 금액 ÷ 같은 기간 거래대금 · '+_vsDate(DT.date)+' 기준</div>'):'<div style="font-size:12px;color:var(--faint)">수급 자료 없음</div>';
+  var flowBox=US?'<div style="font-size:12px;color:var(--faint);line-height:1.6">미국 시장은 외국인·기관 매매 자료가 공개되지 않아요.</div>':fr.length?(bar('외국인 5일',fr[0])+bar('기관 5일',fr[1])+bar('외국인 20일',fr[2])+bar('기관 20일',fr[3])+(fr.length>4?bar('외국인 60일',fr[4])+bar('기관 60일',fr[5]):'')+'<div style="font-size:11px;color:var(--faint);margin-top:4px">순매수 금액 ÷ 같은 기간 거래대금 · '+_vsDate(DT.date)+' 기준</div>'):'<div style="font-size:12px;color:var(--faint)">수급 자료 없음</div>';
   // ③ 매수·손절 가격
-  var lv=function(lab,p,col){ var d=L?(p/L.px-1)*100:null; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line2)"><span style="font-weight:800;color:'+col+'">'+lab+'</span><span><b style="font-size:15px">'+p.toLocaleString()+'원</b> <span style="font-size:11.5px;color:var(--faint)">현재가 대비 '+(d>=0?'+':'')+d.toFixed(1)+'%</span></span></div>'; };
-  var lvBox=L?('<div style="font-size:12px;color:var(--faint);margin-bottom:4px">현재가 '+L.px.toLocaleString()+'원 · 하루 평균 변동폭(ATR) '+Math.round(L.atr).toLocaleString()+'원</div>'+lv('1차 매수',L.b1,'#2ebd85')+lv('2차 매수',L.b2,'#22a06b')+lv('손절',L.st,'#f6465d')
-    +'<div style="font-size:11px;color:var(--faint);margin-top:6px;line-height:1.6">규칙: 1차 = 60일선 부근(현재가가 아래면 현재가) 50% · 2차 = 그 아래 가장 큰 매물대('+L.b2src+') 50% · 손절 = 2차 − ATR 2배 · 60거래일(약 3개월) 보유 기준.</div>'+_lvVerify()):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>';
+  var lv=function(lab,p,col){ var d=L?(p/L.px-1)*100:null; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line2)"><span style="font-weight:800;color:'+col+'">'+lab+'</span><span><b style="font-size:15px">'+M(p)+'</b> <span style="font-size:11.5px;color:var(--faint)">현재가 대비 '+(d>=0?'+':'')+d.toFixed(1)+'%</span></span></div>'; };
+  var lvBox=L?('<div style="font-size:12px;color:var(--faint);margin-bottom:4px">현재가 '+M(L.px)+' · 하루 평균 변동폭(ATR) '+(US?_usd(Math.round(L.atr*100)/100):Math.round(L.atr).toLocaleString()+'원')+'</div>'+lv('1차 매수',L.b1,'#2ebd85')+lv('2차 매수',L.b2,'#22a06b')+lv('손절',L.st,'#f6465d')
+    +'<div style="font-size:11px;color:var(--faint);margin-top:6px;line-height:1.6">규칙: 1차 = 60일선 부근(현재가가 아래면 현재가) 50% · 2차 = 그 아래 가장 큰 매물대('+L.b2src+') 50% · 손절 = 2차 − ATR 2배 · 60거래일(약 3개월) 보유 기준.</div>'+(US?(_lvVerify1(_US.btl60)||_lvVerify1(_US.btl)):_lvVerify())):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>';
   // ④ 섹터
-  var secBox=ind?('<div style="font-size:15px;font-weight:800">'+esc(ind[1])+' '+P(ind[2],2)+'</div><div style="font-size:12px;color:var(--sub);margin-top:4px">상승 '+ind[3]+' · 하락 '+ind[4]+' · 전체 '+ind[5]+'종목</div>'
+  var secBox=US?(dt.indN?'<div style="font-size:15px;font-weight:800">'+esc(dt.indN)+'</div><div style="font-size:12px;color:var(--sub);margin-top:4px">이 종목 오늘 '+P(x.day,2)+'</div><div style="font-size:11px;color:var(--faint);margin-top:6px">미장은 업종 등락 자료가 없어 업종 이름만 보여줘요</div>':'<div style="font-size:12px;color:var(--faint)">업종 자료 없음</div>'):ind?('<div style="font-size:15px;font-weight:800">'+esc(ind[1])+' '+P(ind[2],2)+'</div><div style="font-size:12px;color:var(--sub);margin-top:4px">상승 '+ind[3]+' · 하락 '+ind[4]+' · 전체 '+ind[5]+'종목</div>'
     +'<div style="font-size:12px;color:var(--sub);margin-top:2px">이 종목 '+P(x.day,2)+'</div>'+_rxIndRank(IN,ind)):'<div style="font-size:12px;color:var(--faint)">업종 자료 없음</div>';
   // ⑤ 성장률
   var finBox='<div style="font-size:12px;color:var(--faint)">재무 자료 없음</div>';
   if(fin&&fin.y&&fin.y.length>=2){ var g=function(a,i){ return (a&&a[i]!=null&&a[i-1])?((a[i]/Math.abs(a[i-1])-1)*100):null; };
     var head='<tr><th class="l"></th>'+fin.y.slice(1).map(function(y){return '<th>'+y.replace('E',' 예상')+'</th>';}).join('')+'</tr>';
     var rw=function(lab,a){ return '<tr><td class="l">'+lab+'</td>'+fin.y.slice(1).map(function(_,k){ return '<td>'+P(g(a,k+1))+'</td>'; }).join('')+'</tr>'; };
-    finBox='<table style="width:100%;font-size:12px"><thead>'+head+'</thead><tbody>'+rw('매출 성장률',fin.rev)+rw('영업이익 성장률',fin.op)+rw('EPS 성장률',fin.eps)+'</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:4px">전년 대비 · 연간 · 예상은 증권사 컨센서스</div>'; }
+    finBox='<table style="width:100%;font-size:12px"><thead>'+head+'</thead><tbody>'+rw((fin.lab?fin.lab[0]:'매출')+' 성장률',fin.rev)+rw((fin.lab?fin.lab[1]:'영업이익')+' 성장률',fin.op)+rw((fin.lab?fin.lab[2]:'EPS')+' 성장률',fin.eps)+'</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:4px">전년 대비 · 연간'+(US?' · 회계연도 기준':' · 예상은 증권사 컨센서스')+'</div>'; }
   // ⑥ 매물대
   var vpBox=L?(L.zones.map(function(z,i){ var inside=L.px>=z.lo&&L.px<z.hi, above=L.px>=z.hi;
-      return '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-top:'+(i?'1px solid var(--line2)':'none')+'"><span>'+_tick(z.lo).toLocaleString()+' ~ '+_tick(z.hi).toLocaleString()+'원</span><span style="color:var(--faint)">거래량 '+(z.share*100).toFixed(0)+'% · '+(inside?'<b>현재가 위치</b>':above?'아래 지지대':'위 저항대')+'</span></div>'; }).join('')
+      return '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-top:'+(i?'1px solid var(--line2)':'none')+'"><span>'+(US?_usd(Math.round(z.lo*100)/100)+' ~ '+_usd(Math.round(z.hi*100)/100):_tick(z.lo).toLocaleString()+' ~ '+_tick(z.hi).toLocaleString()+'원')+'</span><span style="color:var(--faint)">거래량 '+(z.share*100).toFixed(0)+'% · '+(inside?'<b>현재가 위치</b>':above?'아래 지지대':'위 저항대')+'</span></div>'; }).join('')
     +'<div style="font-size:11px;color:var(--faint);margin-top:4px">최근 120일 가격대별 거래량 상위 3구간</div>'):'<div style="font-size:12px;color:var(--faint)">—</div>';
   // ⑦ 뉴스
   var newsBox=news.length?news.map(function(n){ var t=n[2]?String(n[2]):''; var tt=t.length>=12?(+t.slice(4,6))+'/'+(+t.slice(6,8))+' '+t.slice(8,10)+':'+t.slice(10,12):'';
@@ -1505,10 +1528,10 @@ function _rxHTML(x,DT,NW,IN,cs){
   return '<div style="padding:12px 4px 16px;border-top:1px dashed var(--line2)">'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+sec('🧭 왜 '+x.view+'인가',whyBox)+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('📈 차트 · 매물대',(cs.length?_rxChart(x.c,cs,L):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>'))+'</div>'
-    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🎯 매수·손절 가격 (교육용 규칙)',lvBox)+sec('🧱 거래대금 대비 순매수',flowBox)+'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🎯 매수·손절 가격 (교육용 규칙)',lvBox)+(US?'':sec('🧱 거래대금 대비 순매수',flowBox))+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🏭 섹터',secBox)+sec('📊 성장률',finBox)+sec('🪜 매물대',vpBox)+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('📰 관련 뉴스',newsBox)+'</div>'
-    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="openStock(\''+x.c+'\')">종목 화면 열기 →</button><button class="tf" onclick="_recoToggle(\''+x.c+'\')">접기</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="openStock(\''+x.c+'\''+(US?',{n:\''+esc(x.n).replace(/'/g,'')+'\',mk:\''+x.mk+'\'}':'')+')">종목 화면 열기 →</button><button class="tf" onclick="_recoToggle(\''+x.c+'\')">접기</button></div>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:8px">교육용 참고 정보이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다.</div></div>';
 }
 var _BTL=null; _loadJ('feeds/backtest-levels.json').then(function(j){ _BTL=j; }); _loadJ('feeds/backtest-levels-60.json').then(function(j){ _BTL60=j; });
@@ -1761,8 +1784,8 @@ function whyMoved(r){
   return parts.join(' ');
 }
 function renderWhy(r){ var el=$('#whyBox'); if(el) el.innerHTML=whyMoved(r)||'등락 데이터를 불러오는 중…'; }
-function openStock(code){
-  var r=scoredOf(code); SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
+function openStock(code,opt){
+  var r=scoredOf(code,opt); /* opt={n,mk}: 목록에 없는 미장 종목(추천 화면)의 이름·거래소 */ SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
   var el=$('#stockPanel'); if(!el)return;
   var isUS=r.ccy==='USD';
   var subs=stockSubs(r), grd=gradeTxt(r.score);

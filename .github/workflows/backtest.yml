@@ -1,6 +1,6 @@
 name: 종합 평점 백테스트 (매달)
 
-# 매달 1일 아침, 지금 공식(score-core.js)이 최근 1년 동안 통했는지 다시 잰다 → feeds/backtest.json
+# 매달 1일 아침, 지금 공식(score-core.js)이 최근 3년 동안 통했는지 다시 잰다 → feeds/backtest.json (미장은 feeds/backtest-us*.json)
 # 사이트 '추천' 화면의 '검증 결과' 칸이 이 파일을 읽는다. 공식 자체를 자동으로 바꾸지는 않는다.
 on:
   schedule:
@@ -29,9 +29,14 @@ jobs:
           node-version: "20"
       - name: 백테스트
         run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs && node scripts/audit_backtest.mjs
+      - name: 미장 백테스트 (미장 공식, 캐시 따로)
+        env:
+          MKT: US
+          BT_CACHE: /tmp/vantor-bt3-us
+        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs
       - name: 결과 올리기
         run: |
-          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json feeds/backtest-audit.json
+          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json feeds/backtest-audit.json feeds/backtest-us.json feeds/backtest-levels-us.json feeds/backtest-us-60.json feeds/backtest-levels-us-60.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F') 백테스트"

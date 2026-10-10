@@ -14,9 +14,11 @@ const require = createRequire(import.meta.url);
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const { features, breakpoints, score, cuts } = require(path.join(ROOT, 'score-core.js'));
 const API = 'https://m.stock.naver.com/api';
-const CACHE = process.env.BT_CACHE || '/tmp/vantor-bt';
+const US = process.env.MKT === 'US'; // MKT=US → 미장(나스닥·NYSE·AMEX), 결과 feeds/backtest-us*.json
+const UAPI = 'https://api.stock.naver.com';
+const CACHE = process.env.BT_CACHE || (US ? '/tmp/vantor-bt-us' : '/tmp/vantor-bt');
 const REFRESH = process.argv.includes('--refresh');
-const MIN_TV = 5, STEP = 5, WARM = +(process.env.BT_WARM || 160), H = +(process.env.BT_H || 20), HZ = [5, H]; // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-60.json)
+const MIN_TV = +(process.env.BT_MINTV || (US ? 0.1 : 5)), STEP = 5, WARM = +(process.env.BT_WARM || 160), H = +(process.env.BT_H || 20), HZ = [5, H]; // BT_H=60 → 60거래일 보유 기준 (feeds/backtest-60.json)
 fs.mkdirSync(CACHE, { recursive: true });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -33,6 +35,14 @@ const n = (s) => { if (s == null) return null; const m = String(s).replace(/,/g,
 
 async function universe() {
   const out = [];
+  if (US) {
+    for (const mkt of ['NASDAQ', 'NYSE', 'AMEX']) for (let page = 1; ; page++) {
+      const d = await get(`${UAPI}/stock/exchange/${mkt}/marketValue?page=${page}&pageSize=100`);
+      for (const s of d.stocks || []) if (s.stockEndType === 'stock' && s.reutersCode) out.push({ c: s.reutersCode, n: s.stockName, mk: mkt });
+      if (page * 100 >= +(d.totalCount || 0) || !(d.stocks || []).length) break;
+    }
+    return out;
+  }
   for (const mkt of ['KOSPI', 'KOSDAQ']) for (let page = 1; ; page++) {
     const d = await get(`${API}/stocks/marketValue/${mkt}?page=${page}&pageSize=100`);
     for (const s of d.stocks || []) if (s.stockEndType === 'stock') out.push({ c: s.itemCode, n: s.stockName, mk: mkt });
@@ -43,6 +53,17 @@ async function universe() {
 async function fetchOne(s) {
   const f = path.join(CACHE, s.c + '.json');
   if (!REFRESH && fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, 'utf8'));
+  if (US) {
+    const days = +(process.env.BT_DAYS || 420), end = new Date(), st = new Date(end - Math.ceil(days * 1.5 + 10) * 864e5);
+    const ymd = (x) => x.toISOString().slice(0, 10).replace(/-/g, '');
+    const rows = await get(`${UAPI}/chart/foreign/item/${s.c}/day?startDateTime=${ymd(st)}0000&endDateTime=${ymd(end)}2359`);
+    const candles = (Array.isArray(rows) ? rows : []).map((x) => [x.localDate, +x.openPrice, +x.highPrice, +x.lowPrice, +x.closePrice, +x.accumulatedTradingVolume]).slice(-days);
+    const b = await get(`${UAPI}/stock/${s.c}/basic`).catch(() => null);
+    const ti = {}; for (const x of (b && b.stockItemTotalInfos) || []) ti[x.code] = x.value;
+    const d = { candles, flows: {}, per: n(ti.per), pbr: n(ti.pbr), div: n(ti.dividendYieldRatio) };
+    fs.writeFileSync(f, JSON.stringify(d));
+    return d;
+  }
   const xml = await get(`https://fchart.stock.naver.com/sise.nhn?symbol=${s.c}&timeframe=day&count=${process.env.BT_DAYS || 420}&requestType=0`, true);
   const candles = [...xml.matchAll(/data="(\d{8})\|(\d+)\|(\d+)\|(\d+)\|(\d+)\|(\d+)"/g)].map((m) => [m[1], +m[2], +m[3], +m[4], +m[5], +m[6]]);
   const info = await get(`${API}/stock/${s.c}/integration`).catch(() => null);
@@ -73,8 +94,9 @@ await Promise.all(Array.from({ length: 8 }, async () => {
 console.log(`자료 완료 (실패 ${fail}) ${Math.round((Date.now() - t0) / 1000)}초`);
 
 /* ── ② 날짜별 채점 (사이트·매일 채점과 같은 길: features → 그날 기준표 → score) ── */
-const ref = data.reduce((a, d) => Math.max(a, (d && d.candles.length) || 0), 0);
-const allDates = data.find((d) => d && d.candles.length === ref).candles.map((x) => x[0]);
+// 기준 날짜 = 가장 많이 나온 날짜들 (미장은 종목마다 상장일·결측이 달라 최장 종목 하나로 잡지 않는다)
+const cnt = new Map(); data.forEach((d) => d && d.candles.forEach((x) => cnt.set(x[0], (cnt.get(x[0]) || 0) + 1)));
+const allDates = [...cnt.keys()].filter((k) => cnt.get(k) >= data.filter(Boolean).length * 0.3).sort();
 const evalDates = [];
 for (let k = WARM; k + HZ[1] < allDates.length; k += STEP) evalDates.push(allDates[k]);
 const mean = (a) => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
@@ -87,7 +109,7 @@ for (const dt of evalDates) {
   const arr = [];
   data.forEach((d, si) => {
     if (!d) return; const i = idx2[si].get(dt); if (i == null || i < 120 || i + HZ[1] >= d.candles.length) return;
-    const c = d.candles; const f = features({ candles: c.slice(Math.max(0, i - 249), i + 1), per: d.per, flows: fdates[si].filter((x) => x <= dt).slice(-20).map((x) => d.flows[x]) });
+    const c = d.candles; const f = features({ candles: c.slice(Math.max(0, i - 260), i + 1), per: d.per, flows: fdates[si].filter((x) => x <= dt).slice(-20).map((x) => d.flows[x]) });
     if (!f || f.tv20 < MIN_TV) return;
     const fl = fdates[si].filter((x) => x <= dt).slice(-20).map((x) => d.flows[x]), sv = fl.reduce((s, x) => s + (x.v || 0), 0);
     const cc = c.map((x) => x[4]);
@@ -95,7 +117,7 @@ for (const dt of evalDates) {
       trend: cc[i] / mean(cc.slice(i - 59, i + 1)) - 1, mom: cc[i] / cc[i - 60] - 1, flow: sv ? fl.reduce((s, x) => s + (x.f || 0) + (x.i || 0), 0) / sv : null });
   });
   if (arr.length < 100) continue;
-  const bp = breakpoints(arr.map((o) => o.f));
+  const bp = breakpoints(arr.map((o) => o.f), US ? 'US' : undefined);
   arr.forEach((o) => { o.r = score(o.f, bp); });
   bp.cut = cuts(arr.map((o) => o.r.total));
   arr.forEach((o) => { o.r = score(o.f, bp); });
@@ -126,9 +148,16 @@ function report(ds) {
 function factorIC(fx) { const v = (ds) => mean(ds.map((d) => { const a = byDate.get(d).filter((o) => fx(o) != null && isFinite(fx(o))); return corr(rank(a.map(fx)), rank(a.map((o) => o.x20))); }));
   const h = Math.floor(dates.length / 2); return { all: +v(dates).toFixed(3), first: +v(dates.slice(0, h)).toFixed(3), second: +v(dates.slice(h)).toFixed(3) }; }
 const h = Math.floor(dates.length / 2);
-const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), minTv: MIN_TV, horizon: H, step: STEP, nObs,
-  formula: '안정성 40 · 고점 근접 30 · 이익 30', all: report(dates), first: report(dates.slice(0, h)), second: report(dates.slice(h)),
-  factors: [
+const res = { v: 2, market: US ? 'US' : 'KR', updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), minTv: MIN_TV, horizon: H, step: STEP, nObs,
+  formula: US ? '1년 모멘텀 67 · 흑자 33' : '안정성 40 · 고점 근접 30 · 이익 30', currency: US ? 'USD' : 'KRW', all: report(dates), first: report(dates.slice(0, h)), second: report(dates.slice(h)),
+  factors: US ? [
+    { nm: '1년 모멘텀(1년 전→한 달 전)', used: true, ...factorIC((o) => o.f.mom) },
+    { nm: '흑자(PER 있음)', used: true, ...factorIC((o) => (o.f.ep > 0 ? 1 + Math.random() * 1e-9 : Math.random() * 1e-9)) },
+    { nm: '안정성(20일 변동성 낮음)', used: false, ...factorIC((o) => -o.f.vol) },
+    { nm: '52주 고점 근접', used: false, ...factorIC((o) => o.f.hiGap) },
+    { nm: '이익 대비 주가(PER)', used: false, ...factorIC((o) => o.f.ep) },
+    { nm: '추세(60일선 위)', used: false, ...factorIC((o) => o.trend) },
+  ] : [
     { nm: '안정성(20일 변동성 낮음)', used: true, ...factorIC((o) => -o.f.vol) },
     { nm: '52주 고점 근접', used: true, ...factorIC((o) => o.f.hiGap) },
     { nm: '이익 대비 주가(PER)', used: true, ...factorIC((o) => o.f.ep) },
@@ -136,8 +165,8 @@ const res = { v: 2, updated: new Date(Date.now() + 9 * 3600e3).toISOString().sli
     { nm: '60일 상승률', used: false, ...factorIC((o) => o.mom) },
     { nm: '외국인·기관 20일 순매수', used: false, ...factorIC((o) => o.flow) },
   ],
-  limits: ['PER 은 과거 값이 없어 현재 값으로 계산(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영'] };
-fs.writeFileSync(path.join(ROOT, H === 20 ? 'feeds/backtest.json' : `feeds/backtest-${H}.json`), JSON.stringify(res, null, 1));
+  limits: US ? ['흑자 여부는 과거 값이 없어 지금 PER 로 판단(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영', '공식은 앞 1.5년으로 고름 — 뒤 1.5년이 확인 구간'] : ['PER 은 과거 값이 없어 현재 값으로 계산(미래 정보가 섞임)', '지금 상장된 종목만 — 상장폐지 종목 빠짐', '거래 비용·세금 미반영'] };
+fs.writeFileSync(path.join(ROOT, `feeds/backtest${US ? '-us' : ''}${H === 20 ? '' : '-' + H}.json`), JSON.stringify(res, null, 1));
 const P = (x) => (x >= 0 ? '+' : '') + x.toFixed(2) + '%';
 for (const k of ['all', 'first', 'second']) { const r = res[k];
   console.log(`${k.padEnd(6)} ${r.from}~${r.to} 5분위 ${r.q20.map(P).join(' ')} | 추천 ${P(r.groups['추천'].x20)} (이긴 주 ${r.beatWeeks['추천']}%) 중립 ${P(r.groups['중립'].x20)} 매수금지 ${P(r.groups['매수 금지'].x20)} (진 주 ${r.beatWeeks['매수 금지']}%) | IC ${r.ic} t=${r.icT}`); }

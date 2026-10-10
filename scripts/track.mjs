@@ -5,6 +5,7 @@
    eval:   기록된 날마다 20·60거래일이 지났으면, 다음 날 시가에 사서 그날 종가까지의 실제 수익률을
            같은 날 거래 활발 종목 평균과 비교하고, 추천 종목은 1차·2차·손절 규칙대로 모의매매(score-core.js simulate)한다.
            → feeds/track-summary.json (사이트 추천 화면 '실제 성과')
+   MKT=US → 미장: feeds/stock-scores-us.json 을 읽어 feeds/track-us/ · feeds/track-summary-us.json (종목 키 = 로이터 코드, 가격은 달러)
    사용: node scripts/track.mjs record | eval */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,11 +14,23 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const V = require(path.join(ROOT, 'score-core.js'));
-const DIR = path.join(ROOT, 'feeds/track');
-const MIN_TV = 5, HS = [20, 60], CONC = 8;
+const US = process.env.MKT === 'US';
+const DIR = path.join(ROOT, US ? 'feeds/track-us' : 'feeds/track');
+const MIN_TV = US ? 0.1 : 5, HS = [20, 60], CONC = 8;
 fs.mkdirSync(DIR, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function candles(code, count) {
+  if (US) {
+    const ymd = (x) => x.toISOString().slice(0, 10).replace(/-/g, ''), end = new Date(), st = new Date(end - Math.ceil(count * 1.5 + 10) * 864e5);
+    for (let i = 0; i < 3; i++) {
+      try {
+        const r = await fetch(`https://api.stock.naver.com/chart/foreign/item/${code}/day?startDateTime=${ymd(st)}0000&endDateTime=${ymd(end)}2359`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) });
+        const a = await r.json();
+        return (Array.isArray(a) ? a : []).map((x) => [x.localDate, +x.openPrice, +x.highPrice, +x.lowPrice, +x.closePrice, +x.accumulatedTradingVolume]).slice(-count);
+      } catch { await sleep(1500 * (i + 1)); }
+    }
+    return [];
+  }
   for (let i = 0; i < 3; i++) {
     try {
       const r = await fetch(`https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=day&count=${count}&requestType=0`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(20000) });
@@ -37,15 +50,16 @@ const loadAll = () => fs.readdirSync(DIR).filter((f) => /^\d{6}\.json$/.test(f))
   .flatMap((f) => Object.entries(JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')).days || {}));
 
 async function record() {
-  const sc = JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/stock-scores.json'), 'utf8'));
+  const sc = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/stock-scores-us.json' : 'feeds/stock-scores.json'), 'utf8'));
+  if (US) sc.items = Object.fromEntries(Object.values(sc.items).map((it) => [it[14], it])); // 미장은 로이터 코드(AAPL.O)로 기록 — 일봉을 다시 받을 때 쓴다
   const d = sc.date, file = path.join(DIR, d.slice(0, 6) + '.json');
   const cur = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { days: {} };
   if (cur.days[d]) { console.log('이미 기록됨', d); return; }
   const liq = Object.entries(sc.items).filter(([, it]) => (it[6] ?? 0) >= MIN_TV);
   const buys = liq.filter(([, it]) => it[1] === '추천'), bans = liq.filter(([, it]) => it[1] === '매수 금지');
   const cs = await pool(buys.map(([c]) => c), (c) => candles(c, 250));
-  const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || []); return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null]; });
-  cur.days[d] = { u: liq.map(([c]) => c), b, n: bans.map(([c, it]) => [c, it[0]]), formula: 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
+  const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], US ? { usd: true } : undefined); return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null]; });
+  cur.days[d] = { u: liq.map(([c]) => c), b, n: bans.map(([c, it]) => [c, it[0]]), formula: US ? 'US 모멘텀67·흑자33 · 1차60일선·2차매물대·손절2차−2ATR' : 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
   fs.writeFileSync(file, JSON.stringify(cur));
   console.log(`기록 ${d}: 거래 활발 ${liq.length} · 추천 ${b.length} · 매수 금지 ${bans.length}`);
 }
@@ -53,7 +67,7 @@ async function record() {
 async function evaluate() {
   const days = loadAll();
   if (!days.length) { console.log('기록 없음'); return; }
-  const ref = await candles('005930', 200), td = ref.map((x) => x[0]);
+  const ref = await candles(US ? 'AAPL.O' : '005930', 200), td = ref.map((x) => x[0]);
   const codes = [...new Set(days.flatMap(([, x]) => x.u))];
   const cs = await pool(codes, (c) => candles(c, 200));
   const cohorts = [];
@@ -83,7 +97,7 @@ async function evaluate() {
       next: (cohorts.map((c) => c['h' + H]).find((h) => h && h.pending && h.due) || {}).due || null };
   }
   const out = { updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), start: days[0][0], days: days.length, agg, cohorts: cohorts.slice(-120) };
-  fs.writeFileSync(path.join(ROOT, 'feeds/track-summary.json'), JSON.stringify(out));
+  fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-summary-us.json' : 'feeds/track-summary.json'), JSON.stringify(out));
   console.log(`기록 ${days.length}일 (${out.start}~) · 20일 결과 ${agg.h20.n}건 · 60일 결과 ${agg.h60.n}건`);
 }
 

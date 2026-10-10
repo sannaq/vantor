@@ -3,6 +3,7 @@
 
 feeds/stock-picks.json(scripts/score_all.mjs 결과)을 한 장짜리 이미지로 그려 웹후크에 올린다.
 환경변수: DISCORD_RECO_WEBHOOK (없으면 PNG 만 만들고 끝), OUT_DIR (기본 /tmp/brief-img)
+         MKT=US → 미장(feeds/stock-picks-us.json, 미국 장마감 뒤 아침 7시 KST)
 """
 import html
 import json
@@ -16,7 +17,9 @@ from playwright.sync_api import sync_playwright
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UP, DN, FLAT = "#2ebd85", "#f6465d", "#9aa4b2"
 VIEWC = {"추천": UP, "중립": "#f0b90b", "매수 금지": DN}
-PARTS = [("안정성", 40), ("고점 근접", 30), ("이익", 30)]  # score-core.js v2
+US = os.environ.get("MKT") == "US"
+PARTS = [("모멘텀", 67), ("흑자", 33)] if US else [("안정성", 40), ("고점 근접", 30), ("이익", 30)]  # score-core.js (미장은 W_US)
+SFX = "-us" if US else ""
 E = lambda s: html.escape(str(s if s is not None else ""))
 
 
@@ -40,13 +43,18 @@ def row(x, i, weak=False):
     why = x["bad"] if weak else x["good"]
     why = why or (x["good"] if weak else x["bad"]) or ["뚜렷한 특징 없음"]
     per = f'PER {x["per"]:.1f}' if x.get("per") else "PER —"
+    if US:
+        mom = "—" if x.get("mom") is None else f'{x["mom"] * 100:+.0f}%'
+        mid = (f'${x["px"]:,.2f} <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span> · 20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span>'
+               f' · 1년 모멘텀 {mom} · {per} · 거래대금 ${x["tv20"] * 100:,.0f}M')
+    else:
+        mid = (f'{x["px"]:,.0f}원 <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span> · 20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span>'
+               f' · 변동 ±{x["vol"] * 100:.1f}% · 고점 대비 {x["hiGap"] * 100:.0f}% · {per} · 거래대금 {x["tv20"]:,}억')
     return f"""<div class="rw">
  <div class="rk">{i}</div>
  <div class="sc" style="--g:{VIEWC[x["view"]]}"><b>{x["total"]}</b><span>{"금지" if x["view"] == "매수 금지" else x["view"]}</span></div>
  <div class="nm"><div class="n1">{E(x["n"])} <small>{E(x["c"])} · {E(x["mk"])}</small></div>
-  <div class="n2">{x["px"]:,.0f}원
-   <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span> · 20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span>
-   · 변동 ±{x["vol"] * 100:.1f}% · 고점 대비 {x["hiGap"] * 100:.0f}% · {per} · 거래대금 {x["tv20"]:,}억</div>
+  <div class="n2">{mid}</div>
   <div class="why">{" · ".join(E(w) for w in why[:3])}</div></div>
  <div class="pbs">{bars(x["parts"])}</div>
 </div>"""
@@ -78,7 +86,7 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 def bt_line(p):
     """60거래일 보유 검증 한 줄 (feeds/backtest-60.json, 매달 갱신)."""
     try:
-        with open(os.path.join(ROOT, "feeds/backtest-60.json"), encoding="utf-8") as f:
+        with open(os.path.join(ROOT, f"feeds/backtest{SFX}-60.json"), encoding="utf-8") as f:
             b = json.load(f)
         g = b["all"]["groups"]
         return f'검증({b["all"]["from"][2:4]}.{int(b["all"]["from"][4:6])}~{b["all"]["to"][2:4]}.{int(b["all"]["to"][4:6])}, 60일 보유): 추천 {g["추천"]["x20"]:+.1f}%p · 매수 금지 {g["매수 금지"]["x20"]:+.1f}%p (시장 평균 대비)'
@@ -90,11 +98,16 @@ def build(p):
     d = p["date"]
     day = f"{int(d[4:6])}월 {int(d[6:8])}일"
     dist = p["dist"]
+    title = "미장 종목 추천 TOP 10" if US else "종목 추천 TOP 10"
+    uni = f'나스닥·NYSE·AMEX {p["n"]:,}종목 채점' if US else f'코스피·코스닥 {p["n"]:,}종목 채점'
+    src = "VANTOR · 미국 장마감 기준" if US else "VANTOR · 장마감 기준"
+    rule = "1년 모멘텀 67<br>흑자 33" if US else "안정성 40 · 고점 근접 30<br>이익 30"
+    liq = f'20일 평균 거래대금 ${p["minTv"] * 100:,.0f}M 이상' if US else f'20일 평균 거래대금 {p["minTv"]}억 이상'
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>{CSS}</style></head><body><div id="card">
-<div class="hd"><h1>🧭 {day} 종목 추천 TOP 10</h1><div class="src">VANTOR · 장마감 기준<br>코스피·코스닥 {p["n"]:,}종목 채점</div></div>
+<div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>
-<div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">안정성 40 · 고점 근접 30<br>이익 30</b></div></div>
-<div class="sec">추천 상위 10 <small>20일 평균 거래대금 {p["minTv"]}억 이상 {p["liquidN"]:,}종목 중</small></div>
+<div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">{rule}</b></div></div>
+<div class="sec">추천 상위 10 <small>{liq} {p["liquidN"]:,}종목 중</small></div>
 {"".join(row(x, i + 1) for i, x in enumerate(p["top"]))}
 <div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
 {"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}
@@ -106,7 +119,8 @@ def build(p):
 def post(webhook, png, p):
     d = p["date"]
     top = p["top"][:3]
-    lines = [f"🧭 **{int(d[4:6])}월 {int(d[6:8])}일 종목 추천** — 코스피·코스닥 {p['n']:,}종목 (장마감 기준) · 추천 {p['dist']['추천']} · 매수 금지 {p['dist']['매수 금지']}"]
+    head = f"🇺🇸 **{int(d[4:6])}월 {int(d[6:8])}일(미국) 미장 종목 추천** — 나스닥·NYSE·AMEX {p['n']:,}종목 (미국 장마감 기준)" if US else f"🧭 **{int(d[4:6])}월 {int(d[6:8])}일 종목 추천** — 코스피·코스닥 {p['n']:,}종목 (장마감 기준)"
+    lines = [f"{head} · 추천 {p['dist']['추천']} · 매수 금지 {p['dist']['매수 금지']}"]
     lines += [f"{i + 1}. **{x['n']}** {x['total']}점 · {', '.join(x['good'][:2]) or '—'}" for i, x in enumerate(top)]
     lines.append("상세 → https://sannaq.github.io/vantor/  ※ 교육용 참고, 매매 신호 아님")
     boundary = uuid.uuid4().hex
@@ -114,8 +128,8 @@ def post(webhook, png, p):
         img = f.read()
     body = (
         f"--{boundary}\r\nContent-Disposition: form-data; name=\"payload_json\"\r\nContent-Type: application/json\r\n\r\n"
-        + json.dumps({"content": "\n".join(lines), "username": "VANTOR 종목 추천"}, ensure_ascii=False)
-        + f"\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"picks-{d}.png\"\r\nContent-Type: image/png\r\n\r\n"
+        + json.dumps({"content": "\n".join(lines), "username": "VANTOR 미장 추천" if US else "VANTOR 종목 추천"}, ensure_ascii=False)
+        + f"\r\n--{boundary}\r\nContent-Disposition: form-data; name=\"files[0]\"; filename=\"picks{SFX}-{d}.png\"\r\nContent-Type: image/png\r\n\r\n"
     ).encode() + img + f"\r\n--{boundary}--\r\n".encode()
     req = urllib.request.Request(webhook, data=body, method="POST",
                                  headers={"Content-Type": f"multipart/form-data; boundary={boundary}", "User-Agent": "vantor-picks"})
@@ -124,11 +138,11 @@ def post(webhook, png, p):
 
 
 def main():
-    with open(os.path.join(ROOT, "feeds/stock-picks.json"), encoding="utf-8") as f:
+    with open(os.path.join(ROOT, f"feeds/stock-picks{SFX}.json"), encoding="utf-8") as f:
         p = json.load(f)
     out_dir = os.environ.get("OUT_DIR", "/tmp/brief-img")
     os.makedirs(out_dir, exist_ok=True)
-    out = os.path.join(out_dir, f"picks-{p['date']}.png")
+    out = os.path.join(out_dir, f"picks{SFX}-{p['date']}.png")
     with sync_playwright() as pw:
         b = pw.chromium.launch()
         pg = b.new_page(viewport={"width": 900, "height": 1600}, device_scale_factor=2, locale="ko-KR")

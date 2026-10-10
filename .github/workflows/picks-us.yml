@@ -1,0 +1,85 @@
+name: 미장 종합 평점 → 사이트·디스코드
+
+# 미국 장마감 뒤(화~토 아침 7시 KST) 나스닥·NYSE·AMEX 전 종목을 미장 공식(score-core.js W_US)으로 채점해
+# feeds/stock-scores-us.json 등을 올리고, 추천 이미지를 DISCORD_RECO_WEBHOOK 으로 보낸다 (2026-10-10 사용자 결정).
+# 미국 휴장일(오늘 거래 없음)엔 보내지 않는다.
+on:
+  schedule:
+    - cron: "0 22 * * 1-5"   # 월~금 22:00 UTC = 화~토 07:00 KST (미국 동부 18:00, 장마감 2시간 뒤)
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "디스코드로 보낼까요? (yes/no)"
+        required: false
+        default: "yes"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: picks-us
+  cancel-in-progress: false
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    env:
+      MKT: US
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: 오늘 이미 보냈는지
+        id: dup
+        run: |
+          today=$(TZ=Asia/Seoul date +%F)
+          if [ "${{ github.event_name }}" = "schedule" ] && git log -20 --format=%s | grep -qE "^auto $today [0-9:]+ 미장 평점"; then
+            echo "오늘 미장 평점은 이미 보냄 → 건너뜀"; echo "skip=1" >> "$GITHUB_OUTPUT"; else echo "skip=0" >> "$GITHUB_OUTPUT"; fi
+      - name: 전 종목 채점
+        if: steps.dup.outputs.skip != '1'
+        run: node scripts/score_all.mjs
+      - name: 실제 성과 기록
+        if: steps.dup.outputs.skip != '1'
+        run: |
+          d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks-us.json'))['date'])")
+          if [ "$d" = "$(TZ=America/New_York date +%Y%m%d)" ]; then node scripts/track.mjs record; fi
+          node scripts/track.mjs eval
+      - name: 미국 장이 열렸는지
+        id: day
+        if: steps.dup.outputs.skip != '1'
+        run: |
+          d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks-us.json'))['date'])")
+          today=$(TZ=America/New_York date +%Y%m%d)
+          echo "채점 기준일 $d · 미국 오늘 $today"
+          if [ "$d" = "$today" ]; then echo "open=1" >> "$GITHUB_OUTPUT"; else echo "open=0" >> "$GITHUB_OUTPUT"; fi
+      - name: 결과 올리기
+        if: steps.day.outputs.open == '1'
+        run: |
+          git add feeds/stock-scores-us.json feeds/stock-picks-us.json feeds/stock-news-us.json feeds/stock-detail-us.json feeds/track-us feeds/track-summary-us.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 미장 평점"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1
+      - uses: actions/setup-python@v5
+        if: steps.day.outputs.open == '1'
+        with:
+          python-version: "3.12"
+      - name: 추천 이미지 만들어 보내기
+        if: steps.day.outputs.open == '1'
+        env:
+          DISCORD_RECO_WEBHOOK: ${{ (github.event_name == 'schedule' || github.event.inputs.send == 'yes') && secrets.DISCORD_RECO_WEBHOOK || '' }}
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk fonts-noto-color-emoji
+          pip install -q playwright && python -m playwright install --with-deps chromium
+          python3 scripts/picks_image.py
+      - name: 만든 이미지 보관 (7일)
+        if: steps.day.outputs.open == '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: picks-us-image
+          path: /tmp/brief-img/*.png
+          retention-days: 7

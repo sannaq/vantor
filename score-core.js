@@ -5,8 +5,12 @@
    2025-09~2026-09 주간 검증: 상위 20% 는 이후 20일 평균 +0.8%p, 하위 20% 는 −1.7%p (같은 날 전체 평균 대비).
    추세(이평·RSI)·외국인·기관 수급은 같은 검증에서 예측력이 없어 점수에서 빼고 참고 정보로만 보여준다.
    사이트(브라우저)와 매일 채점(scripts/score_all.mjs)·백테스트가 이 파일 하나를 같이 쓴다.
+   미장(2026-10-10 사용자 결정): 같은 공식이 미장에선 추천이 시장 평균보다 못해(뒤 1.5년 −2.5%p) 미장 전용 공식을 따로 고름.
+     1년 모멘텀 67 (1년 전 → 한 달 전 상승률, 최근 한 달은 뺀다) · 흑자 33 (PER 있음). 기준표 bp.mkt === 'US' 면 이 공식.
+     지표 11개·조합 1,540개를 앞 1.5년(23.10~25.2)으로 고르고 뒤 1.5년으로 확인: 60일 추천 +2.62%p · 매수 금지 −4.04%p (시장 대비).
    교육용 참고 지표이며 매매 신호가 아니다. */
 (function (root) {
+  var W_US = { mom: 67, prof: 33 };
   var W = { stab: 40, high: 30, earn: 30 }, CUT = { buy: 68, ban: 33 }; // CUT 은 기준표가 없을 때만 쓰는 대략값
   function num(v) { return v == null || v === '' || isNaN(+v) ? null : +v; }
   function avg(a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : null; }
@@ -23,12 +27,13 @@
     var w = c.slice(-250), hi = num(d.h52) || Math.max.apply(null, w), lo = num(d.l52) || Math.min.apply(null, w);
     hi = Math.max(hi, px);
     var per = num(d.per);
-    var tv20 = avg(cs.slice(-20).map(function (x) { return x[4] * x[5]; })) / 1e8;
+    var tv20 = avg(cs.slice(-20).map(function (x) { return x[4] * x[5]; })) / 1e8; // 원화면 억원, 달러면 억달러
+    var mom = n > 250 ? c[n - 22] / c[n - 251] - 1 : null; // 1년 모멘텀(12-1): 250거래일 전 → 21거래일 전
     // 참고 정보(점수 미반영)
     var m20 = ma(c, 20), m60 = ma(c, 60), fl = (d.flows || []).slice(-5), f5 = 0, i5 = 0;
     fl.forEach(function (x) { f5 += +x.f || 0; i5 += +x.i || 0; });
     return {
-      vol: vol, hiGap: px / hi - 1, ep: per != null && per > 0 ? 1 / per : -1, per: per,
+      vol: vol, hiGap: px / hi - 1, mom: mom, ep: per != null && per > 0 ? 1 / per : -1, per: per,
       tv20: tv20, px: px, day: pct(px, c[n - 2]), ret20: pct(px, c[Math.max(0, n - 21)]), date: cs[n - 1][0],
       trend: m20 && m60 ? (px > m20 && m20 > m60 ? '상승 추세' : px < m20 && m20 < m60 ? '하락 추세' : '횡보') : null,
       flow5: fl.length >= 5 ? (f5 > 0 && i5 > 0 ? '외국인·기관 동반 순매수' : f5 < 0 && i5 < 0 ? '외국인·기관 동반 순매도' : '외국인·기관 엇갈림') : null
@@ -36,9 +41,10 @@
   }
 
   /* 기준표: 지표마다 0~100 분위 경계값 (그날 전 종목에서) */
-  function breakpoints(list) {
+  function breakpoints(list, mkt) {
     function q(arr) { arr = arr.filter(function (x) { return x != null && isFinite(x); }).sort(function (a, b) { return a - b; });
       var out = []; for (var k = 0; k <= 100; k++) out.push(arr.length ? arr[Math.min(arr.length - 1, Math.round(k / 100 * (arr.length - 1)))] : 0); return out; }
+    if (mkt === 'US') return { mkt: 'US', mom: q(list.map(function (f) { return f.mom; })) };
     return { vol: q(list.map(function (f) { return f.vol; })), hiGap: q(list.map(function (f) { return f.hiGap; })), ep: q(list.map(function (f) { return f.ep; })) };
   }
   function rankIn(bp, v) { // 기준표 안 위치 0~1
@@ -51,6 +57,7 @@
 
   function score(f, bp) {
     if (!f || !bp) return null;
+    if (bp.mkt === 'US') return scoreUS(f, bp);
     var rs = 1 - rankIn(bp.vol, f.vol), rh = rankIn(bp.hiGap, f.hiGap), re = f.ep < 0 ? 0 : rankIn(bp.ep, f.ep);
     var parts = [Math.round(W.stab * rs), Math.round(W.high * rh), Math.round(W.earn * re)];
     var total = Math.round(W.stab * rs + W.high * rh + W.earn * re);
@@ -62,6 +69,16 @@
     return { total: total, view: view, cut: cut, parts: parts, good: good, bad: bad, ref: [f.trend, f.flow5].filter(Boolean), m: f };
   }
 
+  function scoreUS(f, bp) {
+    var rm = f.mom == null ? 0.5 : rankIn(bp.mom, f.mom), pf = f.ep > 0 ? 1 : 0;
+    var parts = [Math.round(W_US.mom * rm), Math.round(W_US.prof * pf)], total = Math.round(W_US.mom * rm + W_US.prof * pf);
+    var cut = bp.cut || CUT, view = total >= cut.buy ? '추천' : total < cut.ban ? '매수 금지' : '중립';
+    var good = [], bad = [], mp = f.mom == null ? null : (f.mom * 100).toFixed(0);
+    if (f.mom == null) bad.push('상장 1년 미만(모멘텀 없음)');
+    else if (rm >= 0.7) good.push('1년 상승세 강함(' + (f.mom >= 0 ? '+' : '') + mp + '%)'); else if (rm <= 0.3) bad.push('1년 흐름 약함(' + (f.mom >= 0 ? '+' : '') + mp + '%)');
+    if (pf) good.push('흑자(PER ' + f.per.toFixed(1) + '배)'); else bad.push('적자(PER 없음)');
+    return { total: total, view: view, cut: cut, parts: parts, good: good, bad: bad, ref: [f.trend].filter(Boolean), m: f };
+  }
   /* 채점한 점수들로 추천·매수 금지 경계(상위·하위 20%)를 정한다 */
   function cuts(totals) { var a = totals.slice().sort(function (x, y) { return x - y; }); if (!a.length) return CUT;
     return { buy: a[Math.floor(a.length * 0.8)], ban: a[Math.floor(a.length * 0.2)] }; }
@@ -72,7 +89,7 @@
      (2026-10-08 백테스트: 손절 −1ATR 은 39% 가 걸리고 그중 54% 가 다시 올라와 너무 촘촘 → −2ATR 채택, scripts/backtest_levels.mjs) */
   function tick(p) { var t = p < 2000 ? 1 : p < 5000 ? 5 : p < 20000 ? 10 : p < 50000 ? 50 : p < 200000 ? 100 : p < 500000 ? 500 : 1000; return Math.round(p / t) * t; }
   function levels(cs, o) {
-    o = o || {}; var b1Mode = o.b1 || 'ma60', b2Fb = o.b2Fb != null ? o.b2Fb : 1.5, b2Win = o.b2Win != null ? o.b2Win : 4, stopAtr = o.stopAtr != null ? o.stopAtr : 2;
+    o = o || {}; var T = o.usd ? function (p) { return Math.round(p * 100) / 100; } : tick; var b1Mode = o.b1 || 'ma60', b2Fb = o.b2Fb != null ? o.b2Fb : 1.5, b2Win = o.b2Win != null ? o.b2Win : 4, stopAtr = o.stopAtr != null ? o.stopAtr : 2;
     if (!cs || cs.length < 30) return null;
     var n = cs.length, px = cs[n - 1][4], tr = [];
     for (var i = Math.max(1, n - 14); i < n; i++) { var h = cs[i][2], l = cs[i][3], pc = cs[i - 1][4]; tr.push(Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc))); }
@@ -89,7 +106,7 @@
     var b2 = below ? below.p : b1 - b2Fb * atr; if (m60 && m60 < b1 && m60 > b2) b2 = Math.max(b2, m60 * 0.995);
     var st = stopAtr > 0 ? b2 - stopAtr * atr : null;
     var zones = vp.map(function (v, k) { return { v: v, share: v / tot, lo: lo + k * step, hi: lo + (k + 1) * step }; }).sort(function (p, q) { return q.v - p.v; }).slice(0, 3);
-    return { px: px, atr: atr, m20: m20, m60: m60, b1: tick(b1), b2: tick(b2), st: st == null ? null : tick(st), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
+    return { px: px, atr: atr, m20: m20, m60: m60, b1: T(b1), b2: T(b2), st: st == null ? null : T(st), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
   }
   /* 한 건 모의매매 — 1차 50%·2차 50% 지정가, 손절가 닿으면 매도, H거래일째 종가 정리.
      c = 일봉, i = 가격을 정한 날(그날 장마감 뒤), L = levels() 결과. 체결: 시가가 지정가 이하면 시가, 아니면 저가가 닿으면 지정가.
@@ -107,7 +124,7 @@
     return { f1: legs[0].fill != null, f2: legs[1].fill != null, w: w, ret: ret, alloc: ret == null ? 0 : ret * w, stopped: stopped, recovered: stopped ? c[i + H][4] > L.st : null };
   }
   var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, simulate: simulate, W: W, CUT: CUT,
-    PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]],
+    PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]], PARTS_US: [['모멘텀', W_US.mom], ['흑자', W_US.prof]], W_US: W_US,
     VIEW_DESC: { '추천': '전 종목 상위 20% — 검증 기간 60일 보유 시 시장보다 나았던 구간', '중립': '뚜렷한 우위 없음', '매수 금지': '전 종목 하위 20% — 검증 기간 60일 보유 시 시장보다 못했던 구간' } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VScore = api;
 })(typeof window !== 'undefined' ? window : globalThis);
