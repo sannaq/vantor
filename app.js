@@ -3769,7 +3769,43 @@ function _autoBriefData(){
     return data;
   }catch(e){ return null; }
 }
-function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); renderRecos(); }
+function renderBriefAll(){ renderBriefBoard('#briefBoard'); renderBriefBoard('#briefPanel'); renderUSBrief(); renderRecos(); }
+/* 미장 브리핑 (briefs-us/, scripts/us_brief.py — 장 전·장 중·장 마감, 규칙 기반 자동 작성, 2026-10-10) */
+var _USB=null, _usbSlot=null, _USBD={};
+var _USB_SLOTS=[{k:'pre',lab:'장 전'},{k:'mid',lab:'장 중'},{k:'close',lab:'장 마감'}];
+function renderUSBrief(){
+  var el=document.getElementById('usBriefPanel'); if(!el)return;
+  if(_USB===null){ _USB=[]; fetch('briefs-us/index.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).then(function(j){ _USB=Array.isArray(j)?j:[]; renderUSBrief(); }).catch(function(){}); return; }
+  if(!_USB.length){ el.innerHTML=''; return; }
+  var date=_USB[0].date, todays={}; _USB.forEach(function(b){ if(b.date===date)todays[b.slot]=b; });
+  if(!_usbSlot||!todays[_usbSlot]){ _usbSlot=['close','mid','pre'].filter(function(k){return todays[k];})[0]; }
+  var sel=todays[_usbSlot], d=_USBD[sel.file];
+  if(!d){ el.innerHTML='<div class="card" style="margin-top:14px"><div class="pad" style="color:var(--faint);font-size:12.5px">미장 브리핑 불러오는 중…</div></div>';
+    fetch('briefs-us/'+sel.file,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){ _USBD[sel.file]=j; renderUSBrief(); } }); return; }
+  var E=esc, M=function(t){ return E(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>'); }, C=function(v){ var n=parseFloat(v); return isNaN(n)||Math.abs(n)<0.005?'var(--sub)':(n>0?'var(--up)':'var(--down)'); };
+  var tabs='<div style="display:flex;background:var(--panel2);border:1px solid var(--line2);border-radius:11px;padding:3px;margin-bottom:12px">'+_USB_SLOTS.map(function(s){ var has=!!todays[s.k], on=s.k===_usbSlot;
+    return '<button '+(has?'onclick="_usbSet(\''+s.k+'\')"':'disabled')+' style="flex:1;border:none;border-radius:8px;padding:8px 0;font-size:13px;font-weight:800;cursor:'+(has?'pointer':'default')+';font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:transparent;color:'+(has?'var(--sub)':'var(--faint)')+';'+(has?'':'opacity:.5'))+'">'+s.lab+'</button>'; }).join('')+'</div>';
+  var tiles=(d.us.tiles||[]).map(function(t){ return '<div style="flex:1;min-width:110px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:9px 12px"><div style="font-size:11.5px;color:var(--faint)">'+E(t.t)+'</div><div style="font-size:18px;font-weight:800;color:'+(String(t.v).indexOf('%')>=0?C(t.v):'var(--ink)')+'">'+E(t.v)+'</div><div style="font-size:11px;color:var(--faint)">'+E(t.s||'')+'</div></div>'; }).join('');
+  var box=function(h,body){ return '<div style="flex:1;min-width:230px;background:var(--panel2);border:1px solid var(--line2);border-radius:12px;padding:11px 14px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">'+h+'</div><div style="font-size:12.5px;line-height:1.75;color:var(--sub)">'+body+'</div></div>'; };
+  var li=function(a){ return (a||[]).map(function(x){ var m=String(x).match(/([+-][\d.]+%)$/); return '<div>'+M(String(x).replace(/ [+-][\d.]+%$/,''))+(m?' <b style="color:'+C(m[1])+'">'+m[1]+'</b>':'')+'</div>'; }).join(''); };
+  var sec=function(a){ return (a||[]).map(function(r){ return '<div>'+E(r[0])+' <b style="color:'+C(r[1])+'">'+(r[1]>=0?'+':'')+r[1].toFixed(2)+'%</b> <span style="color:var(--faint);font-size:11px">'+r[2]+'종목</span></div>'; }).join(''); };
+  var big=(d.big||[]).map(function(r){ return '<span style="display:inline-block;margin:2px 10px 2px 0">'+E(r.n)+' <b style="color:'+C(r.ch)+'">'+(r.ch==null?'—':(r.ch>=0?'+':'')+r.ch.toFixed(2)+'%')+'</b></span>'; }).join('');
+  var ev=(d.events||[]).map(function(e){ return '<div>📅 '+E(e.k)+' '+M(e.b)+'</div>'; }).join('')+(d.earnings||[]).map(function(e){ return '<div>📊 <b>'+E(e.s)+'</b> '+E(e.n)+' '+E(e.t)+(e.eps?' · EPS 예상 '+E(e.eps):'')+'</div>'; }).join('');
+  var pk=(d.picks||[]).map(function(x){ return '<span style="display:inline-block;margin:2px 10px 2px 0;cursor:pointer" onclick="_recoF.m=\'US\';showView(\'reco\')">'+E(x.n)+' <b>'+x.total+'점</b>'+(x.hot?' <span style="color:#f0b90b">⚠과열</span>':'')+'</span>'; }).join('');
+  var warn=(d.spy&&d.spy.below)?'<div style="margin:10px 0;padding:9px 12px;border:1px solid #f6465d;border-radius:10px;background:rgba(246,70,93,.08);font-size:12.5px">⚠ <b>하락장 주의</b> — S&amp;P500이 200일선보다 '+Math.abs(d.spy.gap)+'% 아래예요.</div>':'';
+  el.innerHTML='<div class="card" style="margin-top:14px"><div class="ch"><h2>🇺🇸 미장 브리핑</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+E(d.made||'')+' · 규칙 기반 자동 작성</span></div></div><div class="pad" style="padding-top:6px">'+tabs
+    +'<div style="font-size:16px;font-weight:800;margin-bottom:6px">'+E(d.title)+'</div>'+warn
+    +'<div style="font-size:13.5px;line-height:1.75;color:var(--sub)">'+M(d.lead)+'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'+tiles+'</div>'
+    +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+box(E(d.us.cpuTitle),li(d.us.cpu))+box(E(d.us.quietTitle),li(d.us.quiet))+box('🏭 업종 (시총 가중)',sec(d.sectors.up)+'<hr style="border:none;border-top:1px solid var(--line2);margin:4px 0">'+sec(d.sectors.down))+'</div>'
+    +(big?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+box('🏛 시가총액 상위 10',big)+'</div>':'')
+    +(ev?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+box('🗓 일정 · 실적 발표',ev)+'</div>':'')
+    +(pk?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+box('🧭 미장 추천 TOP 5 (최근 채점)',pk)+'</div>':'')
+    +'<div style="margin-top:10px">'+box('📌 확인할 것',(d.checks||[]).map(function(c,i){ return '<div>'+(i+1)+'. '+E(c)+'</div>'; }).join(''))+'</div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">'+(d.us.note?E(d.us.note)+' · ':'')+'시세는 네이버 증권(선물 10분 지연) · 교육용 참고이며 매매 신호가 아닙니다 · 장 전 21:50 · 장 중 01:30 · 장 마감 06:30경(한국 시간, 서머타임 끝나면 1시간 늦게)</div></div></div>';
+  if(typeof initCards==='function')setTimeout(initCards,0);
+}
+window._usbSet=function(k){ _usbSlot=k; renderUSBrief(); };
 /* 오늘의 방향 관점 — feeds/stock-recos.json (자동 생성, 하루 3번) */
 var _RECOS=null;
 function _loadRecos(){ try{ fetch('feeds/stock-recos.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(Array.isArray(j)){ _RECOS=j; renderRecos(); } }).catch(function(){}); }catch(e){} }

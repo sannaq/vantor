@@ -1,0 +1,65 @@
+name: 미장 브리핑 (장 전·장 중·장 마감)
+
+# scripts/us_brief.py — 규칙 기반 자동 작성 (2026-10-10 사용자 결정)
+# 사이트(briefs-us/)엔 3번 모두, 디스코드(DISCORD_US_BRIEF_WEBHOOK, 미장 전용 채널)엔 장 전·장 마감만.
+# 크론은 서머타임·표준시 둘 다 걸어 두고, 스크립트가 미국 동부 시간으로 맞는 슬롯만 만든다(나머지는 건너뜀).
+on:
+  schedule:
+    - cron: "50 12 * * 1-5"   # 장 전 — 미국 08:50 (서머타임) = 21:50 KST
+    - cron: "50 13 * * 1-5"   # 장 전 — 미국 08:50 (표준시) = 22:50 KST
+    - cron: "30 16 * * 1-5"   # 장 중 — 미국 12:30 (서머타임) = 01:30 KST
+    - cron: "30 17 * * 1-5"   # 장 중 — 미국 12:30 (표준시) = 02:30 KST
+    - cron: "30 21 * * 1-5"   # 장 마감 — 미국 17:30 (서머타임) = 06:30 KST
+    - cron: "30 22 * * 1-5"   # 장 마감 — 미국 17:30 (표준시) = 07:30 KST
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "pre / mid / close (비우면 지금 시각으로)"
+        required: false
+        default: ""
+      send:
+        description: "디스코드로 보낼까요? (yes/no)"
+        required: false
+        default: "no"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: us-brief
+  cancel-in-progress: false
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 한글 글꼴 · 브라우저
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk fonts-noto-color-emoji
+          pip install -q playwright && python -m playwright install --with-deps chromium
+      - name: 브리핑 만들기
+        env:
+          SLOT: ${{ github.event.inputs.slot }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.slot != '' && '1' || '' }}
+          DISCORD_US_BRIEF_WEBHOOK: ${{ (github.event_name == 'schedule' || github.event.inputs.send == 'yes') && secrets.DISCORD_US_BRIEF_WEBHOOK || '' }}
+        run: python3 scripts/us_brief.py
+      - name: 결과 올리기
+        run: |
+          git add briefs-us
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 미장 브리핑"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1
+      - name: 만든 이미지 보관 (7일)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-brief-image
+          path: /tmp/brief-img/*.png
+          retention-days: 7
+          if-no-files-found: ignore
