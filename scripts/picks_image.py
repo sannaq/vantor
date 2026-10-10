@@ -40,6 +40,7 @@ def bars(parts):
 
 
 def row(x, i, weak=False):
+    hot = ' <span style="font-size:11px;color:#f0b90b;border:1px solid #f0b90b;border-radius:6px;padding:0 5px">⚠ 과열</span>' if (not weak and any(str(b).startswith("⚠ 과열") for b in x.get("bad") or [])) else ""
     why = x["bad"] if weak else x["good"]
     why = why or (x["good"] if weak else x["bad"]) or ["뚜렷한 특징 없음"]
     per = f'PER {x["per"]:.1f}' if x.get("per") else "PER —"
@@ -53,7 +54,7 @@ def row(x, i, weak=False):
     return f"""<div class="rw">
  <div class="rk">{i}</div>
  <div class="sc" style="--g:{VIEWC[x["view"]]}"><b>{x["total"]}</b><span>{"금지" if x["view"] == "매수 금지" else x["view"]}</span></div>
- <div class="nm"><div class="n1">{E(x["n"])} <small>{E(x["c"])} · {E(x["mk"])}</small></div>
+ <div class="nm"><div class="n1">{E(x["n"])} <small>{E(x["c"])} · {E(x["mk"])}</small>{hot}</div>
   <div class="n2">{mid}</div>
   <div class="why">{" · ".join(E(w) for w in why[:3])}</div></div>
  <div class="pbs">{bars(x["parts"])}</div>
@@ -94,6 +95,14 @@ def bt_line(p):
         return "60일 보유 기준"
 
 
+def spy_warn(p):
+    s = p.get("spy") if US else None
+    if not s or not s.get("below"):
+        return ""
+    return (f'<div style="margin-top:12px;padding:10px 14px;border:1px solid {DN};border-radius:12px;background:rgba(246,70,93,.10);font-size:13px">'
+            f'⚠ <b>하락장 주의</b> — S&amp;P500(SPY ${s["px"]:,.2f})이 200일선(${s["ma200"]:,.2f})보다 {abs(s["gap"])}% 아래 · 모멘텀 종목 급반전 주의 (점수는 그대로)</div>')
+
+
 def build(p):
     d = p["date"]
     day = f"{int(d[4:6])}월 {int(d[6:8])}일"
@@ -107,7 +116,7 @@ def build(p):
 <div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>
 <div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">{rule}</b></div></div>
-<div class="sec">추천 상위 10 <small>{liq} {p["liquidN"]:,}종목 중</small></div>
+{spy_warn(p)}<div class="sec">추천 상위 10 <small>{liq} {p["liquidN"]:,}종목 중</small></div>
 {"".join(row(x, i + 1) for i, x in enumerate(p["top"]))}
 <div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
 {"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}

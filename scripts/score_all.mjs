@@ -121,8 +121,15 @@ fresh.forEach((x) => { x.r = score(x.f, bp); });
 fresh.sort((a, b) => b.r.total - a.r.total);
 fresh.forEach((x, i) => { x.rank = i + 1; });
 
+// 미장 시장 국면: S&P500(SPY)이 200일선 아래면 사이트·디스코드에 경고만 띄운다 (점수는 그대로, 2026-10-10 사용자 결정)
+let spy = null;
+if (US) try {
+  const ymd = (x) => x.toISOString().slice(0, 10).replace(/-/g, ''), rows = await get(`${UAPI}/chart/foreign/item/SPY/day?startDateTime=${ymd(new Date(Date.now() - 330 * 864e5))}0000&endDateTime=${ymd(new Date())}2359`);
+  const c = rows.map((x) => +x.closePrice).filter((v) => v > 0);
+  if (c.length >= 200) { const ma = c.slice(-200).reduce((a, b) => a + b, 0) / 200; spy = { px: c[c.length - 1], ma200: +ma.toFixed(2), gap: +((c[c.length - 1] / ma - 1) * 100).toFixed(1), below: c[c.length - 1] < ma }; }
+} catch { /* 없으면 경고 생략 */ }
 const r1 = (v, k) => v == null ? null : +v.toFixed(k);
-const scores = { v: 2, market: US ? 'US' : 'KR', date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
+const scores = { v: 2, market: US ? 'US' : 'KR', spy, date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
   bp: US ? { mkt: 'US', mom: bp.mom.map((x) => r1(x, 4)), cut: bp.cut } : { vol: bp.vol.map((x) => r1(x, 5)), hiGap: bp.hiGap.map((x) => r1(x, 4)), ep: bp.ep.map((x) => r1(x, 4)), cut: bp.cut }, // 사이트가 목록에 없는 종목을 같은 기준으로 채점할 때 씀
   // 코드: [총점, 관점, 순위, [안정성,고점근접,이익], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%, 참고[], 하루변동%, 52주고점대비%, PER]
   //   미장은 뒤에 [12]이름, [13]거래소, [14]로이터 코드, [15]1년 모멘텀% 를 더 붙인다 (국내는 stock-list.json 에서 이름을 찾는다)
@@ -132,7 +139,7 @@ const liquid = fresh.filter((x) => x.f.tv20 >= MIN_TV);
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
 const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x) => dist[x.r.view]++);
-const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
+const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 
 // 미장 실적 발표 예정일 (나스닥 실적 달력, 앞으로 3주) — 못 받으면 빈 채로 둔다

@@ -1361,11 +1361,12 @@ function _recoRows(j){ var L={}; if(j&&j.market!=='US')(_STKLIST||[]).forEach(fu
 function _recoMini(parts,us){ return _vsPartsOf(us).map(function(p,i){ var w=Math.max(0,Math.min(100,(parts[i]||0)/p[1]*100));
   return '<div title="'+p[0]+' '+parts[i]+'/'+p[1]+'" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)"><span style="width:48px">'+p[0]+'</span><div style="width:56px;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff"></div></div></div>'; }).join(''); }
 function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
-  var why=(x.view==='매수 금지'?x.bad.concat(x.good):x.good.concat(x.bad)).slice(0,2);
+  var hot=x.bad.filter(function(t){return t.indexOf('⚠ 과열')===0;})[0], bad0=x.bad.filter(function(t){return t!==hot;});
+  var why=(x.view==='매수 금지'?bad0.concat(x.good):x.good.concat(bad0)).slice(0,2);
   var dy=x.day==null?'':'<span class="'+(x.day>=0?'up':'down')+'" style="font-size:12px;font-weight:700">'+(x.day>=0?'+':'')+x.day.toFixed(2)+'%</span>';
   return '<div onclick="_recoToggle(\''+x.c+'\')" style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-top:1px solid var(--line2);cursor:pointer;flex-wrap:wrap">'
     +'<div style="width:26px;text-align:center;font-weight:800;color:var(--faint);font-size:13px">'+i+'</div>'+_vsBadge(x.total,x.view,48)
-    +'<div style="flex:1;min-width:180px"><div style="font-weight:800;font-size:14.5px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+x.c+' · '+esc(x.mk)+'</span> '+dy+'</div>'
+    +'<div style="flex:1;min-width:180px"><div style="font-weight:800;font-size:14.5px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+x.c+' · '+esc(x.mk)+'</span> '+dy+(hot?' <span title="'+esc(hot)+'" style="font-size:11px;font-weight:800;color:#f0b90b;border:1px solid #f0b90b;border-radius:6px;padding:1px 6px;margin-left:4px">⚠ 과열</span>':'')+'</div>'
       +'<div style="font-size:12px;color:var(--sub);margin-top:2px"><b style="color:'+vc+'">'+x.view+'</b>'+(why.length?' · '+why.map(esc).join(' · '):'')+'</div></div>'
     +'<div style="display:flex;flex-direction:column;gap:2px">'+_recoMini(x.parts,x.us)+'</div><div style="color:var(--faint);font-size:12px">▾</div></div>'
     +'<div id="rx-'+x.c+'" style="display:none"></div>'; }
@@ -1430,6 +1431,8 @@ function renderReco(){
   el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
     +'<div class="pad" style="padding-top:6px">'+bar
     +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
+    +(US&&j.spy&&j.spy.below?'<div style="font-size:12.5px;color:var(--ink);margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid #f6465d;background:rgba(246,70,93,.08)">⚠ <b>하락장 주의</b> — S&amp;P500(SPY '+_usd(j.spy.px)+')이 200일선('+_usd(j.spy.ma200)+')보다 '+Math.abs(j.spy.gap)+'% 아래예요. 모멘텀 종목은 하락장에서 한꺼번에 급반전할 수 있어요. 점수는 그대로예요(3년 중 이런 구간이 13주뿐이라 검증 근거 부족).</div>':'')
+    +(US&&j.spy&&!j.spy.below?'<div style="font-size:11.5px;color:var(--faint);margin:2px 0">시장 국면: S&amp;P500이 200일선 위('+(j.spy.gap>=0?'+':'')+j.spy.gap+'%) — 정상</div>':'')
     +(US?'<div style="font-size:11.5px;color:var(--sub);margin:2px 0 4px">미장은 국장과 공식이 달라요 — 국장 공식은 미장 최근 1.5년에 통하지 않아 미장 데이터로 따로 골랐어요(아래 검증 결과).</div>':'')
     +(rows||'<div style="padding:16px;color:var(--faint);font-size:13px">조건에 맞는 종목이 없어요</div>')
     +(list.length>F.show?'<button class="tf" onclick="_recoSet(\'show\','+(F.show+50)+')" style="width:100%;margin-top:10px">더 보기 ('+(list.length-F.show).toLocaleString()+'종목 남음)</button>':'')

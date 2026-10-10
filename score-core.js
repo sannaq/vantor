@@ -77,6 +77,8 @@
     if (f.mom == null) bad.push('상장 1년 미만(모멘텀 없음)');
     else if (rm >= 0.7) good.push('1년 상승세 강함(' + (f.mom >= 0 ? '+' : '') + mp + '%)'); else if (rm <= 0.3) bad.push('1년 흐름 약함(' + (f.mom >= 0 ? '+' : '') + mp + '%)');
     if (pf) good.push('흑자(PER ' + f.per.toFixed(1) + '배)'); else bad.push('적자(PER 없음)');
+    // 과열 경고(점수 미반영, 2026-10-10 사용자 결정): 1년 +200%↑ 는 평균은 높지만 확인 구간 중앙값 −5%p·하위 5% −40%대
+    if (f.mom != null && f.mom >= 2) bad.unshift('⚠ 과열 주의(1년 +' + mp + '% — 하위 5%는 −40%대)');
     return { total: total, view: view, cut: cut, parts: parts, good: good, bad: bad, ref: [f.trend].filter(Boolean), m: f };
   }
   /* 채점한 점수들로 추천·매수 금지 경계(상위·하위 20%)를 정한다 */
