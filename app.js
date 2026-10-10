@@ -1495,6 +1495,11 @@ function _rxHTML(x,DT,NW,IN,cs){
   if(x.view==='추천')why.push('전 종목 상위 20% 점수('+x.total+'점)라 <b>추천</b>이에요.'); else if(x.view==='매수 금지')why.push('전 종목 하위 20% 점수('+x.total+'점)라 <b>매수 금지</b>예요.'); else why.push(x.total+'점으로 <b>중립</b>이에요.');
   if(x.good.length)why.push('강점: '+x.good.map(esc).join(', ')+'.'); if(x.bad.length)why.push('약점: '+x.bad.map(esc).join(', ')+'.');
   if(US&&dt.indN)why.push('업종은 '+esc(dt.indN)+'이에요.');
+  var cons=dt.cons, earn=dt.earn, qf=dt.qfin;
+  var _cr=function(r){ return r>=4.5?'적극 매수':r>=3.5?'매수':r>=2.5?'중립':r>=1.5?'매도':'적극 매도'; };
+  var _dd=function(d){ var t=new Date(+d.slice(0,4),+d.slice(4,6)-1,+d.slice(6,8)), n=new Date(); n.setHours(0,0,0,0); return Math.round((t-n)/864e5); };
+  if(US&&cons&&cons.r!=null)why.push('애널리스트 평균 의견은 <b>'+_cr(cons.r)+'</b>('+cons.r.toFixed(2)+'/5)'+(cons.t&&L?', 평균 목표주가는 현재가보다 '+((cons.t/L.px-1)*100>=0?'+':'')+((cons.t/L.px-1)*100).toFixed(0)+'%예요.':'예요.'));
+  if(US&&earn&&_dd(earn[0])>=0&&_dd(earn[0])<=14)why.push('⚠ <b>'+(+earn[0].slice(4,6))+'/'+(+earn[0].slice(6,8))+' 실적 발표</b>('+(_dd(earn[0])===0?'오늘':'D-'+_dd(earn[0]))+')가 있어 그 전후로 크게 움직일 수 있어요.');
   if(US&&it[15]!=null)why.push('1년 전부터 한 달 전까지 '+(it[15]>=0?'+':'')+it[15]+'% 움직였어요.');
   if(ind)why.push('업종('+esc(ind[1])+')은 오늘 '+(ind[2]>=0?'+':'')+ind[2].toFixed(2)+'%, 이 종목은 '+(x.day==null?'—':((x.day>=0?'+':'')+x.day.toFixed(2)+'%'))+(x.day!=null?(x.day>ind[2]?' — 업종보다 강해요.':' — 업종보다 약해요.'):''));
   if(fr[0]!=null&&fr[1]!=null){ var s5=fr[0]+fr[1]; why.push('최근 5일 외국인·기관 순매수는 거래대금의 '+(s5>=0?'+':'')+s5.toFixed(1)+'%'+(s5>=3?'로 매수 우위예요.':s5<=-3?'로 매도 우위예요.':'로 뚜렷하지 않아요.')); }
@@ -1517,6 +1522,22 @@ function _rxHTML(x,DT,NW,IN,cs){
     var head='<tr><th class="l"></th>'+fin.y.slice(1).map(function(y){return '<th>'+y.replace('E',' 예상')+'</th>';}).join('')+'</tr>';
     var rw=function(lab,a){ return '<tr><td class="l">'+lab+'</td>'+fin.y.slice(1).map(function(_,k){ return '<td>'+P(g(a,k+1))+'</td>'; }).join('')+'</tr>'; };
     finBox='<table style="width:100%;font-size:12px"><thead>'+head+'</thead><tbody>'+rw((fin.lab?fin.lab[0]:'매출')+' 성장률',fin.rev)+rw((fin.lab?fin.lab[1]:'영업이익')+' 성장률',fin.op)+rw((fin.lab?fin.lab[2]:'EPS')+' 성장률',fin.eps)+'</tbody></table><div style="font-size:11px;color:var(--faint);margin-top:4px">전년 대비 · 연간'+(US?' · 회계연도 기준':' · 예상은 증권사 컨센서스')+'</div>'; }
+  // 미장: 애널리스트 · 실적 발표일 · 분기 실적
+  var B$=function(v){ if(v==null)return '—'; var a=Math.abs(v); return (v<0?'-':'')+'$'+(a>=1000?(a/1000).toFixed(1)+'B':Math.round(a)+'M'); };
+  var consBox=(cons&&cons.r!=null)?('<div style="font-size:15px;font-weight:800">'+_cr(cons.r)+' <span style="font-size:12px;color:var(--faint);font-weight:600">'+cons.r.toFixed(2)+' / 5</span></div>'
+      +'<div style="position:relative;height:8px;background:var(--panel,#0000);border:1px solid var(--line2);border-radius:5px;margin:8px 0 4px"><div style="position:absolute;left:'+((cons.r-1)/4*100).toFixed(0)+'%;top:-4px;width:3px;height:14px;background:#4a9eff;border-radius:2px"></div></div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint)"><span>매도</span><span>중립</span><span>매수</span></div>'
+      +(cons.t?'<div style="font-size:12.5px;color:var(--sub);margin-top:8px">평균 목표주가 <b>'+_usd(cons.t)+'</b>'+(L?' · 현재가 대비 '+P((cons.t/L.px-1)*100,0):'')+'</div><div style="font-size:11.5px;color:var(--faint)">최저 '+(cons.lo?_usd(cons.lo):'—')+' ~ 최고 '+(cons.hi?_usd(cons.hi):'—')+'</div>':'')
+      +'<div style="font-size:11px;color:var(--faint);margin-top:6px">증권사 평균(1 적극 매도 ~ 5 적극 매수) · '+esc(cons.d||'')+' 기준 · 점수에는 반영 안 함</div>')
+    :'<div style="font-size:12px;color:var(--faint)">애널리스트 의견 없음</div>';
+  var earnBox=earn?(function(){ var dd=_dd(earn[0]); return '<div style="font-size:15px;font-weight:800">'+(+earn[0].slice(4,6))+'월 '+(+earn[0].slice(6,8))+'일 '+(earn[1]?'<span style="font-size:12px;color:var(--sub)">('+earn[1]+')</span>':'')+'</div>'
+      +'<div style="font-size:12.5px;margin-top:4px;font-weight:700;color:'+(dd<=7?'var(--up)':'var(--sub)')+'">'+(dd<0?'발표 지남':dd===0?'오늘 발표':'D-'+dd)+'</div>'
+      +(earn[2]?'<div style="font-size:12px;color:var(--sub);margin-top:4px">EPS 예상 '+esc(earn[2])+'</div>':'')+'<div style="font-size:11px;color:var(--faint);margin-top:6px">미국 현지 날짜 · 나스닥 실적 달력 · 발표 전후엔 주가 변동이 커요</div>'; })()
+    :'<div style="font-size:12px;color:var(--faint)">앞으로 3주 안에 예정된 발표 없음</div>';
+  var qBox='<div style="font-size:12px;color:var(--faint)">분기 실적 없음</div>';
+  if(qf&&qf.q&&qf.q.length){ var nq=qf.q.length, yo=function(a){ return (a&&a[nq-1]!=null&&a[0])?((a[nq-1]/Math.abs(a[0])-1)*100):null; };
+    qBox='<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th class="l"></th>'+qf.q.map(function(k){ return '<th>'+k.slice(2,4)+'.'+(+k.slice(5,7))+'</th>'; }).join('')+(nq>=5?'<th>1년 전 대비</th>':'')+'</tr></thead><tbody>'
+      +[['매출',qf.rev],['영업이익(EBIT)',qf.op],['순이익',qf.ni]].map(function(r){ return '<tr><td class="l">'+r[0]+'</td>'+r[1].map(function(v){ return '<td'+(v!=null&&v<0?' class="down"':'')+'>'+B$(v)+'</td>'; }).join('')+(nq>=5?'<td>'+P(yo(r[1]),0)+'</td>':'')+'</tr>'; }).join('')
+      +'</tbody></table></div><div style="font-size:11px;color:var(--faint);margin-top:4px">분기 끝 날짜 기준 · B = 10억 달러, M = 100만 달러</div>'; }
   // ⑥ 매물대
   var vpBox=L?(L.zones.map(function(z,i){ var inside=L.px>=z.lo&&L.px<z.hi, above=L.px>=z.hi;
       return '<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;border-top:'+(i?'1px solid var(--line2)':'none')+'"><span>'+(US?_usd(Math.round(z.lo*100)/100)+' ~ '+_usd(Math.round(z.hi*100)/100):_tick(z.lo).toLocaleString()+' ~ '+_tick(z.hi).toLocaleString()+'원')+'</span><span style="color:var(--faint)">거래량 '+(z.share*100).toFixed(0)+'% · '+(inside?'<b>현재가 위치</b>':above?'아래 지지대':'위 저항대')+'</span></div>'; }).join('')
@@ -1529,6 +1550,8 @@ function _rxHTML(x,DT,NW,IN,cs){
     +'<div style="display:flex;gap:10px;flex-wrap:wrap">'+sec('🧭 왜 '+x.view+'인가',whyBox)+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('📈 차트 · 매물대',(cs.length?_rxChart(x.c,cs,L):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>'))+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🎯 매수·손절 가격 (교육용 규칙)',lvBox)+(US?'':sec('🧱 거래대금 대비 순매수',flowBox))+'</div>'
+    +(US?'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🧑‍💼 애널리스트 의견',consBox)+sec('🗓 실적 발표',earnBox)+'</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('📋 분기 실적 (최근 5분기)',qBox)+'</div>':'')
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('🏭 섹터',secBox)+sec('📊 성장률',finBox)+sec('🪜 매물대',vpBox)+'</div>'
     +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">'+sec('📰 관련 뉴스',newsBox)+'</div>'
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="openStock(\''+x.c+'\''+(US?',{n:\''+esc(x.n).replace(/'/g,'')+'\',mk:\''+x.mk+'\'}':'')+')">종목 화면 열기 →</button><button class="tf" onclick="_recoToggle(\''+x.c+'\')">접기</button></div>'

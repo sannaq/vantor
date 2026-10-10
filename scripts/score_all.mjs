@@ -135,6 +135,20 @@ const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x
 const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 
+// 미장 실적 발표 예정일 (나스닥 실적 달력, 앞으로 3주) — 못 받으면 빈 채로 둔다
+const EARN = {};
+if (US) {
+  for (let k = 0; k < 22; k++) {
+    const t = new Date(Date.now() + k * 864e5), wd = t.getUTCDay(); if (wd === 0 || wd === 6) continue;
+    const ds = t.toISOString().slice(0, 10);
+    try {
+      const r = await fetch(`https://api.nasdaq.com/api/calendar/earnings?date=${ds}`, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+      const j = await r.json();
+      for (const row of (j && j.data && j.data.rows) || []) if (row.symbol && !EARN[row.symbol]) EARN[row.symbol] = [ds.replace(/-/g, ''), /pre/.test(row.time || '') ? '장 전' : /after/.test(row.time || '') ? '장 후' : '', row.epsForecast || ''];
+    } catch { /* 달력은 없어도 된다 */ }
+  }
+  console.log('실적 발표 예정', Object.keys(EARN).length, '종목');
+}
 // 종목 뉴스 — 추천 화면에서 종목을 펼치면 보여준다 (거래 활발한 종목마다 최근 3건, 네이버 증권 종목 뉴스)
 const news = {}, detail = {}; let ni = 0;
 // 종목별 상세(추천 화면 펼침): 업종 코드 · 거래대금 대비 순매수 비율 [외국인5일, 기관5일, 외국인20일, 기관20일, 외국인60일, 기관60일]
@@ -143,6 +157,19 @@ await Promise.all(Array.from({ length: CONC }, async () => {
   while (ni < liquid.length) {
     const x = liquid[ni++];
     if (US) {
+      try { // 애널리스트 의견(1~5, 5 = 적극 매수) · 목표주가
+        const ig = await get(`${UAPI}/stock/${x.rc}/integration`).catch(() => null), ci = ig && ig.consensusInfo;
+        if (ci && ci.recommMean) detail[x.c] = { ...(detail[x.c] || {}), cons: { r: n(ci.recommMean), t: n(ci.priceTargetMean), hi: n(ci.priceTargetHigh), lo: n(ci.priceTargetLow), d: ci.createDate || null } };
+      } catch { /* 없어도 된다 */ }
+      try { // 분기 실적 (최근 5개 분기, 백만 달러)
+        const fq = await get(`${UAPI}/stock/${x.rc}/finance/quarter`).catch(() => null);
+        if (fq && fq.trTitleList) {
+          const ks = fq.trTitleList.map((t) => t.key);
+          const row = (nm) => { const r = (fq.rowList || []).find((z) => z.title === nm); return ks.map((k) => (r && r.columns[k] ? n(r.columns[k].value) : null)); };
+          detail[x.c] = { ...(detail[x.c] || {}), qfin: { q: ks, rev: row('매출액'), op: row('EBIT'), ni: row('당기순이익') } };
+        }
+      } catch { /* 없어도 된다 */ }
+      if (EARN[x.c]) detail[x.c] = { ...(detail[x.c] || {}), earn: EARN[x.c] };
       try {
         const fi = await get(`${UAPI}/stock/${x.rc}/finance/annual`).catch(() => null);
         if (fi && fi.trTitleList) {
