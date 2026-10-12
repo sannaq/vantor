@@ -58,7 +58,7 @@ jobs:
       - name: 결과 올리기
         if: steps.day.outputs.open == '1'
         run: |
-          git add feeds/stock-scores-us.json feeds/stock-picks-us.json feeds/stock-news-us.json feeds/stock-detail-us.json feeds/track-us feeds/track-summary-us.json feeds/track-codes-us.json
+          git add feeds/stock-scores-us.json feeds/stock-picks-us.json feeds/stock-news-us.json feeds/stock-detail-us.json feeds/track-us feeds/track-summary-us.json feeds/track-codes-us.json feeds/stock-list-us.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 미장 평점"

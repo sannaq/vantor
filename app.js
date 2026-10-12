@@ -2233,7 +2233,10 @@ $$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; _new
 function _isKRCode(c){ return /^\d[0-9A-Z]{5}$/.test(String(c||'')); }
 /* 검색용 전체 국내 종목 목록 — feeds/stock-list.json [[코드, 이름, 시장], ...] (주 1회 갱신, 첫 검색 때 한 번 받음) */
 var _STKLIST=null, _stkListP=null;
-function _loadStockList(){ if(_stkListP)return _stkListP; _stkListP=fetch('feeds/stock-list.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST=Array.isArray(j)?j:[]; _STKLIST.forEach(function(x){ x._k=_skey(x[1]); }); return _STKLIST; }).catch(function(){ _STKLIST=[]; return []; }); return _stkListP; }
+var _STKLIST_US=null; // 미장 [티커, 한글 이름, 거래소] — feeds/stock-list-us.json (매일 미장 채점 때 갱신, 10/12)
+function _loadStockList(){ if(_stkListP)return _stkListP;
+  var us=fetch('feeds/stock-list-us.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST_US=Array.isArray(j)?j:[]; _STKLIST_US.forEach(function(x){ x._k=_skey(x[1]); x._t=x[0].toLowerCase(); }); }).catch(function(){ _STKLIST_US=[]; });
+  _stkListP=Promise.all([fetch('feeds/stock-list.json').then(function(r){return r.ok?r.json():[];}).then(function(j){ _STKLIST=Array.isArray(j)?j:[]; _STKLIST.forEach(function(x){ x._k=_skey(x[1]); }); return _STKLIST; }).catch(function(){ _STKLIST=[]; return []; }),us]).then(function(a){ return a[0]; }); return _stkListP; }
 /* 비교용 키 — 대소문자·띄어쓰기·하이픈·점 무시 ("kodex200" = "KODEX 200", "s oil" = "S-Oil") */
 function _skey(s){ return String(s||'').toLowerCase().replace(/[\s\-·.]/g,''); }
 /* 한글로 부르는 영문 종목명 — 앞부분만 바꿔 끼운다 (엘지화학 → LG화학) */
@@ -2246,22 +2249,23 @@ function _stkMatches(raw,lim){ lim=lim||8; var keys=_skeys(raw); if(!keys[0])ret
   function rankOf(nk){ var best=9; keys.forEach(function(k){ if(nk===k)best=Math.min(best,0); else if(nk.indexOf(k)===0)best=Math.min(best,1); else if(nk.indexOf(k)>-1)best=Math.min(best,2); }); return best; }
   var digits=/^\d[0-9a-z]{0,5}$/.test(keys[0])&&/\d/.test(keys[0].slice(0,1));
   (_STKLIST||[]).forEach(function(x,i){ var xc=x[0].toLowerCase(), r=digits?(xc===keys[0]?0:(xc.indexOf(keys[0])===0?1:9)):rankOf(x._k||_skey(x[1])); if(r<9)add(x[0],x[1],x[2]||'KR',r,i); });
+  if(!digits)(_STKLIST_US||[]).forEach(function(x,i){ var r=Math.min(rankOf(x._k), x._t===keys[0]?0:(x._t.indexOf(keys[0])===0&&keys[0].length>=2?1:9)); if(r<9)add(x[0],x[1],x[2]||'US',r,50000+i); });
   var pool=(typeof ALLSTK!=='undefined'?ALLSTK:STK)||[];
   pool.forEach(function(x,i){ var r=Math.min(rankOf(_skey(x.n)), _skey(x.c)===keys[0]?0:(!digits&&_skey(x.c).indexOf(keys[0])===0?1:9)); if(r<9)add(x.c,x.n,x.mk,r,100000+i); });
   res.sort(function(a,b){ return a.rank-b.rank||a.ord-b.ord; });
   return res.slice(0,lim); }
 function _stkListMk(code){ var L=_STKLIST||[]; for(var i=0;i<L.length;i++){ if(L[i][0]===code)return L[i]; } return null; }
 function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false;
-  function open(code){ if(coinMode)setMode('stock'); openStock(code); return true; }
-  // 1) 국내 종목 목록·보유 풀에서 찾기 (SK·LG·KT·NAVER 같은 영문 이름도 국내 종목이 먼저)
+  function open(code,m){ if(coinMode)setMode('stock'); if(m&&!_isKRCode(m.c))openStock(m.c,{n:m.n,mk:m.mk}); else openStock(code); return true; }
+  // 1) 국내 종목 목록·보유 풀에서 찾기 (SK·LG·KT·NAVER 같은 영문 이름도 국내 종목이 먼저) — 미장 한글 이름(아이온큐 등)도
   var m=_stkMatches(raw,1)[0];
-  if(m&&m.rank<=1) return open(m.c);
+  if(m&&m.rank<=1) return open(m.c,m);
   // 2) 6자리 숫자 = 국내 코드
   if(_isKRCode(raw.toUpperCase())) return open(raw.toUpperCase());
   // 3) 영문 대문자 = 미국 티커
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw) && raw===raw.toUpperCase()) return open(raw.toUpperCase());
   // 4) 이름 중간 일치
-  if(m) return open(m.c);
+  if(m) return open(m.c,m);
   // 5) 그래도 영문이면 미국 티커로 시도
   if(/^[A-Za-z][A-Za-z.\-]{0,5}$/.test(raw)) return open(raw.toUpperCase());
   return false;
@@ -2280,7 +2284,7 @@ function doSearch(raw){ raw=(raw||'').trim(); if(!raw)return false;
         +'<span style="color:var(--faint);font-size:11.5px;flex:none">'+esc(it.c)+'</span>'
         +'<span style="flex:none;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:5px;background:var(--panel2);color:'+(kr?'var(--sub)':'#4a9eff')+'">'+esc(it.mk||(kr?'KR':'US'))+'</span></div>'; }).join('');
     box.style.display=items.length?'':'none'; }
-  function pick(it){ hide(); q.value=''; q.blur(); if(coinMode)setMode('stock'); openStock(it.c); }
+  function pick(it){ hide(); q.value=''; q.blur(); if(coinMode)setMode('stock'); if(_isKRCode(it.c))openStock(it.c); else openStock(it.c,{n:it.n,mk:it.mk}); }
   function refresh(){ var v=q.value.trim(); if(!v){ hide(); return; }
     var go=function(){ if(q.value.trim()!==v)return; items=_stkMatches(v,8); cur=items.length?0:-1; paint(); };
     if(_STKLIST)go(); else _loadStockList().then(go); }

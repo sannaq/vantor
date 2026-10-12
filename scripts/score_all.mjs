@@ -229,6 +229,8 @@ fs.writeFileSync(OUT('stock-news'), JSON.stringify({ date, updated: scores.updat
 fs.writeFileSync(OUT('stock-detail'), JSON.stringify({ date, updated: scores.updated, items: detail }));
 console.log('종목 뉴스', Object.keys(news).length, '종목 · 재무', Object.values(detail).filter((d) => d.fin).length, '종목');
 fs.writeFileSync(OUT('stock-scores'), JSON.stringify(scores));
+// 미장 종목 검색 목록 (사이트 검색창 — 한글 이름으로도 찾게, 2026-10-12): [티커, 한글 이름, 거래소] 20일 거래대금 순
+if (US) fs.writeFileSync(path.join(ROOT, 'feeds/stock-list-us.json'), JSON.stringify(fresh.slice().sort((a, b) => (b.f.tv20 || 0) - (a.f.tv20 || 0)).map((x) => [x.c, x.n, x.mk])));
 fs.writeFileSync(OUT('stock-picks'), JSON.stringify(picks, null, 1));
 console.log(`완료 ${fresh.length}종목 (실패 ${fail}, 옛 날짜 ${rows.length - fresh.length}) · ${date} · ${Math.round((Date.now() - t0) / 1000)}초`);
 console.log('분포', dist, '· 상위', picks.top.slice(0, 3).map((x) => `${x.n} ${x.total}`).join(', '));
