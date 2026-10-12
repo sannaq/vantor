@@ -493,6 +493,8 @@ function renderIdx(){
       +'<div class="foot">'+foot+'</div></div>';
   }).join('');
   if(typeof _glLive==='function')setTimeout(_glLive,0);
+  var ib=$('#idxbar'); if(ib){ var lv=IDX.filter(function(x){ return x.v&&(x._real||x._us); });
+    ib.innerHTML=(lv.length?lv:IDX).map(function(x){ return '<span><span class="ib-nm">'+x.nm+'</span><span class="ib-v">'+((!x._real&&!x._us)?'—':(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{maximumFractionDigits:2}))+'</span><span class="'+cls(x.c)+'" style="font-weight:700">'+pctTxt(x.c)+'</span></span>'; }).join('')+'<span class="ib-t">마켓 ›</span>'; }
   // footer ticker
   var ft=$('#footTicker'); if(ft)ft.innerHTML=IDX.slice(0,2).filter(function(x){return x.v;}).map(function(x){return x.nm+' <span class="'+cls(x.c)+'">'+x.v.toLocaleString()+' '+arw(x.c)+pctTxt(x.c).replace('+','')+'</span>';}).join('');
 }
@@ -3323,7 +3325,7 @@ function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
     if(coinMode){ if(window._preCoinTheme===undefined)window._preCoinTheme=_rt.getAttribute('data-theme'); _rt.setAttribute('data-theme','dark'); }
     else if(window._preCoinTheme!==undefined){ if(window._preCoinTheme)_rt.setAttribute('data-theme',window._preCoinTheme); else _rt.removeAttribute('data-theme'); window._preCoinTheme=undefined; } }catch(e){}
   $$('.segmode button').forEach(function(b){b.classList.toggle('on',b.dataset.m===m);});
-  var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':'';
+  var strip=$('#idxstrip'); if(strip)strip.style.display=coinMode?'none':''; document.body.classList.toggle('coin-on',!!coinMode);
   _applyCoinMenu(coinMode); // 코인 모드 전용 상단 메뉴(홈/RADAR/섹터/뉴스/관심/기초)
   var db=$('#demoban'); if(db)db.style.display=coinMode?'none':'';
   var brf=$('#brief'); if(brf)brf.style.display=coinMode?'none':'';           // 주식 브리핑은 코인 모드에서 숨김

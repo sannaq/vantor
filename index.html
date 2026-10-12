@@ -245,6 +245,11 @@
   .catfoot{margin-top:9px;font-size:11px;color:var(--faint);border-top:1px solid var(--line2);padding-top:8px;display:flex;justify-content:space-between}
   .card.off{display:none!important}
   /* 홈 = '한눈에 보기' 타일만 (10/12 사용자 결정) — 각 칸은 타일을 눌러 해당 탭에서 */
+  /* 탭 윗부분은 얇은 지수 한 줄만 — 이벤트 표·시장 요약·지수 카드는 숨김(이벤트 탭·홈 타일에 있음) */
+  #homeEvents,#marketSummary,#idxstrip{display:none!important}
+  #idxbar{display:flex;gap:18px;align-items:center;overflow-x:auto;white-space:nowrap;margin:0 0 14px;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);font-size:12.5px;cursor:pointer;scrollbar-width:none}
+  #idxbar::-webkit-scrollbar{display:none}#idxbar .ib-nm{color:var(--sub);margin-right:6px}#idxbar .ib-v{font-weight:800;font-variant-numeric:tabular-nums;margin-right:5px}#idxbar .ib-t{margin-left:auto;color:var(--faint);font-size:11px}
+  body.home-glance #idxbar,body.coin-on #idxbar{display:none!important}
   body.home-glance #brief,body.home-glance .home-top2,body.home-glance #homeEvents,body.home-glance #marketSummary,body.home-glance #idxstrip,body.home-glance #v-home>*{display:none!important}
   .heat{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
   .heat .h{min-width:64px}
@@ -696,6 +701,8 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <!-- 지수 스트립 (모든 화면 공통) -->
   <div id="marketSummary"></div>
   <div class="idxstrip" id="idxstrip"></div>
+  <!-- 얇은 지수 한 줄 (10/12 사용자 결정: 탭마다 반복되던 이벤트 표·시장 요약·지수 카드 대신) -->
+  <div id="idxbar" onclick="showView('market')" title="누르면 마켓 화면"></div>
 
   <!-- ===== HOME ===== -->
   <div class="view" id="v-ai">
@@ -889,7 +896,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=136"></script>
+<script src="app.js?v=137"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
