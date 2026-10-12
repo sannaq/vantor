@@ -1362,6 +1362,27 @@ function _recoRows(j){ var L={}; if(j&&j.market!=='US')(_STKLIST||[]).forEach(fu
     return {c:c,us:j.market==='US',n:l[1]||c,mk:l[2]||'',total:it[0],view:it[1],rank:it[2],parts:it[3],good:it[4]||[],bad:it[5]||[],tv:it[6],day:it[7],ref:it[8]||[]}; }); }
 function _recoMini(parts,us){ return _vsPartsOf(us).map(function(p,i){ var w=Math.max(0,Math.min(100,(parts[i]||0)/p[1]*100));
   return '<div title="'+p[0]+' '+parts[i]+'/'+p[1]+'" style="display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--faint)"><span style="width:48px">'+p[0]+'</span><div style="width:56px;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden"><div style="width:'+w.toFixed(0)+'%;height:100%;background:#4a9eff"></div></div></div>'; }).join(''); }
+/* 종목별 실제 성과 (feeds/track-codes.json — scripts/track.mjs eval, 2026-10-12) */
+var _TCODES={KR:null,US:null};
+function _tcLoad(us){ var k=us?'US':'KR'; if(_TCODES[k])return; _TCODES[k]='…'; _loadJ('feeds/track-codes'+(us?'-us':'')+'.json').then(function(j){ _TCODES[k]=j||{items:{}}; if(_recoUS()===us)renderReco(); }); }
+function _tcOf(x){ var t=_TCODES[x.us?'US':'KR']; if(!t||!t.items)return null; var key=x.c;
+  if(x.us&&_VSCU&&_VSCU.items&&_VSCU.items[x.c])key=_VSCU.items[x.c][14]||x.c; return t.items[key]||null; }
+function _tcLine(x){ var t=_tcOf(x); if(!t)return '';
+  if(t.r==null)return '<div style="font-size:11.5px;color:var(--faint);margin-top:2px">📈 '+_vsDate(t.s)+' 새로 추천 · 결과는 다음 거래일부터</div>';
+  var ex=t.m==null?null:t.r-t.m, ok=ex!=null&&ex>0;
+  return '<div style="font-size:11.5px;color:var(--sub);margin-top:2px">📈 '+_vsDate(t.s)+'부터 추천'+(t.now?'':' (지금은 빠짐)')+' · 그 뒤 <b class="'+(t.r>=0?'up':'down')+'">'+(t.r>=0?'+':'')+t.r.toFixed(2)+'%</b>'
+    +(ex!=null?' (시장 대비 <b class="'+(ex>=0?'up':'down')+'">'+(ex>=0?'+':'')+ex.toFixed(2)+'%p</b>) <b style="color:'+(ok?'#2ebd85':'#f6465d')+'">'+(ok?'✓':'✗')+'</b>':'')+'</div>'; }
+function _tcTable(x){ var t=_tcOf(x); if(!t||!t.h||!t.h.length)return '';
+  var c=function(v){ return v==null?'<td style="color:var(--faint)">대기</td>':'<td><b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+v.toFixed(2)+'%p</b> '+(v>0?'✓':'✗')+'</td>'; };
+  return '<div style="margin:10px 4px 4px"><div style="font-size:12px;font-weight:800;margin-bottom:4px">📊 이 종목 추천일별 결과 <span style="font-weight:600;color:var(--faint);font-size:11px">다음 날 시가에 샀다고 보고, 같은 날 거래 활발 종목 평균 대비</span></div>'
+    +'<div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th class="l">추천일</th><th>1일 뒤</th><th>5일 뒤</th><th>20일 뒤</th></tr></thead><tbody>'
+    +t.h.slice().reverse().map(function(r){ return '<tr><td class="l">'+_vsDate(r[0])+'</td>'+c(r[1])+c(r[2])+c(r[3])+'</tr>'; }).join('')+'</tbody></table></div></div>'; }
+function _tcSummary(trk){ if(!trk||!trk.agg)return '';
+  var Hs=[60,20,5,1].filter(function(H){ var g=trk.agg['h'+H]; return g&&g.n; }), P=function(v){ return v==null?'—':'<b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+(v*100).toFixed(1)+'%p</b>'; }, R=function(v){ return v==null?'—':Math.round(v*100)+'%'; };
+  var nx=[1,5,20,60].map(function(H){ var g=trk.agg['h'+H]; return g&&!g.n&&g.next?H+'일 첫 결과 '+_vsDate(g.next)+'경':null; }).filter(Boolean)[0];
+  return '<div style="font-size:12.5px;margin:4px 0 8px;padding:9px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);line-height:1.7">📈 <b>실제 성과</b> <span style="color:var(--faint);font-size:11px">('+_vsDate(trk.start)+'부터 기록 · 시장 평균 대비 · 적중 = 평균보다 나은 비율)</span><br>'
+    +(Hs.length?Hs.map(function(H){ var g=trk.agg['h'+H]; return H+'일 — TOP10 '+P(g.top)+' (적중 '+R(g.hitT)+') · 추천 전체 '+P(g.buy)+' ('+R(g.hitB)+') · 매수 금지 '+P(g.ban)+' <span style="color:var(--faint);font-size:11px">'+g.n+'회</span>'; }).join('<br>'):'아직 결과 없음')
+    +(nx?' <span style="color:var(--faint);font-size:11px">· '+nx+'</span>':'')+'</div>'; }
 function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
   var hot=x.bad.filter(function(t){return t.indexOf('⚠ 과열')===0;})[0], bad0=x.bad.filter(function(t){return t!==hot;});
   var why=(x.view==='매수 금지'?bad0.concat(x.good):x.good.concat(bad0)).slice(0,2);
@@ -1369,7 +1390,7 @@ function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
   return '<div onclick="_recoToggle(\''+x.c+'\')" style="display:flex;align-items:center;gap:12px;padding:10px 4px;border-top:1px solid var(--line2);cursor:pointer;flex-wrap:wrap">'
     +'<div style="width:26px;text-align:center;font-weight:800;color:var(--faint);font-size:13px">'+i+'</div>'+_vsBadge(x.total,x.view,48)
     +'<div style="flex:1;min-width:180px"><div style="font-weight:800;font-size:14.5px">'+esc(x.n)+' <span style="font-size:11px;color:var(--faint);font-weight:600">'+x.c+' · '+esc(x.mk)+'</span> '+dy+(hot?' <span title="'+esc(hot)+'" style="font-size:11px;font-weight:800;color:#f0b90b;border:1px solid #f0b90b;border-radius:6px;padding:1px 6px;margin-left:4px">⚠ 과열</span>':'')+'</div>'
-      +'<div style="font-size:12px;color:var(--sub);margin-top:2px"><b style="color:'+vc+'">'+x.view+'</b>'+(why.length?' · '+why.map(esc).join(' · '):'')+'</div></div>'
+      +'<div style="font-size:12px;color:var(--sub);margin-top:2px"><b style="color:'+vc+'">'+x.view+'</b>'+(why.length?' · '+why.map(esc).join(' · '):'')+'</div>'+_tcLine(x)+'</div>'
     +'<div style="display:flex;flex-direction:column;gap:2px">'+_recoMini(x.parts,x.us)+'</div><div style="color:var(--faint);font-size:12px">▾</div></div>'
     +'<div id="rx-'+x.c+'" style="display:none"></div>'; }
 /* 실제 성과 (feeds/track-summary.json — 매일 그날 추천을 기록하고 20·60거래일 뒤 실제 결과를 계산, scripts/track.mjs) */
@@ -1416,6 +1437,7 @@ function renderReco(){
     Promise.all([_loadVScores(),_loadStockList(),_loadJ('feeds/backtest.json'),_loadJ('feeds/backtest-60.json'),_loadJ('feeds/backtest-levels-60.json'),_loadJ('feeds/track-summary.json'),_loadJ('feeds/backtest-audit.json')]).then(function(a){ _BT=a[2]; _BT60=a[3]; _BTL60=a[4]; _TRK=a[5]; _AUD=a[6]; if(_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
   if(US&&!_VSCU){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 불러오는 중…</div></div>';
     Promise.all([_loadVScoresUS(),_loadJ('feeds/backtest-us.json'),_loadJ('feeds/backtest-us-60.json'),_loadJ('feeds/backtest-levels-us-60.json'),_loadJ('feeds/track-summary-us.json'),_loadJ('feeds/backtest-levels-us.json')]).then(function(a){ _US={bt:a[1],bt60:a[2],btl60:a[3],trk:a[4],btl:a[5]}; if(!_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 자료를 불러오지 못했어요 · 화~토 아침 7시에 갱신돼요</div></div>'; }); return; }
+  _tcLoad(US);
   var j=_recoSc(), all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{}, minTv=US?0.1:5, SORTS=US?_RECO_SORTS_US:_RECO_SORTS;
   var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=minTv)); });
   var dist={'추천':0,'중립':0,'매수 금지':0}; pool.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
@@ -1433,7 +1455,7 @@ function renderReco(){
   var formula=US?'1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30';
   var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};
   el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
-    +'<div class="pad" style="padding-top:6px">'+bar
+    +'<div class="pad" style="padding-top:6px">'+_tcSummary(D.trk)+bar
     +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
     +(US&&j.spy&&j.spy.below?'<div style="font-size:12.5px;color:var(--ink);margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid #f6465d;background:rgba(246,70,93,.08)">⚠ <b>하락장 주의</b> — S&amp;P500(SPY '+_usd(j.spy.px)+')이 200일선('+_usd(j.spy.ma200)+')보다 '+Math.abs(j.spy.gap)+'% 아래예요. 모멘텀 종목은 하락장에서 한꺼번에 급반전할 수 있어요. 점수는 그대로예요(3년 중 이런 구간이 13주뿐이라 검증 근거 부족).</div>':'')
     +(US&&j.spy&&!j.spy.below?'<div style="font-size:11.5px;color:var(--faint);margin:2px 0">시장 국면: S&amp;P500이 200일선 위('+(j.spy.gap>=0?'+':'')+j.spy.gap+'%) — 정상</div>':'')
@@ -1460,7 +1482,7 @@ window._recoToggle=function(c){ var box=document.getElementById('rx-'+c); if(!bo
   var sf=x.us?'-us':'', cq=x.us?'/candles?mkt=US&code='+encodeURIComponent(c)+'&exch='+usExch(x.mk)+'&tf=D&limit=200':'/candles?mkt=KR&code='+encodeURIComponent(c)+'&tf=D&limit=200';
   Promise.all([_loadJ('feeds/stock-detail'+sf+'.json'),_loadJ('feeds/stock-news'+sf+'.json'),x.us?Promise.resolve(null):_loadJ('feeds/industries.json'),
     (typeof proxyJson==='function'?proxyJson(cq).catch(function(){return null;}):Promise.resolve(null))]).then(function(a){
-    if(_recoOpen!==c)return; box.innerHTML=_rxHTML(x,a[0],a[1],a[2],(a[3]&&a[3].candles)||[]);
+    if(_recoOpen!==c)return; box.innerHTML=_tcTable(x)+_rxHTML(x,a[0],a[1],a[2],(a[3]&&a[3].candles)||[]);
     var cv=document.getElementById('rxc-'+c); if(cv&&cv._draw)cv._draw(); });
 };
 function _tick(p){ var t=p<2000?1:p<5000?5:p<20000?10:p<50000?50:p<200000?100:p<500000?500:1000; return Math.round(p/t)*t; }

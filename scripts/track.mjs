@@ -110,6 +110,27 @@ async function evaluate() {
       next: (cohorts.map((c) => c['h' + H]).find((h) => h && h.pending && h.due) || {}).due || null };
   }
   const out = { updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), start: days[0][0], days: days.length, agg, cohorts: cohorts.slice(-120) };
+
+  // 종목별 — 추천 화면 각 줄의 '추천 이후 성과'와 펼치면 보이는 '추천일별 결과' (2026-10-12 사용자 결정)
+  //   s = 이번에 연속으로 추천되기 시작한 기록일, r = 그 다음 날 시가에 사서 최근 종가까지, m = 같은 날 거래 활발 종목 평균(같은 기간)
+  //   h = 최근 추천일 6개의 [기록일, 1일·5일·20일 뒤 시장 대비] (아직이면 null)
+  const lastTd = td[td.length - 1];
+  const between = (c, d, end) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d), j = a.findIndex((v) => v[0] === end);
+    if (i < 0 || j < 0 || i + 1 > j) return null; const o = a[i + 1][1] || a[i + 1][4]; return o ? a[j][4] / o - 1 : null; };
+  const mkC = {}, mkt = (d, end, u) => { const k = d + end; if (!(k in mkC)) mkC[k] = mean(u.map((c) => between(c, d, end)).filter((v) => v != null)); return mkC[k]; };
+  const coBy = Object.fromEntries(cohorts.map((c) => [c.d, c]));
+  const recSets = days.map(([d, x]) => [d, new Set(x.b.map((b) => b[0])), x.u]);
+  const items = {};
+  for (const c of new Set(days.flatMap(([, x]) => x.b.map((b) => b[0])))) {
+    let i = recSets.length - 1; while (i >= 0 && !recSets[i][1].has(c)) i--;
+    if (i < 0) continue;
+    const now = i === recSets.length - 1; let st = i; while (st > 0 && recSets[st - 1][1].has(c)) st--;
+    const [sd, , su] = recSets[st], r = between(c, sd, lastTd), m = r == null ? null : mkt(sd, lastTd, su);
+    const h = recSets.filter(([, set]) => set.has(c)).slice(-6).map(([d]) => [d].concat([1, 5, 20].map((H) => {
+      const co = coBy[d] && coBy[d]['h' + H]; if (!co || co.pending) return null; const v = between(c, d, co.end); return v == null || co.mkt == null ? null : +((v - co.mkt) * 100).toFixed(2); })));
+    items[c] = { s: sd, n: i - st + 1, now, r: r == null ? null : +(r * 100).toFixed(2), m: m == null ? null : +(m * 100).toFixed(2), h };
+  }
+  fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-codes-us.json' : 'feeds/track-codes.json'), JSON.stringify({ updated: out.updated, last: lastTd, items }));
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-summary-us.json' : 'feeds/track-summary.json'), JSON.stringify(out));
   console.log(`기록 ${days.length}일 (${out.start}~) · ` + HS.map((H) => `${H}일 결과 ${agg['h' + H].n}건`).join(' · '));
 }
