@@ -657,6 +657,9 @@
 <div class="maincol">
   <div class="demoban" id="demoban">⏳ <b>실시간 데이터 연결 중</b> — 연결되면 자동으로 바뀌어요.</div>
 
+  <!-- 한눈에 보기 (HOME 맨 위, 다른 탭 요약 타일 — 누르면 그 탭으로) 2026-10-12 -->
+  <div id="glance"></div>
+
   <!-- 오늘의 브리핑 (토글: 밤사이·장전 / 장마감) -->
   <div id="brief"></div>
 
@@ -865,7 +868,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=130"></script>
+<script src="app.js?v=131"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
