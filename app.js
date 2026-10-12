@@ -1374,14 +1374,16 @@ function _recoRow(x,i){ var vc=_VS_VC[x.view]||'var(--faint)';
 var _TRK=null, _AUD=null;
 function _trkHTML(t){ if(!t)return '';
   var D=function(d){ return d?_vsDate(d):'—'; }, P=function(x){ return x==null?'—':'<b class="'+(x>=0?'up':'down')+'">'+(x>=0?'+':'')+(x*100).toFixed(2)+'%p</b>'; }, R=function(x){ return x==null?'—':Math.round(x*100)+'%'; };
-  var a20=t.agg.h20||{}, a60=t.agg.h60||{};
-  var row=function(lab,a){ return a.n?('<tr><td class="l">'+lab+' <span style="color:var(--faint);font-size:11px">'+a.n+'회</span></td><td>'+P(a.buy)+'</td><td>'+P(a.ban)+'</td><td>'+R(a.beat)+'</td><td>'+R(a.banLose)+'</td><td>'+(a.lvRet==null?'—':((a.lvRet>=0?'+':'')+(a.lvRet*100).toFixed(2)+'%'))+' · 손절 '+R(a.lvStop)+'</td></tr>')
-    :('<tr><td class="l">'+lab+'</td><td colspan="5" style="color:var(--faint);text-align:left">아직 결과 없음 · 첫 결과 '+D(a.next)+'경</td></tr>'); };
-  var recent=(t.cohorts||[]).filter(function(c){ return c.h20&&!c.h20.pending; }).slice(-8).reverse().map(function(c){ var h=c.h20; return '<tr><td class="l">'+D(c.d)+' → '+D(h.end)+'</td><td>'+P(h.buy)+'</td><td>'+P(h.ban)+'</td><td>'+(h.mkt==null?'—':((h.mkt>=0?'+':'')+(h.mkt*100).toFixed(1)+'%'))+'</td><td>'+(h.lv.ret==null?'—':((h.lv.ret>=0?'+':'')+(h.lv.ret*100).toFixed(1)+'%'))+'</td></tr>'; }).join('');
+  var PR=function(x,h){ return x==null?'—':P(x)+' <span style="color:var(--faint);font-size:11px">'+R(h)+'</span>'; };
+  var row=function(H){ var a=t.agg['h'+H]||{}, lab=H+'일'+(H<20?' <span style="color:var(--faint);font-size:10.5px">참고</span>':'');
+    return a.n?('<tr><td class="l">'+lab+' <span style="color:var(--faint);font-size:11px">'+a.n+'회</span></td><td>'+PR(a.top,a.hitT)+'</td><td>'+PR(a.buy,a.hitB)+'</td><td>'+PR(a.ban,a.hitN)+'</td><td>'+(H<20?'—':(a.lvRet==null?'—':((a.lvRet>=0?'+':'')+(a.lvRet*100).toFixed(2)+'%'))+' · 손절 '+R(a.lvStop))+'</td></tr>')
+    :('<tr><td class="l">'+lab+'</td><td colspan="4" style="color:var(--faint);text-align:left">아직 결과 없음 · 첫 결과 '+D(a.next)+'경</td></tr>'); };
+  var recentOf=function(H){ return (t.cohorts||[]).filter(function(c){ return c['h'+H]&&!c['h'+H].pending; }).slice(-8).reverse().map(function(c){ var h=c['h'+H]; return '<tr><td class="l">'+D(c.d)+' → '+D(h.end)+'</td><td>'+PR(h.top,h.hitT)+'</td><td>'+PR(h.buy,h.hitB)+'</td><td>'+PR(h.ban,h.hitN)+'</td><td>'+(h.mkt==null?'—':((h.mkt>=0?'+':'')+(h.mkt*100).toFixed(1)+'%'))+'</td></tr>'; }).join(''); };
+  var rH=[20,5,1].filter(function(H){ return recentOf(H); })[0], recent=rH?recentOf(rH):'';
   return '<div class="card" style="margin-top:14px"><div class="ch"><h2>📈 실제 성과 (기록)</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+D(t.start)+'부터 '+t.days+'일 기록 · '+esc(t.updated)+' 갱신</span></div></div>'
-    +'<div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--sub);line-height:1.65">백테스트가 아니라 <b>그날 실제로 낸 추천</b>의 결과예요. 매일 장마감에 추천·매수 금지 종목과 매수·손절 가격을 저장해 두고, 다음 날 시가에 샀다고 보고 20·60거래일 뒤 결과를 같은 날 거래 활발 종목 평균과 비교해요. 기록은 나중에 고치지 않아요.'
-    +'<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">보유</th><th>추천 (시장 대비)</th><th>매수 금지</th><th>추천이 이긴 날</th><th>매수 금지가 진 날</th><th>매수·손절 규칙 (추천)</th></tr></thead><tbody>'+row('60일',a60)+row('20일',a20)+'</tbody></table></div>'
-    +(recent?'<div style="font-size:12px;font-weight:800;margin-top:10px">최근 20일 결과</div><div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th class="l">추천일 → 결과일</th><th>추천</th><th>매수 금지</th><th>시장</th><th>규칙 매매</th></tr></thead><tbody>'+recent+'</tbody></table></div>':'')
+    +'<div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--sub);line-height:1.65">백테스트가 아니라 <b>그날 실제로 낸 추천</b>의 결과예요. 다음 날 시가에 샀다고 보고 1·5·20·60거래일 뒤 결과를 같은 날 거래 활발 종목 평균과 비교해요. 작은 숫자는 <b>적중</b> — 평균보다 나은(매수 금지는 못한) 종목 비율이에요. 공식은 60일 보유 기준이라 1·5일은 참고용이에요. 기록은 나중에 고치지 않아요.'
+    +'<div style="overflow-x:auto;margin-top:8px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">보유</th><th>TOP 10</th><th>추천 전체</th><th>매수 금지</th><th>매수·손절 규칙 (추천)</th></tr></thead><tbody>'+row(60)+row(20)+row(5)+row(1)+'</tbody></table></div>'
+    +(recent?'<div style="font-size:12px;font-weight:800;margin-top:10px">최근 '+rH+'일 결과</div><div style="overflow-x:auto"><table style="width:100%;font-size:12px"><thead><tr><th class="l">추천일 → 결과일</th><th>TOP 10</th><th>추천</th><th>매수 금지</th><th>시장</th></tr></thead><tbody>'+recent+'</tbody></table></div>':'')
     +'</div></div>'; }
 function _audHTML(a){ if(!a||!a.checks)return ''; var g=function(nm,H){ return a.checks.filter(function(c){return c.nm.indexOf(nm)===0&&c.H===H;})[0]; };
   var line=function(H){ var b=g('기준',H), c=g('②',H), p=g('③',H), o=g('④',H), m=g('⑥',H); if(!b)return '';

@@ -107,6 +107,7 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 .pbs{width:178px;flex:none}.pb{display:flex;align-items:center;gap:6px;font-size:11px;color:#9aa4b2;height:15px}
 .pb span{width:50px}.pb b{width:20px;text-align:right;color:#d6dce5}
 .pt{flex:1;height:6px;background:#1c2431;border-radius:3px;overflow:hidden}.pt div{height:100%;background:#4a9eff;border-radius:3px}
+.trk{margin-top:12px;font-size:12px;color:#9aa4b2;background:#151c27;border:1px solid #222b38;border-radius:10px;padding:8px 12px;line-height:1.7}.trk div:first-child{font-weight:800;color:#c6cfdb}.trk small{color:#6f7a89}
 .ft{margin-top:14px;font-size:11px;color:#5f6a79;text-align:center;line-height:1.6}
 """
 
@@ -120,6 +121,30 @@ def bt_line(p):
         return f'검증({b["all"]["from"][2:4]}.{int(b["all"]["from"][4:6])}~{b["all"]["to"][2:4]}.{int(b["all"]["to"][4:6])}, 60일 보유): 추천 {g["추천"]["x20"]:+.1f}%p · 매수 금지 {g["매수 금지"]["x20"]:+.1f}%p (시장 평균 대비)'
     except Exception:
         return "60일 보유 기준"
+
+
+def track_line(p):
+    """실제 성과 한 줄 (feeds/track-summary.json, scripts/track.mjs eval) — 그날 낸 추천이 1·5·20·60거래일 뒤 시장 평균보다 나았는지."""
+    try:
+        with open(os.path.join(ROOT, f"feeds/track-summary{SFX}.json"), encoding="utf-8") as f:
+            t = json.load(f)
+    except Exception:
+        return ""
+    pp = lambda v: "—" if v is None else f"{v * 100:+.1f}%p"
+    pc = lambda v: "—" if v is None else f"{v * 100:.0f}%"
+    parts, nxt = [], None
+    for H in (1, 5, 20, 60):
+        a = t["agg"].get(f"h{H}") or {}
+        if a.get("n"):
+            parts.append(f'{H}일 TOP10 <b style="color:{col(a.get("top"))}">{pp(a.get("top"))}</b>(적중 {pc(a.get("hitT"))}) · 추천 <b style="color:{col(a.get("buy"))}">{pp(a.get("buy"))}</b>({pc(a.get("hitB"))}) <small>{a["n"]}회</small>')
+        elif not nxt and a.get("next"):
+            nxt = f'{H}일 첫 결과 {int(a["next"][4:6])}/{int(a["next"][6:8])}경'
+    if not parts and not nxt:
+        return ""
+    s0 = t.get("start", "")
+    head = f'📈 실제 성과 ({int(s0[4:6])}/{int(s0[6:8])}부터 기록, 시장 평균 대비 · 적중 = 평균보다 나은 종목 비율)' if s0 else "📈 실제 성과"
+    body = " &nbsp;|&nbsp; ".join(parts) if parts else "아직 결과 없음"
+    return f'<div class="trk"><div>{head}</div><div>{body}{" · " + nxt if nxt else ""}</div></div>'
 
 
 def spy_warn(p):
@@ -153,6 +178,7 @@ def build(p):
 {dropped(p)}
 <div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
 {"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}
+{track_line(p)}
 <div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · {bt_line(p)}<br>
 교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 갱신 {E(p["updated"])}</div>
 </div></body></html>"""

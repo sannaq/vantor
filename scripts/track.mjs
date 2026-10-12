@@ -16,7 +16,7 @@ const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const V = require(path.join(ROOT, 'score-core.js'));
 const US = process.env.MKT === 'US';
 const DIR = path.join(ROOT, US ? 'feeds/track-us' : 'feeds/track');
-const MIN_TV = US ? 0.1 : 5, HS = [20, 60], CONC = 8;
+const MIN_TV = US ? 0.1 : 5, HS = [1, 5, 20, 60], CONC = 8; // 1·5일은 참고용(공식은 60일 보유 기준) — 2026-10-12 사용자 결정
 fs.mkdirSync(DIR, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function candles(code, count) {
@@ -51,15 +51,22 @@ const loadAll = () => fs.readdirSync(DIR).filter((f) => /^\d{6}\.json$/.test(f))
 
 async function record() {
   const sc = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/stock-scores-us.json' : 'feeds/stock-scores.json'), 'utf8'));
+  // 그날 디스코드로 보낸 TOP 10 (미장은 로이터 코드로 바꿔 둔다)
+  let top = null;
+  try { const pk = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/stock-picks-us.json' : 'feeds/stock-picks.json'), 'utf8'));
+    if (pk.date === sc.date) top = pk.top.map((x) => (US ? (sc.items[x.c] || [])[14] : x.c)).filter(Boolean); } catch { /* 없으면 생략 */ }
   if (US) sc.items = Object.fromEntries(Object.values(sc.items).map((it) => [it[14], it])); // 미장은 로이터 코드(AAPL.O)로 기록 — 일봉을 다시 받을 때 쓴다
   const d = sc.date, file = path.join(DIR, d.slice(0, 6) + '.json');
   const cur = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { days: {} };
-  if (cur.days[d]) { console.log('이미 기록됨', d); return; }
+  if (cur.days[d]) {
+    if (!cur.days[d].t && top) { cur.days[d].t = top; fs.writeFileSync(file, JSON.stringify(cur)); console.log('이미 기록됨', d, '· TOP 10 만 보탬'); return; }
+    console.log('이미 기록됨', d); return;
+  }
   const liq = Object.entries(sc.items).filter(([, it]) => (it[6] ?? 0) >= MIN_TV);
   const buys = liq.filter(([, it]) => it[1] === '추천'), bans = liq.filter(([, it]) => it[1] === '매수 금지');
   const cs = await pool(buys.map(([c]) => c), (c) => candles(c, 250));
   const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], US ? { usd: true } : undefined); return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null]; });
-  cur.days[d] = { u: liq.map(([c]) => c), b, n: bans.map(([c, it]) => [c, it[0]]), formula: US ? 'US 모멘텀67·흑자33 · 1차60일선·2차매물대·손절2차−2ATR' : 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
+  cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: US ? 'US 모멘텀67·흑자33 · 1차60일선·2차매물대·손절2차−2ATR' : 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
   fs.writeFileSync(file, JSON.stringify(cur));
   console.log(`기록 ${d}: 거래 활발 ${liq.length} · 추천 ${b.length} · 매수 금지 ${bans.length}`);
 }
@@ -80,10 +87,14 @@ async function evaluate() {
         if (i < 0 || j < 0 || i + 1 > j) return null; const o = a[i + 1][1] || a[i + 1][4]; return o ? a[j][4] / o - 1 : null; };
       const all = x.u.map(ret).filter((v) => v != null), m = mean(all);
       const rb = x.b.map((b) => ret(b[0])).filter((v) => v != null), rn = x.n.map((b) => ret(b[0])).filter((v) => v != null);
-      const sims = x.b.map(([c, , b1, b2, st]) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d);
+      const rt = (x.t || []).map(ret).filter((v) => v != null);
+      // 적중 = 시장 평균(같은 날 거래 활발 종목)보다 나았던 종목 비율. 매수 금지는 평균보다 못했던 비율
+      const hit = (a, up) => (a.length && m != null ? a.filter((v) => (up ? v > m : v < m)).length / a.length : null);
+      const sims = H < 20 ? [] : x.b.map(([c, , b1, b2, st]) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d);
         if (b1 == null || i < 0 || i + H >= a.length) return null; return V.simulate(a, i, { b1, b2, st }, H); }).filter(Boolean);
       const inv = sims.filter((s) => s.ret != null);
       co['h' + H] = { end, mkt: m, buy: mean(rb) - m, ban: mean(rn) - m, buyAbs: mean(rb), banAbs: mean(rn),
+        top: rt.length ? mean(rt) - m : null, nT: rt.length, hitB: hit(rb, true), hitT: hit(rt, true), hitN: hit(rn, false),
         lv: { n: sims.length, fill1: mean(sims.map((s) => (s.f1 ? 1 : 0))), stop: mean(sims.map((s) => (s.stopped ? 1 : 0))), ret: mean(inv.map((s) => s.ret)), win: mean(inv.map((s) => (s.ret > 0 ? 1 : 0))) } };
     }
     cohorts.push(co);
@@ -93,12 +104,14 @@ async function evaluate() {
     const done = cohorts.map((c) => c['h' + H]).filter((h) => h && !h.pending);
     agg['h' + H] = { n: done.length, buy: mean(done.map((h) => h.buy)), ban: mean(done.map((h) => h.ban)),
       beat: done.length ? done.filter((h) => h.buy > 0).length / done.length : null, banLose: done.length ? done.filter((h) => h.ban < 0).length / done.length : null,
+      top: mean(done.map((h) => h.top).filter((v) => v != null)), hitB: mean(done.map((h) => h.hitB).filter((v) => v != null)),
+      hitT: mean(done.map((h) => h.hitT).filter((v) => v != null)), hitN: mean(done.map((h) => h.hitN).filter((v) => v != null)),
       lvRet: mean(done.map((h) => h.lv.ret).filter((v) => v != null)), lvStop: mean(done.map((h) => h.lv.stop).filter((v) => v != null)),
       next: (cohorts.map((c) => c['h' + H]).find((h) => h && h.pending && h.due) || {}).due || null };
   }
   const out = { updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), start: days[0][0], days: days.length, agg, cohorts: cohorts.slice(-120) };
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-summary-us.json' : 'feeds/track-summary.json'), JSON.stringify(out));
-  console.log(`기록 ${days.length}일 (${out.start}~) · 20일 결과 ${agg.h20.n}건 · 60일 결과 ${agg.h60.n}건`);
+  console.log(`기록 ${days.length}일 (${out.start}~) · ` + HS.map((H) => `${H}일 결과 ${agg['h' + H].n}건`).join(' · '));
 }
 
 const mode = process.argv[2];
