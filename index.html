@@ -899,7 +899,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <script src="app.js?v=138"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
-(function(){ var cur=138, busy=false;
+(function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;
   function check(){ if(busy||document.hidden)return; busy=true;
     fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(t){ busy=false; var m=t.match(/app\.js\?v=(\d+)/); var nv=m?+m[1]:0;
       if(nv>cur){ var k='vtReloadedTo'; if(sessionStorage.getItem(k)==String(nv))return; sessionStorage.setItem(k,String(nv)); location.reload(); } }).catch(function(){ busy=false; }); }
