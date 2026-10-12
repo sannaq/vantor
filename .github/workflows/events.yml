@@ -24,7 +24,7 @@ jobs:
         run: python3 scripts/update_events.py
       - name: 변경분 올리기
         run: |
-          git add events.json feeds/coin-events.json
+          git add events.json feeds/coin-events.json feeds/events-prev.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date +%F) 이번주 이벤트 갱신"

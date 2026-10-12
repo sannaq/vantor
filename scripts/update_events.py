@@ -5,6 +5,8 @@ GitHub Actions(.github/workflows/events.yml)가 매일 아침 실행한다.
 - 미국 일정: ForexFactory 주간 피드(무료·키 없음)에서 USD 중요/보통 일정을 가져온다.
 - 한국 휴장: 아래 KRX_HOLIDAYS 표. 한국 정기 일정: 수출입동향(1일)·옵션 만기(둘째 목)·금통위(BOK_MPC 표)·잠정실적 시즌.
 - 결과: 미 노동통계국(BLS) 무료 API 로 CPI·PPI·고용·실업률·임금 실제값을 채우고 예상 대비 뜨거움/식음 판정.
+  그 밖의 지표는 FRED, 모든 이벤트의 '발표 뒤 시장 반응'(rx)은 야후 일봉 — scripts/event_results.py.
+- 주가 바뀌면 지난주 이벤트(결과 포함)를 feeds/events-prev.json 에 남긴다 → 사이트 '지난주 결과'.
 - 한글 제목·해설: TITLE_KO 사전. 사전에 없는 일정은 영문 제목 그대로(사전에 한 줄 추가하면 다음 실행부터 한글).
 - 같은 주에 손으로 넣은 이벤트(src 없음)·해설·결과는 지우지 않고 그대로 둔다.
   같은 날짜·시각에 손으로 넣은 미국 이벤트가 있으면 자동 이벤트는 추가하지 않는다.
@@ -12,6 +14,9 @@ GitHub Actions(.github/workflows/events.yml)가 매일 아침 실행한다.
 """
 import json, os, re, sys, time, urllib.request
 from datetime import datetime, timedelta, timezone
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import event_results  # FRED 지표 결과·발표 뒤 시장 반응 (2026-10-12)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KST = timezone(timedelta(hours=9))
@@ -45,7 +50,7 @@ TITLE_KO = [
     (r"^FOMC Meeting Minutes", ("FOMC 의사록 공개", 3, "policy", "직전 회의에서 추가 인상·인하 논의가 얼마나 강했는지. 매파적이면 금리·달러↑.", "연준 톤 변화 — 매파면 크립토 하락 압력.")),
     (r"^Federal Funds Rate|^FOMC Statement", ("FOMC 금리 결정", 3, "policy", "금리 결정과 성명 문구. 주 최대 이벤트.", "금리 결정 — 크립토 변동성 최대 구간.")),
     (r"^FOMC Press Conference", ("연준 의장 기자회견", 3, "policy", "향후 경로 힌트.", "의장 발언에 따라 급변동 가능.")),
-    (r"^Fed Chair .* Speaks", ("연준 의장 발언", 3, "policy", "금리 경로 힌트. 발언 톤에 시장 민감.", "의장 발언 — 크립토 변동성 주의.")),
+    (r"^Fed Chair\w* .*Speaks", ("연준 의장 발언", 3, "policy", "금리 경로 힌트. 발언 톤에 시장 민감.", "의장 발언 — 크립토 변동성 주의.")),
     (r"^FOMC Member (\w+) Speaks", ("연준 위원 발언 ({0})", 2, "policy", "개별 위원의 금리 시각 참고.", None)),
     (r"^President Trump Speaks", ("트럼프 대통령 연설", 2, "event", "관세·정책 발언에 따라 변동성 확대 가능.", "정책 발언 — 크립토 관련 언급 주의.")),
     (r"UoM Consumer Sentiment", ("미시간대 소비자심리", 2, "data", "소비 심리와 함께 나오는 기대 인플레이션이 관건.", None)),
@@ -295,7 +300,7 @@ def main():
                                        f"직전 {e['previous']}" if e.get("previous") else ""] if x)
         if extra:
             ev["note"] = (ev["note"] + " " if ev["note"] else "") + f"({extra})"
-        if e["title"] in BLS:
+        if e["title"] in BLS or e["title"] in event_results.FRED:
             ev["_fc"] = {e["title"]: e.get("forecast", "")}
         auto.append(ev)
 
@@ -349,7 +354,7 @@ def main():
             p = prev_auto.get(a["src"])
             n = {k: v for k, v in a.items() if not k.startswith("_")}
             if p:  # 손으로 고친 해설·결과는 유지
-                for k in ("note", "result", "title", "imp"):
+                for k in ("note", "result", "rx", "title", "imp"):
                     if k in p:
                         n[k] = p[k]
             evs.append(n)
@@ -358,6 +363,18 @@ def main():
             filled = fill_results(evs, today)
             if filled:
                 print("결과 채움:", filled, "건")
+            event_results.fill_all(evs, now)
+            # 지난주 보관: 주가 바뀌는 순간 옛 주 이벤트를 결과까지 채워 남기고, 그 뒤에도 빈 결과는 계속 채운다
+            prev_path = os.path.join(ROOT, "feeds", "events-prev.json")
+            prev = {"week": old.get("week"), "range": old.get("range"), "events": old.get("events", [])} if (not same_week and old.get("events")) else load(prev_path)
+            if prev.get("events"):
+                before = json.dumps(prev, ensure_ascii=False, sort_keys=True)
+                fill_results(prev["events"], today)
+                event_results.fill_all(prev["events"], now)
+                if json.dumps(prev, ensure_ascii=False, sort_keys=True) != before or not os.path.exists(prev_path):
+                    save(prev_path, prev)
+                    changed = True
+                    print("지난주 보관:", prev.get("range"), len(prev["events"]), "건")
             stock_results = {e["src"]: e["result"] for e in evs if e.get("src") and e.get("result")}
         else:
             for e in evs:
