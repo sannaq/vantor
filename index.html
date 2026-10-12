@@ -607,8 +607,24 @@
 #splash .sp-half.sp-picked .sp-half-in{animation:spPop .34s ease forwards}
 @media(prefers-reduced-motion:reduce){#splash *{animation:none!important;transition:opacity .3s!important}}
 </style>
+<script>/* 접속 비밀번호 (10/12 사용자 결정) — 처음 한 번 맞히면 이 기기·브라우저는 계속 통과. 정적 사이트라 화면만 가리는 간단한 문(자료 파일은 공개) */
+var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; try{ if(localStorage.getItem('vtGate')!==VT_GATE)document.documentElement.classList.add('gated'); }catch(e){ document.documentElement.classList.add('gated'); }</script>
+<style>html.gated body>*:not(#vtGate){display:none!important}#vtGate{display:none}html.gated #vtGate{display:flex;position:fixed;inset:0;z-index:2147483647;align-items:center;justify-content:center;background:#0b0f16;font-family:inherit}
+#vtGate .bx{width:min(340px,88vw);background:#121822;border:1px solid #263041;border-radius:16px;padding:26px 24px;text-align:center;color:#e8ecf3}
+#vtGate h1{font-size:22px;letter-spacing:2px;margin:0 0 6px}#vtGate p{font-size:12.5px;color:#8a95a5;margin:0 0 16px}
+#vtGate input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #2b3647;background:#0b0f16;color:#e8ecf3;font-size:16px;text-align:center;letter-spacing:3px;outline:none}
+#vtGate input:focus{border-color:#d4a73a}#vtGate button{width:100%;margin-top:10px;padding:11px;border:none;border-radius:10px;background:#d4a73a;color:#0b0f16;font-weight:800;font-size:14px;cursor:pointer}
+#vtGate .er{color:#f6465d;font-size:12px;min-height:16px;margin-top:8px}</style>
 </head>
 <body>
+<div id="vtGate"><form class="bx" onsubmit="return vtGateTry(event)"><h1>⚡ VANTOR</h1><p>비밀번호를 입력해 주세요</p>
+<input id="vtGatePw" type="password" inputmode="numeric" autocomplete="current-password" placeholder="비밀번호" autofocus>
+<button type="submit">들어가기</button><div class="er" id="vtGateEr"></div></form></div>
+<script>function vtGateTry(ev){ ev.preventDefault(); var pw=document.getElementById('vtGatePw').value, er=document.getElementById('vtGateEr');
+  if(!window.crypto||!crypto.subtle){ er.textContent='이 브라우저에서는 확인할 수 없어요'; return false; }
+  crypto.subtle.digest('SHA-256',new TextEncoder().encode('vantor-gate:'+pw)).then(function(b){ var h=Array.from(new Uint8Array(b)).map(function(x){return x.toString(16).padStart(2,'0');}).join('');
+    if(h===VT_GATE){ try{ localStorage.setItem('vtGate',h); }catch(e){} document.documentElement.classList.remove('gated'); window.dispatchEvent(new Event('resize')); }
+    else { er.textContent='비밀번호가 맞지 않아요'; document.getElementById('vtGatePw').select(); } }); return false; }</script>
 
 <div id="splash">
   <canvas id="spCanvas" aria-hidden="true"></canvas>
