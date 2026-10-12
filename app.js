@@ -1938,8 +1938,41 @@ function stkPass(s){ var ch=s.ch||0, mk=(s.mk||'').toUpperCase();
     case 'kospi': return mk.indexOf('KOSDAQ')<0; case 'kosdaq': return mk.indexOf('KOSDAQ')>=0;
     default: return true; }
 }
+/* 미장 스크리너 — 매일 채점 자료(feeds/stock-scores-us.json) 의 20일 평균 거래대금 상위 100 (2026-10-12 사용자 결정) */
+var _usScrF='all', _usScrInd='';
+var US_SCR_FILTERS=[['all','전체'],['reco','미장 추천'],['hot','⚠ 과열'],['surge','급등 +5%↑'],['plunge','급락 -5%↓'],['up','상승'],['down','하락']];
+function _usScrList(){ if(!_VSCU||!_VSCU.items)return null;
+  return Object.keys(_VSCU.items).map(function(c){ var it=_VSCU.items[c]; return {c:c,n:it[12]||c,mk:it[13]||'',ccy:'USD',px:it[17],ch:it[7],tv:it[6],total:it[0],view:it[1],hot:(it[5]||[]).some(function(b){return String(b).indexOf('⚠ 과열')===0;}),ind:it[16]||''}; })
+    .filter(function(s){ return s.tv!=null; }).sort(function(a,b){ return b.tv-a.tv; }).slice(0,100); }
+function _usScrPass(s){ var ch=s.ch||0; if(_usScrInd&&s.ind!==_usScrInd)return false;
+  switch(_usScrF){ case 'reco': return s.view==='추천'; case 'hot': return s.hot; case 'surge': return ch>=5; case 'plunge': return ch<=-5; case 'up': return ch>0; case 'down': return ch<0; default: return true; } }
+function _renderUSBrowse(el,head){
+  var all=_usScrList();
+  if(!all){ el.innerHTML=head+'<div style="color:var(--faint);font-size:12.5px;padding:16px 4px">미장 종목 불러오는 중…</div>'; _loadVScoresUS().then(function(j){ if(stkMkt==='US'&&j)renderStockBrowse(); else if(stkMkt==='US') el.innerHTML=head+'<div style="color:var(--faint);font-size:12.5px;padding:16px 4px">미장 자료를 불러오지 못했어요</div>'; }); return; }
+  var inds={}; all.forEach(function(s){ if(s.ind)inds[s.ind]=(inds[s.ind]||0)+1; });
+  var indTop=Object.keys(inds).sort(function(a,b){return inds[b]-inds[a];}).slice(0,10);
+  var list=all.filter(_usScrPass);
+  var chip=function(on,attr,lab){ return '<button class="scfil'+(on?' on':'')+'" '+attr+'>'+lab+'</button>'; };
+  el.innerHTML=head
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'+US_SCR_FILTERS.map(function(f){ return chip(f[0]===_usScrF,'data-uf="'+f[0]+'"',f[1]); }).join('')+'</div>'
+    +(indTop.length?'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"><span style="font-size:11.5px;color:var(--faint);align-self:center">업종</span>'+chip(!_usScrInd,'data-ui=""','전체')+indTop.map(function(k){ return chip(_usScrInd===k,'data-ui="'+esc(k)+'"',esc(k)+' <small style="opacity:.6">'+inds[k]+'</small>'); }).join('')+'</div>':'')
+    +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>20일 평균 거래대금</th><th>미장 평점</th></tr></thead><tbody>'
+    +(list.length?list.map(function(s){ var vc=_VS_VC[s.view]||'var(--sub)';
+      return '<tr class="rowbtn" data-c="'+esc(s.c)+'" data-n="'+esc(s.n)+'" data-mk="'+esc(s.mk)+'"><td class="l"><div class="sym">'+esc(s.n)+(s.hot?' <span style="font-size:10px;color:#f0b90b;border:1px solid #f0b90b;border-radius:5px;padding:0 4px">⚠ 과열</span>':'')+'<small>'+esc(s.c)+' · '+esc(s.mk)+(s.ind?' · '+esc(s.ind):'')+'</small></div></td>'
+        +'<td class="num" id="bpx-'+esc(s.c)+'">'+(s.px!=null?_usd(s.px):'—')+'</td><td class="'+cls(s.ch)+'" id="bch-'+esc(s.c)+'" style="font-weight:700">'+pctTxt(s.ch)+'</td>'
+        +'<td class="num" style="color:var(--sub)">$'+Math.round(s.tv*100).toLocaleString('en-US')+'M</td><td class="num"><b style="color:'+vc+'">'+s.total+'</b> <small style="color:'+vc+'">'+esc(s.view)+'</small></td></tr>'; }).join('')
+      :'<tr><td colspan="5" style="text-align:center;color:var(--faint);padding:24px">조건에 맞는 종목이 없습니다.</td></tr>')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+esc(_vsDate(_VSCU.date))+'(미국) 장마감 채점 기준 · 20일 평균 거래대금 상위 100 중 '+list.length+'종목 · 시세 불러오는 중…</div>';
+  $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c,{n:tr.dataset.n,mk:tr.dataset.mk});};});
+  $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
+  $$('#stockPanel [data-uf]').forEach(function(b){b.onclick=function(){_usScrF=b.dataset.uf;renderStockBrowse();};});
+  $$('#stockPanel [data-ui]').forEach(function(b){b.onclick=function(){_usScrInd=b.dataset.ui;renderStockBrowse();};});
+  browseQuotes(list.map(function(s){return s.c;}),'US');
+}
 function renderStockBrowse(){
   var el=$('#stockPanel'); if(!el)return;
+  if(stkMkt==='US'){ return _renderUSBrowse(el,'<div class="sec-title" style="font-size:22px">🔎 종목 골라보기 (스크리너)</div><p class="sec-sub">미국은 나스닥·NYSE·AMEX 중 20일 평균 거래대금 상위 100종목이에요. 티커 검색도 됩니다 (예: AAPL).</p>'
+    +'<div style="display:flex;gap:6px;margin-bottom:12px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid var(--line);border-radius:20px;font-weight:800;font-size:13px">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid var(--gold);border-radius:20px;font-weight:800;font-size:13px;color:var(--gold)">🇺🇸 미국</button></div>'); }
   // 국내 실데이터: board(거래대금 상위 30) 우선 → 스크리너. 없으면 RADAR/데모.
   var base=(stkMkt==='US')?USTK:((KBOARD&&KBOARD.length)?KBOARD:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK));
   var real=(stkMkt==='KR'&&((KBOARD&&KBOARD.length)||(useReal&&KISUNIV&&KISUNIV.length)));
@@ -1959,15 +1992,15 @@ function renderStockBrowse(){
 /* 목록 시세를 /quotes 실데이터로 제자리 갱신 (클릭 전에도 실시간) */
 function browseQuotes(codes,mkt){
   if(!PROXY||!codes.length) return;
-  proxyJson('/quotes?mkt='+(mkt==='US'?'US':'KR')+'&codes='+codes.slice(0,50).join(',')).then(function(j){
-    if(!j||!j.quotes) return; var got=0;
+  var got=0; for(var bi=0;bi<Math.min(codes.length,100);bi+=50) proxyJson('/quotes?mkt='+(mkt==='US'?'US':'KR')+'&codes='+codes.slice(bi,bi+50).join(',')).then(function(j){
+    if(!j||!j.quotes) return;
     j.quotes.forEach(function(q){ if(!q||q.px==null)return; got++;
       var pxEl=$('#bpx-'+q.code), chEl=$('#bch-'+q.code); // q.code=심볼, q.c=등락률
       var ccy=(mkt==='US')?'USD':'KRW';
       if(pxEl) pxEl.textContent=(ccy==='USD')?('$'+(+q.px).toLocaleString('en-US',{maximumFractionDigits:2})):won(q.px);
       if(chEl&&hasNum(q.c)){ chEl.textContent=pctTxt(q.c); chEl.className='num '+cls(q.c); }
     });
-    var note=$('#browseNote'); if(note&&got&&stkMkt===mkt) note.textContent=(mkt==='US'?'✅ 미국 실시간 시세':'✅ 국내 실시간 시세')+' · '+got+'종목';
+    var note=$('#browseNote'); if(note&&got&&stkMkt===mkt) note.textContent=(mkt==='US'?'✅ 미국 실시간 시세 '+got+'종목 · 평점은 '+(_VSCU?_vsDate(_VSCU.date)+'(미국) 장마감 채점':'매일 채점')+' · 거래대금 상위 100':'✅ 국내 실시간 시세 · '+got+'종목');
   });
 }
 function bindNav(a){ a.onclick=function(e){ if(a.dataset.v)showView(a.dataset.v); }; }
@@ -1999,25 +2032,43 @@ function esc(t){return String(t).replace(/[&<>"]/g,function(m){return {'&':'&amp
 function sentiment(t){var neg=['하락','급락','규제','관세','폭락','우려','경고','소송','제재','하향','파산','약세','손실','벌금','위기','충격','부진','논란','적자'];var pos=['상승','급등','호재','승인','유입','신고가','돌파','완화','호조','성장','상향','상장','투자','반등','회복','기대','최고','호실적','흑자','수주'];for(var i=0;i<neg.length;i++)if(t.indexOf(neg[i])>-1)return 'neg';for(var j=0;j<pos.length;j++)if(t.indexOf(pos[j])>-1)return 'pos';return '';}
 function toggleTr(){ usTr=!usTr; var b=$('#trbtn'); if(b){b.classList.toggle('on',usTr);b.textContent=usTr?'🌐 번역 켜짐':'🌐 한글 번역';b.style.borderColor=usTr?'var(--gold)':'var(--line)';} fetchNews(); }
 async function trOne(t){ if(!t)return t; if(_trC[t])return _trC[t]; try{var r=await fetch('https://api.mymemory.translated.net/get?langpair=en|ko&q='+encodeURIComponent(t.slice(0,480))).then(x=>x.json());var o=(r&&r.responseData&&r.responseData.translatedText)||t;if(/MYMEMORY WARNING|QUERY LENGTH|INVALID/i.test(o))o=t;_trC[t]=o;return o;}catch(e){return t;} }
+/* 뉴스 — feeds/news-all.json(깃허브가 30분마다 국내 12·미국 5곳+한글 해외증시 모음, 같은 기사 묶음, scripts/update_news.py) 이 본선.
+   그 파일이 없거나 1시간 넘게 묵었으면 예전처럼 브라우저에서 rss2json 으로 몇 곳을 직접 받아 섞는다. 2026-10-12 */
+var _newsSrc='', _NEWSALL=null, _newsAllAt=0;
+function _newsAll(){ if(_NEWSALL&&Date.now()-_newsAllAt<5*60000)return Promise.resolve(_NEWSALL);
+  return fetch('feeds/news-all.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){_NEWSALL=j;_newsAllAt=Date.now();} return j; }).catch(function(){return _NEWSALL;}); }
+function _newsLive(cat){ var feeds=NEWS_FEEDS[cat==='USKO'?'KR':cat]||[];
+  return Promise.all(feeds.map(function(f){return fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(f.u)).then(r=>r.json()).then(j=>({j:j,s:f.s})).catch(()=>null);}))
+    .then(function(res){ var all=[]; res.forEach(function(x){if(x&&x.j&&x.j.items)x.j.items.forEach(function(it){all.push({title:decEnt(String(it.title||'')),link:it.link,t:parseNewsTime(it.pubDate),src:x.s,also:[]});});}); return all; }); }
+function _newsKey(t){ return String(t).replace(/\[[^\]]*\]|\([^)]*\)/g,'').replace(/[^0-9A-Za-z가-힣]/g,'').toLowerCase().slice(0,28); }
 async function fetchNews(){
-  var cat=newsCat, feeds=NEWS_FEEDS[cat];
+  var cat=newsCat;
   var full=$('#fullNews'), home=$('#homeNews');
   if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px;padding:8px 0">불러오는 중…</div>';
   try{
-    var res=await Promise.all(feeds.map(function(f){return fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(f.u)).then(r=>r.json()).then(j=>({j:j,s:f.s})).catch(()=>null);}));
+    var j=await _newsAll(), base=(j&&j[cat])?j[cat].map(function(x){return {title:x.title,link:x.link,t:x.t,src:x.src,also:x.also||[]};}):[];
+    var stale=!j||!j.updated||(Date.now()-Date.parse(j.updated.replace(' ','T')+':00+09:00'))>60*60000;
+    var live=(stale||!base.length)&&cat!=='USKO'?await _newsLive(cat):[];
     if(cat!==newsCat)return;
-    var all=[];res.forEach(function(x){if(x&&x.j&&x.j.items)x.j.items.forEach(function(it){all.push({title:decEnt(String(it.title||'')),link:it.link,t:parseNewsTime(it.pubDate),src:x.s});});});
-    all.sort(function(a,b){return b.t-a.t;});all=all.slice(0,18);
-    if(cat==='KR'){ _lastNews=all.slice(); if(typeof renderBriefing==='function')renderBriefing(); }
-    if(cat==='US'&&usTr){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px;padding:8px 0">🌐 번역 중…</div>'; var tt=await Promise.all(all.map(function(n){return trOne(n.title);})); if(cat!==newsCat)return; all.forEach(function(n,i){n.title=tt[i];}); }
-    function item(n){var se=sentiment(n.title);var st=se==='pos'?' <span class="up" style="font-size:10px;font-weight:800">▲</span>':se==='neg'?' <span class="down" style="font-size:10px;font-weight:800">▼</span>':'';return '<a href="'+esc(n.link||'#')+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span><span class="tt">'+esc(n.title)+st+'</span></a>';}
-    if(full)full.innerHTML=all.map(item).join('');
-    if(home)home.innerHTML=all.slice(0,7).map(item).join('');
-    if(!all.length){ var nf='<div style="color:var(--faint);font-size:12px;padding:8px 0">뉴스를 불러오지 못했어요 · 잠시 후 다시 시도해요</div>'; if(full)full.innerHTML=nf; if(home)home.innerHTML=nf; if($('#newsupd'))$('#newsupd').textContent='· 불러오기 실패'; return; }
-    if($('#newsupd'))$('#newsupd').textContent='· '+nowHM()+' 갱신';
+    var seen={}, all=[];
+    base.concat(live).sort(function(a,b){return b.t-a.t;}).forEach(function(n){ var k=_newsKey(n.title); if(seen[k]){ if(seen[k].src!==n.src&&seen[k].also.indexOf(n.src)<0)seen[k].also.push(n.src); return; } seen[k]=n; all.push(n); });
+    if(cat==='KR'){ _lastNews=all.slice(0,18); if(typeof renderBriefing==='function')renderBriefing(); }
+    var srcs={}; all.forEach(function(n){ srcs[n.src]=(srcs[n.src]||0)+1; });
+    if(_newsSrc&&!srcs[_newsSrc])_newsSrc='';
+    var shown=all.filter(function(n){ return !_newsSrc||n.src===_newsSrc||n.also.indexOf(_newsSrc)>=0; }).slice(0,50);
+    if(cat==='US'&&usTr){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px;padding:8px 0">🌐 번역 중…</div>'; var tt=await Promise.all(shown.map(function(n){return trOne(n.title);})); if(cat!==newsCat)return; shown=shown.map(function(n,i){return Object.assign({},n,{title:tt[i]});}); }
+    function item(n){var se=sentiment(n.title);var st=se==='pos'?' <span class="up" style="font-size:10px;font-weight:800">▲</span>':se==='neg'?' <span class="down" style="font-size:10px;font-weight:800">▼</span>':'';
+      var sr='<small style="color:var(--faint);margin-left:6px;font-size:10.5px">'+esc(n.src)+(n.also&&n.also.length?' 외 '+n.also.length+'곳':'')+'</small>';
+      return '<a href="'+esc(n.link||'#')+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span><span class="tt">'+esc(n.title)+st+sr+'</span></a>';}
+    var chips='<div id="newsSrcChips" style="display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px">'+['']
+      .concat(Object.keys(srcs).sort(function(a,b){return srcs[b]-srcs[a];})).map(function(k){ var on=(_newsSrc===k); return '<button class="scfil'+(on?' on':'')+'" data-ns="'+esc(k)+'" style="font-size:11.5px">'+(k?esc(k)+' <small style="opacity:.6">'+srcs[k]+'</small>':'전체 '+all.length)+'</button>'; }).join('')+'</div>';
+    if(full){ full.innerHTML=chips+shown.map(item).join(''); $$('#newsSrcChips [data-ns]').forEach(function(b){ b.onclick=function(){ _newsSrc=b.dataset.ns; fetchNews(); }; }); }
+    if(home&&cat==='KR')home.innerHTML=all.slice(0,7).map(item).join('');
+    if(!all.length){ var nf='<div style="color:var(--faint);font-size:12px;padding:8px 0">뉴스를 불러오지 못했어요 · 잠시 후 다시 시도해요</div>'; if(full)full.innerHTML=nf; if(home&&cat==='KR')home.innerHTML=nf; if($('#newsupd'))$('#newsupd').textContent='· 불러오기 실패'; return; }
+    if($('#newsupd'))$('#newsupd').textContent='· '+(j&&j.updated&&!stale?j.updated.slice(11)+' 모음':nowHM()+' 갱신')+' · '+shown.length+'건';
   }catch(e){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px">뉴스를 불러오지 못했어요</div>'; }
 }
-$$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; $$('.nc').forEach(function(x){x.classList.toggle('on',x===b);x.style.borderColor=x===b?'var(--gold)':'var(--line)';}); var tb=$('#trbtn'); if(tb)tb.style.display=newsCat==='US'?'':'none'; fetchNews(); }; });
+$$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; _newsSrc=''; $$('.nc').forEach(function(x){x.classList.toggle('on',x===b);x.style.borderColor=x===b?'var(--gold)':'var(--line)';}); var tb=$('#trbtn'); if(tb)tb.style.display=newsCat==='US'?'':'none'; fetchNews(); }; });
 
 /* ═══════════ 테마 ═══════════ */
 (function(){ var root=document.documentElement, tb=$('#theme'); var sv=null; try{sv=localStorage.getItem('aurtheme');}catch(e){}

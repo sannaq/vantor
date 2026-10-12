@@ -777,16 +777,17 @@
   <!-- ===== NEWS ===== -->
   <div class="view" id="v-news">
     <div class="sec-title">📰 NEWS RADAR</div>
-    <p class="sec-sub">한국·미국 증시 뉴스를 실시간으로. 미국은 🌐 한글 번역 지원.</p>
+    <p class="sec-sub">한국·미국 증시 뉴스와 한글로 쓴 해외주식 기사. 미국은 🌐 한글 번역 지원.</p>
     <div class="card"><div class="pad">
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="ibtn nc on" data-cat="KR" style="width:auto;padding:0 14px;border:1px solid var(--line);border-radius:20px;font-weight:700;font-size:13px">🇰🇷 한국</button>
         <button class="ibtn nc" data-cat="US" style="width:auto;padding:0 14px;border:1px solid var(--line);border-radius:20px;font-weight:700;font-size:13px">🇺🇸 미국</button>
+        <button class="ibtn nc" data-cat="USKO" style="width:auto;padding:0 14px;border:1px solid var(--line);border-radius:20px;font-weight:700;font-size:13px">🌏 해외주식(한글)</button>
         <button class="ibtn" id="trbtn" onclick="toggleTr()" style="width:auto;padding:0 14px;border:1px solid var(--line);border-radius:20px;font-weight:700;font-size:13px;display:none">🌐 한글 번역</button>
         <span id="newsupd" style="margin-left:auto;align-self:center;font-size:12px;color:var(--faint)"></span>
       </div>
       <div class="nlist" id="fullNews"></div>
-      <div style="font-size:11px;color:var(--faint);margin-top:12px;line-height:1.5">한국: 연합뉴스·한국경제·매일경제·연합인포맥스·이데일리·머니투데이 · 미국: CNBC · rss2json 경유 · 5분 갱신 · 긍정/부정 자동 태그(참고용)</div>
+      <div style="font-size:11px;color:var(--faint);margin-top:12px;line-height:1.5">한국: 연합뉴스·한국경제·매일경제·연합인포맥스·이데일리·머니투데이·서울경제·조선비즈·파이낸셜뉴스·헤럴드경제·뉴시스·아시아경제 · 미국: CNBC·MarketWatch·WSJ·Investing.com·Nasdaq · 해외주식(한글): 국내 기사 중 미국 증시 관련 + 한경 국제 · 30분마다 모음 · 같은 기사는 하나로 묶고 "외 N곳" 표시 · 긍정/부정 자동 태그(참고용)</div>
     </div></div>
   </div>
 
@@ -864,7 +865,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=128"></script>
+<script src="app.js?v=129"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

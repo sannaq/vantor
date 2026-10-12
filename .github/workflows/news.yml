@@ -1,0 +1,33 @@
+name: 뉴스 모으기
+
+# 국내·미국 언론 RSS 를 모아 feeds/news-all.json 으로 (scripts/update_news.py). 브라우저 rss2json 은 출처를 늘리면 막혀서 여기서 모은다.
+on:
+  schedule:
+    - cron: "10,40 * * * *"   # 30분마다 (정각·30분은 다른 작업이 몰려 10분 비킴)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: news-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 뉴스 모으기
+        run: python3 scripts/update_news.py
+      - name: 변경분 올리기
+        run: |
+          git add feeds/news-all.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 뉴스"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1

@@ -132,9 +132,9 @@ const r1 = (v, k) => v == null ? null : +v.toFixed(k);
 const scores = { v: 2, market: US ? 'US' : 'KR', spy, date, n: fresh.length, updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '),
   bp: US ? { mkt: 'US', mom: bp.mom.map((x) => r1(x, 4)), cut: bp.cut } : { vol: bp.vol.map((x) => r1(x, 5)), hiGap: bp.hiGap.map((x) => r1(x, 4)), ep: bp.ep.map((x) => r1(x, 4)), cut: bp.cut }, // 사이트가 목록에 없는 종목을 같은 기준으로 채점할 때 씀
   // 코드: [총점, 관점, 순위, [안정성,고점근접,이익], 좋은점[], 약한점[], 20일평균거래대금(억), 등락률%, 참고[], 하루변동%, 52주고점대비%, PER]
-  //   미장은 뒤에 [12]이름, [13]거래소, [14]로이터 코드, [15]1년 모멘텀% 를 더 붙인다 (국내는 stock-list.json 에서 이름을 찾는다)
+  //   미장은 뒤에 [12]이름, [13]거래소, [14]로이터 코드, [15]1년 모멘텀%, [16]업종, [17]종가 를 더 붙인다 (16·17 은 스크리너용, 2026-10-12) (국내는 stock-list.json 에서 이름을 찾는다)
   items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.view, x.rank, x.r.parts, x.r.good, x.r.bad, r1(x.f.tv20, US ? 3 : 1), r1(x.f.day, 2), x.r.ref, r1(x.f.vol * 100, 2), r1(x.f.hiGap * 100, 1), x.f.per]
-    .concat(US ? [x.n, x.mk, x.rc, x.f.mom == null ? null : r1(x.f.mom * 100, 1)] : [])])) };
+    .concat(US ? [x.n, x.mk, x.rc, x.f.mom == null ? null : r1(x.f.mom * 100, 1), x.f._ind || null, r1(x.f.px, 2)] : [])])) };
 const liquid = fresh.filter((x) => x.f.tv20 >= MIN_TV);
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
