@@ -2037,7 +2037,7 @@ async function trOne(t){ if(!t)return t; if(_trC[t])return _trC[t]; try{var r=aw
 var _newsSrc='', _NEWSALL=null, _newsAllAt=0;
 function _newsAll(){ if(_NEWSALL&&Date.now()-_newsAllAt<5*60000)return Promise.resolve(_NEWSALL);
   return fetch('feeds/news-all.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){_NEWSALL=j;_newsAllAt=Date.now();} return j; }).catch(function(){return _NEWSALL;}); }
-function _newsLive(cat){ var feeds=NEWS_FEEDS[cat==='USKO'?'KR':cat]||[];
+function _newsLive(cat,only){ var feeds=(NEWS_FEEDS[cat==='USKO'?'KR':cat]||[]).filter(function(f){ return !only||only.indexOf(f.s)>=0; });
   return Promise.all(feeds.map(function(f){return fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(f.u)).then(r=>r.json()).then(j=>({j:j,s:f.s})).catch(()=>null);}))
     .then(function(res){ var all=[]; res.forEach(function(x){if(x&&x.j&&x.j.items)x.j.items.forEach(function(it){all.push({title:decEnt(String(it.title||'')),link:it.link,t:parseNewsTime(it.pubDate),src:x.s,also:[]});});}); return all; }); }
 function _newsKey(t){ return String(t).replace(/\[[^\]]*\]|\([^)]*\)/g,'').replace(/[^0-9A-Za-z가-힣]/g,'').toLowerCase().slice(0,28); }
@@ -2048,7 +2048,8 @@ async function fetchNews(){
   try{
     var j=await _newsAll(), base=(j&&j[cat])?j[cat].map(function(x){return {title:x.title,link:x.link,t:x.t,src:x.src,also:x.also||[]};}):[];
     var stale=!j||!j.updated||(Date.now()-Date.parse(j.updated.replace(' ','T')+':00+09:00'))>60*60000;
-    var live=(stale||!base.length)&&cat!=='USKO'?await _newsLive(cat):[];
+    // 이데일리·머니투데이는 깃허브 서버 접속을 막아 모음에 안 들어온다 → 국내는 이 두 곳만 브라우저에서 직접
+    var live=(stale||!base.length)&&cat!=='USKO'?await _newsLive(cat):(cat==='KR'?await _newsLive('KR',['이데일리','머니투데이']):[]);
     if(cat!==newsCat)return;
     var seen={}, all=[];
     base.concat(live).sort(function(a,b){return b.t-a.t;}).forEach(function(n){ var k=_newsKey(n.title); if(seen[k]){ if(seen[k].src!==n.src&&seen[k].also.indexOf(n.src)<0)seen[k].also.push(n.src); return; } seen[k]=n; all.push(n); });
