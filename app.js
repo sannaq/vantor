@@ -2107,7 +2107,54 @@ function toggleTr(){ usTr=!usTr; var b=$('#trbtn'); if(b){b.classList.toggle('on
 async function trOne(t){ if(!t)return t; if(_trC[t])return _trC[t]; try{var r=await fetch('https://api.mymemory.translated.net/get?langpair=en|ko&q='+encodeURIComponent(t.slice(0,480))).then(x=>x.json());var o=(r&&r.responseData&&r.responseData.translatedText)||t;if(/MYMEMORY WARNING|QUERY LENGTH|INVALID/i.test(o))o=t;_trC[t]=o;return o;}catch(e){return t;} }
 /* 뉴스 — feeds/news-all.json(깃허브가 30분마다 국내 12·미국 5곳+한글 해외증시 모음, 같은 기사 묶음, scripts/update_news.py) 이 본선.
    그 파일이 없거나 1시간 넘게 묵었으면 예전처럼 브라우저에서 rss2json 으로 몇 곳을 직접 받아 섞는다. 2026-10-12 */
-var _newsSrc='', _NEWSALL=null, _newsAllAt=0;
+var _newsSrc='', _newsCatF='', _NEWSALL=null, _newsAllAt=0;
+/* 뉴스 분류 (2026-10-12 사용자 결정: 업종 18 + 시장 3, 제목 앞엔 가장 강한 1개, 칩 거르기는 걸린 분류 전부)
+   낱말 사전 방식 — 회사 이름은 2점, 일반 낱말은 1점. 업종이 하나라도 걸리면 시장 분류(증시·환율·금리)보다 앞선다. */
+var NEWS_CATS=[
+  ['반도체',2,/삼성전자|SK하이닉스|하이닉스|한미반도체|마이크론|엔비디아|TSMC|ASML|브로드컴|퀄컴|인텔|AMD|Micron|Nvidia|NVIDIA|Broadcom|Qualcomm|Intel/],
+  ['반도체',1,/반도체|HBM|D램|디램|낸드|메모리|파운드리|웨이퍼|칩(?!거)|chip|semiconductor|DRAM|NAND/i],
+  ['AI',2,/오픈AI|OpenAI|앤트로픽|Anthropic|챗GPT|ChatGPT|제미나이|Gemini|딥시크|DeepSeek/],
+  ['AI',1,/(^|[^A-Za-z])AI([^A-Za-z]|$)|인공지능|생성형|데이터센터|GPU|LLM|에이전트|artificial intelligence/],
+  ['2차전지',2,/LG에너지솔루션|LG엔솔|삼성SDI|SK온|에코프로|포스코퓨처엠|엘앤에프|CATL/],
+  ['2차전지',1,/2차전지|이차전지|배터리|양극재|음극재|리튬|전고체|battery|lithium/i],
+  ['자동차',2,/현대차|기아|현대모비스|테슬라|Tesla|GM|포드|Ford|도요타|Toyota|BYD/],
+  ['자동차',1,/자동차|완성차|전기차|EV|자율주행|車|automaker/],
+  ['조선',2,/HD현대중공업|한화오션|삼성중공업|HD한국조선해양|HD현대미포|한국조선해양/],
+  ['조선',1,/조선|선박|LNG선|컨테이너선|수주.*척|해운|shipbuild/i],
+  ['항공',2,/대한항공|아시아나|제주항공|티웨이|진에어|보잉|Boeing|에어버스|Airbus/],
+  ['항공',1,/항공사|여객기|항공편|저비용항공|LCC|airline/i],
+  ['방산',2,/한화에어로스페이스|LIG넥스원|한국항공우주|KAI|현대로템|록히드|Lockheed/],
+  ['방산',1,/방산|방위산업|K-?방산|무기(?!한)|전투기|미사일|국방|탄약|defense/i],
+  ['바이오',2,/삼성바이오|셀트리온|유한양행|알테오젠|한미약품|일라이릴리|Eli Lilly|화이자|Pfizer|노보노디스크|Novo Nordisk|바이오젠|Biogen/],
+  ['바이오',1,/바이오|제약|신약|임상|FDA|비만약|치료제|의약품|biotech|pharma/i],
+  ['원전',2,/두산에너빌리티|한국전력기술|한전기술|한수원|뉴스케일|NuScale/],
+  ['원전',1,/원전|원자력|SMR|소형모듈원자로|우라늄|nuclear|uranium/i],
+  ['전력',2,/LS ELECTRIC|LS일렉트릭|HD현대일렉트릭|효성중공업|한국전력|한전/],
+  ['전력',1,/전력|변압기|전력망|송전|배전|전기요금|발전소|power grid|utilit/i],
+  ['로봇',2,/레인보우로보틱스|두산로보틱스|보스턴다이내믹스|Boston Dynamics|피규어AI/],
+  ['로봇',1,/로봇|휴머노이드|robot/i],
+  ['금융',2,/KB금융|신한지주|하나금융|우리금융|메리츠|미래에셋|삼성생명|JP모건|JPMorgan|골드만|Goldman|모건스탠리|Morgan Stanley/],
+  ['금융',1,/은행|증권사|보험|금융지주|카드사|저축은행|핀테크|bank/i],
+  ['건설',2,/현대건설|삼성물산|GS건설|대우건설|DL이앤씨/],
+  ['건설',1,/건설|부동산|아파트|분양|재건축|주택|PF|housing|real estate/i],
+  ['화학',2,/LG화학|롯데케미칼|금호석유|한화솔루션|SK이노베이션|S-Oil|에쓰오일/],
+  ['화학',1,/화학|석유화학|정유|유가|원유|나프타|에틸렌|oil|crude/i],
+  ['철강',2,/포스코홀딩스|POSCO|현대제철|동국제강|고려아연/],
+  ['철강',1,/철강|제철|비철|구리|알루미늄|steel|copper/i],
+  ['게임',2,/엔씨소프트|넷마블|크래프톤|넥슨|펄어비스|카카오게임즈|닌텐도|Nintendo/],
+  ['게임',1,/게임|game/i],
+  ['엔터',2,/하이브|HYBE|SM엔터|JYP|YG엔터|넷플릭스|Netflix|디즈니|Disney/],
+  ['엔터',1,/엔터|K-?팝|아이돌|콘서트|드라마|OTT|웹툰/],
+  ['코인',2,/비트코인|이더리움|리플|XRP|솔라나|업비트|빗썸|코인베이스|Coinbase|Bitcoin|Ethereum/],
+  ['코인',1,/가상자산|암호화폐|코인|스테이블코인|crypto|stablecoin/i],
+  ['증시',0,/코스피|코스닥|증시|주가|지수|뉴욕증시|나스닥|S&P|다우|stocks?|Wall Street|Dow|Nasdaq/i],
+  ['환율',0,/환율|원\/달러|원·달러|달러|엔화|위안|외환|dollar|yen|currency/i],
+  ['금리',0,/금리|기준금리|연준|Fed|FOMC|국채|채권|금통위|파월|워시|인플레|물가|CPI|treasur|yield|rate cut|rate hike/i]
+];
+function newsCats(title){ var sc={}, mk={}; NEWS_CATS.forEach(function(c){ if(c[2].test(title)){ if(c[1]===0)mk[c[0]]=1; else sc[c[0]]=(sc[c[0]]||0)+c[1]; } });
+  var sec=Object.keys(sc).sort(function(a,b){ return sc[b]-sc[a]; }), all=sec.concat(Object.keys(mk).filter(function(k){return sec.indexOf(k)<0;}));
+  return all; }
+var NEWS_CAT_ORDER=['반도체','AI','2차전지','자동차','조선','항공','방산','바이오','원전','전력','로봇','금융','건설','화학','철강','게임','엔터','코인','증시','환율','금리'];
 function _newsAll(){ if(_NEWSALL&&Date.now()-_newsAllAt<5*60000)return Promise.resolve(_NEWSALL);
   return fetch('feeds/news-all.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){_NEWSALL=j;_newsAllAt=Date.now();} return j; }).catch(function(){return _NEWSALL;}); }
 function _newsLive(cat,only){ var feeds=(NEWS_FEEDS[cat==='USKO'?'KR':cat]||[]).filter(function(f){ return !only||only.indexOf(f.s)>=0; });
@@ -2127,22 +2174,28 @@ async function fetchNews(){
     var seen={}, all=[];
     base.concat(live).sort(function(a,b){return b.t-a.t;}).forEach(function(n){ var k=_newsKey(n.title); if(seen[k]){ if(seen[k].src!==n.src&&seen[k].also.indexOf(n.src)<0)seen[k].also.push(n.src); return; } seen[k]=n; all.push(n); });
     if(cat==='KR'){ _lastNews=all.slice(0,18); if(typeof renderBriefing==='function')renderBriefing(); }
-    var srcs={}; all.forEach(function(n){ srcs[n.src]=(srcs[n.src]||0)+1; });
-    if(_newsSrc&&!srcs[_newsSrc])_newsSrc='';
-    var shown=all.filter(function(n){ return !_newsSrc||n.src===_newsSrc||n.also.indexOf(_newsSrc)>=0; }).slice(0,50);
+    all.forEach(function(n){ n.cats=newsCats(n.title); });
+    var srcs={}, cnt={}; all.forEach(function(n){ srcs[n.src]=(srcs[n.src]||0)+1; n.cats.forEach(function(c){ cnt[c]=(cnt[c]||0)+1; }); });
+    if(_newsSrc&&!srcs[_newsSrc])_newsSrc=''; if(_newsCatF&&!cnt[_newsCatF])_newsCatF='';
+    var shown=all.filter(function(n){ return (!_newsSrc||n.src===_newsSrc||n.also.indexOf(_newsSrc)>=0)&&(!_newsCatF||n.cats.indexOf(_newsCatF)>=0); }).slice(0,50);
     if(cat==='US'&&usTr){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px;padding:8px 0">🌐 번역 중…</div>'; var tt=await Promise.all(shown.map(function(n){return trOne(n.title);})); if(cat!==newsCat)return; shown=shown.map(function(n,i){return Object.assign({},n,{title:tt[i]});}); }
+    var catTag=function(n){ return n.cats&&n.cats.length?'<b style="color:var(--gold);font-weight:800;margin-right:4px">('+esc(n.cats[0])+')</b>':''; };
     function item(n){var se=sentiment(n.title);var st=se==='pos'?' <span class="up" style="font-size:10px;font-weight:800">▲</span>':se==='neg'?' <span class="down" style="font-size:10px;font-weight:800">▼</span>':'';
       var sr='<small style="color:var(--faint);margin-left:6px;font-size:10.5px">'+esc(n.src)+(n.also&&n.also.length?' 외 '+n.also.length+'곳':'')+'</small>';
-      return '<a href="'+esc(n.link||'#')+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span><span class="tt">'+esc(n.title)+st+sr+'</span></a>';}
+      return '<a href="'+esc(n.link||'#')+'" target="_blank" rel="noopener"><span class="tm">'+relTime(n.t)+'</span><span class="tt">'+catTag(n)+esc(n.title)+st+sr+'</span></a>';}
     var chips='<div id="newsSrcChips" style="display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px">'+['']
       .concat(Object.keys(srcs).sort(function(a,b){return srcs[b]-srcs[a];})).map(function(k){ var on=(_newsSrc===k); return '<button class="scfil'+(on?' on':'')+'" data-ns="'+esc(k)+'" style="font-size:11.5px">'+(k?esc(k)+' <small style="opacity:.6">'+srcs[k]+'</small>':'전체 '+all.length)+'</button>'; }).join('')+'</div>';
-    if(full){ full.innerHTML=chips+shown.map(item).join(''); $$('#newsSrcChips [data-ns]').forEach(function(b){ b.onclick=function(){ _newsSrc=b.dataset.ns; fetchNews(); }; }); }
+    var cchips='<div id="newsCatChips" style="display:flex;gap:5px;flex-wrap:wrap;margin:0 0 10px"><span style="font-size:11.5px;color:var(--faint);align-self:center">분류</span>'+['']
+      .concat(NEWS_CAT_ORDER.filter(function(k){return cnt[k];})).map(function(k){ var on=(_newsCatF===k); return '<button class="scfil'+(on?' on':'')+'" data-nc="'+esc(k)+'" style="font-size:11.5px">'+(k?esc(k)+' <small style="opacity:.6">'+cnt[k]+'</small>':'전체')+'</button>'; }).join('')+'</div>';
+    if(full){ full.innerHTML=cchips+chips+shown.map(item).join('');
+      $$('#newsSrcChips [data-ns]').forEach(function(b){ b.onclick=function(){ _newsSrc=b.dataset.ns; fetchNews(); }; });
+      $$('#newsCatChips [data-nc]').forEach(function(b){ b.onclick=function(){ _newsCatF=b.dataset.nc; fetchNews(); }; }); }
     if(home&&cat==='KR')home.innerHTML=all.slice(0,7).map(item).join('');
     if(!all.length){ var nf='<div style="color:var(--faint);font-size:12px;padding:8px 0">뉴스를 불러오지 못했어요 · 잠시 후 다시 시도해요</div>'; if(full)full.innerHTML=nf; if(home&&cat==='KR')home.innerHTML=nf; if($('#newsupd'))$('#newsupd').textContent='· 불러오기 실패'; return; }
     if($('#newsupd'))$('#newsupd').textContent='· '+(j&&j.updated&&!stale?j.updated.slice(11)+' 모음':nowHM()+' 갱신')+' · '+shown.length+'건';
   }catch(e){ if(full)full.innerHTML='<div style="color:var(--faint);font-size:12px">뉴스를 불러오지 못했어요</div>'; }
 }
-$$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; _newsSrc=''; $$('.nc').forEach(function(x){x.classList.toggle('on',x===b);x.style.borderColor=x===b?'var(--gold)':'var(--line)';}); var tb=$('#trbtn'); if(tb)tb.style.display=newsCat==='US'?'':'none'; fetchNews(); }; });
+$$('.nc').forEach(function(b){ b.onclick=function(){ newsCat=b.dataset.cat; _newsSrc=''; _newsCatF=''; $$('.nc').forEach(function(x){x.classList.toggle('on',x===b);x.style.borderColor=x===b?'var(--gold)':'var(--line)';}); var tb=$('#trbtn'); if(tb)tb.style.display=newsCat==='US'?'':'none'; fetchNews(); }; });
 
 /* ═══════════ 테마 ═══════════ */
 (function(){ var root=document.documentElement, tb=$('#theme'); var sv=null; try{sv=localStorage.getItem('aurtheme');}catch(e){}
