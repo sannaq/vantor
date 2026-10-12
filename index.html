@@ -244,6 +244,8 @@
   .cattop .r b{color:var(--ink);font-weight:700}
   .catfoot{margin-top:9px;font-size:11px;color:var(--faint);border-top:1px solid var(--line2);padding-top:8px;display:flex;justify-content:space-between}
   .card.off{display:none!important}
+  /* 홈 = '한눈에 보기' 타일만 (10/12 사용자 결정) — 각 칸은 타일을 눌러 해당 탭에서 */
+  body.home-glance #brief,body.home-glance .home-top2,body.home-glance #homeEvents,body.home-glance #marketSummary,body.home-glance #idxstrip,body.home-glance #v-home>*{display:none!important}
   .heat{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
   .heat .h{min-width:64px}
   .heat .h{flex:1;text-align:center;padding:9px 2px;border-radius:7px;color:#fff;font-weight:800;font-size:12px}
@@ -869,7 +871,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=132"></script>
+<script src="app.js?v=133"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
