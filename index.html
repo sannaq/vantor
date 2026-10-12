@@ -301,6 +301,8 @@
   #chartTip .tr{display:flex;justify-content:space-between;gap:12px;line-height:1.65}
   #chartTip .tr span{color:var(--sub)}
   /* 카드 접기/숨김 + 편집기 */
+  .cardshot{margin-left:6px;background:none;border:none;cursor:pointer;font-size:12px;padding:2px 5px;border-radius:6px;opacity:.55;line-height:1}
+  .cardshot:hover{opacity:1;background:var(--panel2)}
   .cardtog{margin-left:8px;background:none;border:none;color:var(--faint);cursor:pointer;font-size:13px;padding:2px 5px;border-radius:6px;transition:transform .18s,background .15s;line-height:1}
   .cardtog:hover{background:var(--panel2);color:var(--ink)}
   .card.collapsed .cardtog{transform:rotate(-90deg)}
@@ -652,7 +654,7 @@
 <div class="main">
 <header class="topbar">
   <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="기기 간 동기화" onclick="openSync()">☁️</button><button class="ibtn" title="가이드·도움말" onclick="openHelp()">❓</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
+  <div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="지금 화면을 JPG 이미지로 저장" onclick="saveViewJpg()">📸</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="기기 간 동기화" onclick="openSync()">☁️</button><button class="ibtn" title="가이드·도움말" onclick="openHelp()">❓</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
 </header>
 
 <div class="wrap">
@@ -871,7 +873,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=135"></script>
+<script src="app.js?v=136"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>

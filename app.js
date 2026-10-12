@@ -3661,11 +3661,29 @@ function cardId(card){
   return (txt||'').replace(/[^\w가-힣]/g,'').slice(0,24)||('card'+([].indexOf.call(document.querySelectorAll('.card'),card)));
 }
 function applyCollapse(card,c){ card.classList.toggle('collapsed',!!c); }
+/* 이미지 저장 (JPG) — 칸마다 📷, 상단 📸 는 지금 화면 전체 (10/12 사용자 결정). html2canvas 는 처음 누를 때만 불러온다 */
+var _h2cP=null;
+function _h2c(){ if(window.html2canvas)return Promise.resolve(window.html2canvas); if(_h2cP)return _h2cP;
+  _h2cP=new Promise(function(ok,no){ var sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'; sc.onload=function(){ ok(window.html2canvas); }; sc.onerror=function(){ _h2cP=null; no(new Error('load')); }; document.head.appendChild(sc); }); return _h2cP; }
+function _shotName(t){ var d=new Date(), p=function(n){return String(n).padStart(2,'0');};
+  return 'vantor-'+String(t||'').replace(/[^0-9A-Za-z가-힣]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40)+'-'+d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())+'.jpg'; }
+function saveJpg(el,title){ if(!el)return; var bg=getComputedStyle(document.body).backgroundColor||'#ffffff';
+  if(typeof toast==='function')toast('📷 이미지 만드는 중…');
+  _h2c().then(function(h2c){ return h2c(el,{backgroundColor:bg,scale:Math.min(2,window.devicePixelRatio||1)*1.5,useCORS:true,logging:false,
+      ignoreElements:function(n){ return n.classList&&(n.classList.contains('cardshot')||n.classList.contains('cardtog')); }}); })
+    .then(function(cv){ var a=document.createElement('a'); a.download=_shotName(title); a.href=cv.toDataURL('image/jpeg',0.92); document.body.appendChild(a); a.click(); a.remove(); if(typeof toast==='function')toast('✅ '+a.download+' 저장'); })
+    .catch(function(){ if(typeof toast==='function')toast('이미지를 만들지 못했어요 · 잠시 후 다시 눌러 주세요'); else alert('이미지를 만들지 못했어요'); }); }
+function saveViewJpg(){ var v=$('.view.on'), mc=document.querySelector('.maincol'); var tgt=(document.body.classList.contains('home-glance')&&$('#glance'))?$('#glance'):(v||mc);
+  var h=(tgt&&tgt.querySelector('h2,.sec-title'))||null; saveJpg(tgt,h?h.textContent:'화면'); }
+window.saveJpg=saveJpg; window.saveViewJpg=saveViewJpg;
 function initCards(){
   $$('.card').forEach(function(card){
     var ch=card.querySelector('.ch'), h=card.querySelector('.ch h2'); if(!ch||!h)return;
     var id=cardId(card); card.dataset.card=id;
     if(CARDPREF.hidden[id]){ card.style.display='none'; } else if(card.style.display==='none'){ card.style.display=''; }
+    if(!ch.querySelector('.cardshot')){ var sb=document.createElement('button'); sb.className='cardshot'; sb.title='이 칸을 JPG 이미지로 저장'; sb.textContent='📷';
+      var rb0=ch.querySelector('.r'); if(rb0)rb0.appendChild(sb); else ch.appendChild(sb);
+      sb.onclick=function(ev){ ev.stopPropagation(); saveJpg(card,(h.textContent||'vantor').trim()); }; }
     if(!ch.querySelector('.cardtog')){
       var btn=document.createElement('button'); btn.className='cardtog'; btn.title='접기/펴기'; btn.textContent='▾';
       var rbox=ch.querySelector('.r'); if(rbox)rbox.appendChild(btn); else ch.appendChild(btn);
