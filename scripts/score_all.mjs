@@ -141,6 +141,23 @@ const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total,
 const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x) => dist[x.r.view]++);
 const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
   top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
+// 직전 거래일 대비 변화 (이미지의 NEW·순위 ▲▼·빠진 종목). 같은 날 다시 돌리면 그 전 거래일 기준을 그대로 물려받는다.
+{
+  let old = null;
+  try { old = JSON.parse(fs.readFileSync(OUT('stock-picks'), 'utf8')); } catch { /* 첫 실행 */ }
+  const base = old && old.date && old.date !== date && Array.isArray(old.top) ? { date: old.date, top: old.top.map((x) => x.c), weak: (old.weak || []).map((x) => x.c) } : (old && old.prev) || null;
+  if (base) {
+    const liqPos = new Map(liquid.map((x, i) => [x.c, i + 1]));
+    picks.prev = base;
+    picks.top.forEach((x) => { const k = base.top.indexOf(x.c); x.was = k < 0 ? null : k + 1; });
+    picks.weak.forEach((x) => { x.isNew = !base.weak.includes(x.c); });
+    const nowTop = new Set(picks.top.map((x) => x.c)), byC = new Map(fresh.map((x) => [x.c, x]));
+    picks.dropped = base.top.map((c, k) => ({ c, was: k + 1 })).filter((d) => !nowTop.has(d.c)).map((d) => {
+      const x = byC.get(d.c);
+      return { c: d.c, n: x ? x.n : (old.top.find((o) => o.c === d.c) || {}).n || d.c, was: d.was, pos: liqPos.get(d.c) || null, total: x ? x.r.total : null, view: x ? x.r.view : null };
+    });
+  }
+}
 
 // 미장 실적 발표 예정일 (나스닥 실적 달력, 앞으로 3주) — 못 받으면 빈 채로 둔다
 const EARN = {};

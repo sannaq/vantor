@@ -39,6 +39,31 @@ def bars(parts):
     return "".join(out)
 
 
+def chg(x, i, weak):
+    """직전 거래일 대비 — 상위 10은 NEW/▲▼, 매수 금지는 NEW 만. 비교 기준이 없으면 빈칸."""
+    if weak:
+        return '<i class="cg nw">NEW</i>' if x.get("isNew") else ""
+    if "was" not in x:
+        return ""
+    w = x["was"]
+    if w is None:
+        return '<i class="cg nw">NEW</i>'
+    if w == i:
+        return '<i class="cg">–</i>'
+    return f'<i class="cg" style="color:{UP}">▲{w - i}</i>' if w > i else f'<i class="cg" style="color:{DN}">▼{i - w}</i>'
+
+
+def dropped(p):
+    ds = p.get("dropped") or []
+    if not ds:
+        return ""
+    def one(d):
+        now = f'지금 {d["pos"]}위' if d.get("pos") else "거래대금 기준 밖"
+        sc = f' · {d["total"]}점 {E(d["view"])}' if d.get("total") is not None else ""
+        return f'<b>{E(d["n"])}</b> {d["was"]}위 → {now}{sc}'
+    return f'<div class="drop">빠진 종목: {" · ".join(one(d) for d in ds)}</div>'
+
+
 def row(x, i, weak=False):
     hot = ' <span style="font-size:11px;color:#f0b90b;border:1px solid #f0b90b;border-radius:6px;padding:0 5px">⚠ 과열</span>' if (not weak and any(str(b).startswith("⚠ 과열") for b in x.get("bad") or [])) else ""
     why = x["bad"] if weak else x["good"]
@@ -52,7 +77,7 @@ def row(x, i, weak=False):
         mid = (f'{x["px"]:,.0f}원 <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span> · 20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span>'
                f' · 변동 ±{x["vol"] * 100:.1f}% · 고점 대비 {x["hiGap"] * 100:.0f}% · {per} · 거래대금 {x["tv20"]:,}억')
     return f"""<div class="rw">
- <div class="rk">{i}</div>
+ <div class="rk">{i}{chg(x, i, weak)}</div>
  <div class="sc" style="--g:{VIEWC[x["view"]]}"><b>{x["total"]}</b><span>{"금지" if x["view"] == "매수 금지" else x["view"]}</span></div>
  <div class="nm"><div class="n1">{E(x["n"])} <small>{E(x["c"])} · {E(x["mk"])}</small>{hot}</div>
   <div class="n2">{mid}</div>
@@ -72,7 +97,9 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 .sec{margin-top:16px;font-size:15px;font-weight:800;color:#c6cfdb;display:flex;justify-content:space-between;align-items:baseline}
 .sec small{font-size:11.5px;color:#6f7a89;font-weight:600}
 .rw{display:flex;gap:12px;align-items:center;background:#151c27;border:1px solid #222b38;border-radius:12px;padding:10px 14px;margin-top:8px}
-.rk{width:20px;font-size:14px;font-weight:800;color:#6f7a89;text-align:center}
+.rk{width:34px;font-size:14px;font-weight:800;color:#6f7a89;text-align:center;flex:none}
+.cg{display:block;font-style:normal;font-size:10.5px;font-weight:800;margin-top:2px;color:#6f7a89}.cg.nw{color:#0b0f16;background:#f0b90b;border-radius:4px;padding:0 2px}
+.drop{margin-top:8px;font-size:12px;color:#9aa4b2;background:#151c27;border:1px dashed #2a3444;border-radius:10px;padding:8px 12px;line-height:1.6}.drop b{color:#d6dce5}
 .sc{width:56px;height:56px;border-radius:12px;border:2px solid var(--g);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
 .sc b{font-size:21px;line-height:1}.sc span{font-size:11px;font-weight:800;color:var(--g);margin-top:2px}
 .nm{flex:1;min-width:0}.n1{font-size:16px;font-weight:800}.n1 small{font-size:11.5px;color:#6f7a89;font-weight:600}
@@ -103,6 +130,11 @@ def spy_warn(p):
             f'⚠ <b>하락장 주의</b> — S&amp;P500(SPY ${s["px"]:,.2f})이 200일선(${s["ma200"]:,.2f})보다 {abs(s["gap"])}% 아래 · 모멘텀 종목 급반전 주의 (점수는 그대로)</div>')
 
 
+def cmp_note(p):
+    d = (p.get("prev") or {}).get("date")
+    return f"순위 변화는 {int(d[4:6])}/{int(d[6:8])} 대비 · " if d else ""
+
+
 def build(p):
     d = p["date"]
     day = f"{int(d[4:6])}월 {int(d[6:8])}일"
@@ -116,8 +148,9 @@ def build(p):
 <div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>
 <div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">{rule}</b></div></div>
-{spy_warn(p)}<div class="sec">추천 상위 10 <small>{liq} {p["liquidN"]:,}종목 중</small></div>
+{spy_warn(p)}<div class="sec">추천 상위 10 <small>{cmp_note(p)}{liq} {p["liquidN"]:,}종목 중</small></div>
 {"".join(row(x, i + 1) for i, x in enumerate(p["top"]))}
+{dropped(p)}
 <div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
 {"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}
 <div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · {bt_line(p)}<br>
