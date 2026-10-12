@@ -703,8 +703,9 @@
       </div>
     </div>
 
-    <div class="sec-h2">🛠 프로 지표 <span>· VANTOR 엔진</span></div>
-    <div class="row a">
+    <!-- 프로 지표(MARKET FLOW·강한 업종·실시간 포착)는 홈에서 뺌 (10/12 사용자 결정) — 같은 정보는 '한눈에 보기'·마켓 탭에 있음 -->
+    <div class="sec-h2 off" style="display:none">🛠 프로 지표 <span>· VANTOR 엔진</span></div>
+    <div class="row a off" style="display:none">
       <div class="card">
         <div class="ch"><h2>🌊 MARKET FLOW</h2><div class="r"><span id="flowupd">–</span></div></div>
         <div class="pad" id="marketFlow"></div>
@@ -715,7 +716,7 @@
       </div>
     </div>
 
-    <div class="card" style="margin-top:16px">
+    <div class="card off" style="margin-top:16px">
       <div class="ch"><h2>🚨 실시간 포착 <span style="font-weight:600;color:var(--faint);font-size:12px">급등·급락·거래폭발</span></h2><div class="r"><span id="catchupd">–</span></div></div>
       <div class="pad" style="padding-top:10px" id="catchFeed"></div>
     </div>
@@ -868,7 +869,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=8"></script>
-<script src="app.js?v=131"></script>
+<script src="app.js?v=132"></script>
 <script>/* 이전 PWA 서비스워커·캐시 정리(앱화 취소) */if('serviceWorker' in navigator){navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){r.unregister();});}).catch(function(){});if(window.caches){caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});}}</script>
 </body>
 </html>
