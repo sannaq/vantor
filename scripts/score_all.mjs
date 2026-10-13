@@ -144,7 +144,7 @@ const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
 const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; pickable.forEach((x) => dist[x.r.view]++);
 const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: pickable.length, minTv: PICK_TV, noDown: NO_DOWN, updated: scores.updated, dist,
-  top: pickable.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
+  top: pickable.slice(0, 20).map(pick), weak: liquid.slice(-20).reverse().map(pick) }; // 책처럼 양쪽 20종씩 (2026-10-13 사용자 결정)
 // 직전 거래일 대비 변화 (이미지의 NEW·순위 ▲▼·빠진 종목). 같은 날 다시 돌리면 그 전 거래일 기준을 그대로 물려받는다.
 {
   let old = null;

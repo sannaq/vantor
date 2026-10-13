@@ -54,7 +54,7 @@ async function record() {
   // 그날 디스코드로 보낸 TOP 10 (미장은 로이터 코드로 바꿔 둔다)
   let top = null;
   try { const pk = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/stock-picks-us.json' : 'feeds/stock-picks.json'), 'utf8'));
-    if (pk.date === sc.date) top = pk.top.map((x) => (US ? (sc.items[x.c] || [])[14] : x.c)).filter(Boolean); } catch { /* 없으면 생략 */ }
+    if (pk.date === sc.date) top = pk.top.slice(0, 10).map((x) => (US ? (sc.items[x.c] || [])[14] : x.c)).filter(Boolean); } catch { /* 없으면 생략 */ }
   if (US) sc.items = Object.fromEntries(Object.values(sc.items).map((it) => [it[14], it])); // 미장은 로이터 코드(AAPL.O)로 기록 — 일봉을 다시 받을 때 쓴다
   const d = sc.date, file = path.join(DIR, d.slice(0, 6) + '.json');
   const cur = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { days: {} };

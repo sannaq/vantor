@@ -86,10 +86,21 @@ def row(x, i, weak=False):
 </div>"""
 
 
+def brow(x, i, weak=False):
+    """책 한 줄 — 순위·점수·이름·이유 1개·등락률·거래대금."""
+    why = (x["bad"] if weak else x["good"]) or (x["good"] if weak else x["bad"]) or ["—"]
+    hot = ' <i class="hot">⚠과열</i>' if (not weak and any(str(b).startswith("⚠ 과열") for b in x.get("bad") or [])) else ""
+    tv = f'${x["tv20"] * 100:,.0f}M' if US else f'{x["tv20"]:,}억'
+    px = f'${x["px"]:,.2f}' if US else f'{x["px"]:,.0f}원'
+    return f"""<div class="br"><div class="rk">{i}{chg(x, i, weak)}</div><b class="bs" style="color:{DN if weak else UP}">{x["total"]}</b>
+ <div class="bn"><div class="b1">{E(x["n"])}{hot}</div><div class="b2">{E(why[0])}</div></div>
+ <div class="bp"><div>{px} <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span></div><small>20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span> · {tv}</small></div></div>"""
+
+
 CSS = """
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#e8ecf3}
-#card{width:900px;padding:26px 28px 18px;background:#0f141c}
+#card{width:1320px;padding:26px 28px 18px;background:#0f141c}
 .hd{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #222b38;padding-bottom:14px}
 .hd h1{font-size:27px;font-weight:800;letter-spacing:-.5px}.hd .src{color:#7d8796;font-size:12.5px;font-weight:700;text-align:right;line-height:1.55}
 .dist{display:flex;gap:10px;margin-top:14px}.dist div{flex:1;background:#151c27;border:1px solid #222b38;border-radius:12px;padding:10px 14px;font-size:12.5px;color:#9aa4b2}
@@ -108,6 +119,13 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 .pb span{width:50px}.pb b{width:20px;text-align:right;color:#d6dce5}
 .pt{flex:1;height:6px;background:#1c2431;border-radius:3px;overflow:hidden}.pt div{height:100%;background:#4a9eff;border-radius:3px}
 .trk{margin-top:12px;font-size:12px;color:#9aa4b2;background:#151c27;border:1px solid #222b38;border-radius:10px;padding:8px 12px;line-height:1.7}.trk div:first-child{font-weight:800;color:#c6cfdb}.trk small{color:#6f7a89}
+.book{display:grid;grid-template-columns:1fr 1fr;margin-top:14px;background:#151c27;border:1px solid #222b38;border-radius:14px;overflow:hidden}
+.pg{padding:12px 16px 10px}.pg+.pg{border-left:3px solid #0b0f16;box-shadow:inset 8px 0 12px -10px #000}
+.pg h2{font-size:17px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:baseline}.pg h2 small{font-size:11.5px;color:#6f7a89;font-weight:600}
+.br{display:flex;align-items:center;gap:10px;border-top:1px solid #222b38;padding:6px 0;height:52px}
+.bs{width:30px;font-size:18px;text-align:center;flex:none}.bn{flex:1;min-width:0}.b1{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b2{font-size:11.5px;color:#9aa4b2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp{text-align:right;font-size:12.5px;font-weight:700;flex:none}.bp small{font-size:11px;color:#6f7a89;font-weight:600}
+.hot{font-style:normal;font-size:10.5px;color:#f0b90b;border:1px solid #f0b90b;border-radius:5px;padding:0 4px;margin-left:4px}
 .ft{margin-top:14px;font-size:11px;color:#5f6a79;text-align:center;line-height:1.6}
 """
 
@@ -164,7 +182,7 @@ def build(p):
     d = p["date"]
     day = f"{int(d[4:6])}월 {int(d[6:8])}일"
     dist = p["dist"]
-    title = "미장 종목 추천 TOP 10" if US else "종목 추천 TOP 10"
+    title = "미장 종목 추천" if US else "종목 추천"
     uni = f'나스닥·NYSE·AMEX {p["n"]:,}종목 채점' if US else f'코스피·코스닥 {p["n"]:,}종목 채점'
     src = "VANTOR · 미국 장마감 기준" if US else "VANTOR · 장마감 기준"
     rule = "1년 모멘텀 67<br>흑자 33" if US else "안정성 40 · 고점 근접 30<br>이익 30"
@@ -173,11 +191,12 @@ def build(p):
 <div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>
 <div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">{rule}</b></div></div>
-{spy_warn(p)}<div class="sec">추천 상위 10 <small>{cmp_note(p)}{liq} {p["liquidN"]:,}종목 중</small></div>
-{"".join(row(x, i + 1) for i, x in enumerate(p["top"]))}
+{spy_warn(p)}<div class="book">
+<div class="pg"><h2><span style="color:{UP}">📈 추천 상위 {len(p["top"])}</span><small>{cmp_note(p)}{liq} {p["liquidN"]:,}종목 중</small></h2>
+{"".join(brow(x, i + 1) for i, x in enumerate(p["top"]))}</div>
+<div class="pg"><h2><span style="color:{DN}">📉 매수 금지 하위 {len(p["weak"])}</span><small>점수 낮은 순 · 약한 이유</small></h2>
+{"".join(brow(x, i + 1, True) for i, x in enumerate(p["weak"]))}</div></div>
 {dropped(p)}
-<div class="sec">매수 금지 하위 5 <small>약한 이유</small></div>
-{"".join(row(x, i + 1, True) for i, x in enumerate(p["weak"]))}
 {track_line(p)}
 <div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · {bt_line(p)}<br>
 교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 갱신 {E(p["updated"])}</div>
@@ -213,7 +232,7 @@ def main():
     out = os.path.join(out_dir, f"picks{SFX}-{p['date']}.png")
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        pg = b.new_page(viewport={"width": 900, "height": 1600}, device_scale_factor=2, locale="ko-KR")
+        pg = b.new_page(viewport={"width": 1320, "height": 1800}, device_scale_factor=2, locale="ko-KR")
         pg.set_content(build(p), wait_until="load")
         pg.evaluate("document.fonts.ready")
         pg.locator("#card").screenshot(path=out)

@@ -1457,7 +1457,7 @@ function renderReco(){
   var formula=US?'1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30';
   var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};
   el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
-    +'<div class="pad" style="padding-top:6px">'+_tcSummary(D.trk)+bar
+    +'<div class="pad" style="padding-top:6px">'+_tcSummary(D.trk)+_recoBook(US)+bar
     +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
     +(US&&j.spy&&j.spy.below?'<div style="font-size:12.5px;color:var(--ink);margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid #f6465d;background:rgba(246,70,93,.08)">⚠ <b>하락장 주의</b> — S&amp;P500(SPY '+_usd(j.spy.px)+')이 200일선('+_usd(j.spy.ma200)+')보다 '+Math.abs(j.spy.gap)+'% 아래예요. 모멘텀 종목은 하락장에서 한꺼번에 급반전할 수 있어요. 점수는 그대로예요(3년 중 이런 구간이 13주뿐이라 검증 근거 부족).</div>':'')
     +(US&&j.spy&&!j.spy.below?'<div style="font-size:11.5px;color:var(--faint);margin:2px 0">시장 국면: S&amp;P500이 200일선 위('+(j.spy.gap>=0?'+':'')+j.spy.gap+'%) — 정상</div>':'')
@@ -1474,6 +1474,26 @@ window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==
    자료: feeds/stock-detail.json(수급 비율·업종·재무, 매일) · stock-news.json(종목 뉴스, 매일) · industries.json(업종 등락, 장중 30분)
          + 워커 일봉(차트·매물대·가격 계산, 지금 시세) */
 var _JC={};
+/* 추천 화면 맨 위 — 책처럼 펼친 두 쪽: 왼쪽 추천 상위 20 · 오른쪽 매수 금지 하위 20 (feeds/stock-picks*.json, 디스코드 이미지와 같은 목록, 2026-10-13) */
+var _PK={};
+function _recoBook(US){
+  var k=US?'US':'KR', p=_PK[k];
+  if(p===undefined){ _PK[k]=null; _loadJ('feeds/stock-picks'+(US?'-us':'')+'.json').then(function(j){ _PK[k]=j||false; if(_recoUS()===US&&typeof renderReco==='function')renderReco(); }); return ''; }
+  if(!p||!p.top||!p.top.length)return '';
+  function page(arr,weak){ return arr.map(function(x,i){ var d=+x.day||0;
+    var op=US?'openStock(\''+x.c+'\',{n:\''+esc(x.n).replace(/'/g,'')+'\',mk:\''+x.mk+'\'})':'openStock(\''+x.c+'\')';
+    var why=(weak?(x.bad||[]):(x.good||[]))[0]||'';
+    return '<div class="bk-r" onclick="'+op+'"><span class="bk-i">'+(i+1)+'</span><b class="bk-s" style="color:'+(weak?'#f6465d':'#2ebd85')+'">'+x.total+'</b>'
+      +'<span class="bk-n"><b>'+esc(x.n)+'</b><small>'+esc(why)+'</small></span><span class="bk-d '+(d>=0?'up':'down')+'">'+(d>=0?'+':'')+d.toFixed(2)+'%</span></div>'; }).join(''); }
+  var liq=US?'거래대금 $'+Math.round(p.minTv*100)+'M↑':'거래대금 '+p.minTv+'억↑'+(p.noDown?' · 하락 추세 제외':'');
+  return '<style>.bk{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line2);border-radius:12px;overflow:hidden;margin:4px 0 12px}'
+    +'.bk>div{padding:10px 12px}.bk>div+div{border-left:2px solid var(--line2)}.bk h3{font-size:14px;font-weight:800;margin:0 0 6px}.bk h3 small{font-size:11px;color:var(--faint);font-weight:600;margin-left:6px}'
+    +'.bk-r{display:flex;align-items:center;gap:8px;padding:5px 2px;border-top:1px solid var(--line2);cursor:pointer;font-size:13px}.bk-i{width:18px;text-align:right;color:var(--faint);font-weight:700;font-size:11.5px}'
+    +'.bk-s{width:24px;text-align:center;font-weight:800}.bk-n{flex:1;min-width:0;display:flex;flex-direction:column}.bk-n b,.bk-n small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bk-n small{font-size:11px;color:var(--sub)}'
+    +'.bk-d{font-size:12px;font-weight:700}@media(max-width:700px){.bk{grid-template-columns:1fr}.bk>div+div{border-left:none;border-top:2px solid var(--line2)}}</style>'
+    +'<div class="bk"><div><h3>📈 추천 상위 '+p.top.length+'<small>'+liq+'</small></h3>'+page(p.top,false)+'</div>'
+    +'<div><h3>📉 매수 금지 하위 '+(p.weak||[]).length+'<small>점수 낮은 순</small></h3>'+page(p.weak||[],true)+'</div></div>';
+}
 function _loadJ(u){ if(!_JC[u])_JC[u]=fetch(u,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}); return _JC[u]; }
 var _recoOpen=null;
 window._recoToggle=function(c){ var box=document.getElementById('rx-'+c); if(!box)return;
