@@ -1483,8 +1483,11 @@ function _recoBook(US){
   function page(arr,weak){ return arr.map(function(x,i){ var d=+x.day||0;
     var op=US?'openStock(\''+x.c+'\',{n:\''+esc(x.n).replace(/'/g,'')+'\',mk:\''+x.mk+'\'})':'openStock(\''+x.c+'\')';
     var why=(weak?(x.bad||[]):(x.good||[]))[0]||'';
+    var Mo=function(v){ return v==null?'—':US?_usd(v):(+v).toLocaleString(); };
+    if(!weak&&x.lv){ var ex=x.ex; why='1차 '+Mo(x.lv.b1)+' · 2차 '+Mo(x.lv.b2)+' · 손절 '+Mo(x.lv.st)+(x.lv.tg!=null?' · 목표 '+Mo(x.lv.tg):'')+(ex&&ex.ret!=null?' · 예상 '+(ex.ret>=0?'+':'')+(ex.ret*100).toFixed(1)+'%':''); }
     return '<div class="bk-r" onclick="'+op+'"><span class="bk-i">'+(i+1)+'</span><b class="bk-s" style="color:'+(weak?'#f6465d':'#2ebd85')+'">'+x.total+'</b>'
-      +'<span class="bk-n"><b>'+esc(x.n)+'</b><small>'+esc(why)+'</small></span><span class="bk-d '+(d>=0?'up':'down')+'">'+(d>=0?'+':'')+d.toFixed(2)+'%</span></div>'; }).join(''); }
+      +'<span class="bk-n"><b>'+esc(x.n)+(function(){ var tc=_TCODES[US?'US':'KR'], pp=!weak&&tc&&tc.items&&tc.items[x.c]&&tc.items[x.c].p; if(!pp||pp.z==null)return ''; var z=pp.z;
+        return ' <span title="예상 경로 대비 지금 위치" style="font-size:10.5px;font-weight:800;color:'+(z>0?'#2ebd85':z<0?'#f6465d':'var(--sub)')+'">'+(z===0?'경로 안 ✓':z>0?'경로 위 ↑':'경로 아래 ↓')+'</span>'; })()+'</b><small>'+esc(why)+'</small></span><span class="bk-d '+(d>=0?'up':'down')+'">'+(d>=0?'+':'')+d.toFixed(2)+'%</span></div>'; }).join(''); }
   var liq=US?'거래대금 $'+Math.round(p.minTv*100)+'M↑':'거래대금 '+p.minTv+'억↑'+(p.noDown?' · 하락 추세 제외':'');
   return '<style>.bk{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line2);border-radius:12px;overflow:hidden;margin:4px 0 12px}'
     +'.bk>div{padding:10px 12px}.bk>div+div{border-left:2px solid var(--line2)}.bk h3{font-size:14px;font-weight:800;margin:0 0 6px}.bk h3 small{font-size:11px;color:var(--faint);font-weight:600;margin-left:6px}'
@@ -1508,7 +1511,9 @@ window._recoToggle=function(c){ var box=document.getElementById('rx-'+c); if(!bo
     var cv=document.getElementById('rxc-'+c); if(cv&&cv._draw)cv._draw(); });
 };
 function _tick(p){ var t=p<2000?1:p<5000?5:p<20000?10:p<50000?50:p<200000?100:p<500000?500:1000; return Math.round(p/t)*t; }
-function _rxLevels(cs,us){ return (typeof VScore!=='undefined'&&VScore.levels)?VScore.levels(cs,us?{usd:true}:undefined):null; } // 규칙은 score-core.js levels() — 백테스트와 같은 계산
+var _LVM={}; _loadJ('feeds/levels-model.json').then(function(j){ _LVM.KR=j; }); _loadJ('feeds/levels-model-us.json').then(function(j){ _LVM.US=j; });
+function _rxLevels(cs,us){ if(typeof VScore==='undefined'||!VScore.levels)return null; var M=_LVM[us?'US':'KR'], o={}; if(M&&M.rule)for(var k in M.rule.o)o[k]=M.rule.o[k]; if(us)o.usd=true;
+  var L=VScore.levels(cs,o); if(L&&M&&VScore.expect)L.ex=VScore.expect(L,M,us); if(L)L.M=M; return L; } // 규칙·예상은 feeds/levels-model*.json (매달 스스로 고르는 규칙, 2026-10-13) // 규칙은 score-core.js levels() — 백테스트와 같은 계산
 function _rxChart(c,cs,L){ return '<canvas id="rxc-'+c+'" style="width:100%;height:230px;display:block"></canvas>'; }
 function _rxDraw(cv,cs,L){
   var dpr=window.devicePixelRatio||1, W=cv.clientWidth||600, H=230; cv.width=W*dpr; cv.height=H*dpr; var g=cv.getContext('2d'); g.scale(dpr,dpr);
@@ -1525,12 +1530,28 @@ function _rxDraw(cv,cs,L){
   function mline(k,col){ var a=[]; for(var i=0;i<d.length;i++){ var s=cs.slice(Math.max(0,cs.length-d.length+i-k+1),cs.length-d.length+i+1); if(s.length<k){a.push(null);continue;} a.push(s.reduce(function(t,v){return t+v[4];},0)/k); }
     g.strokeStyle=col; g.lineWidth=1.3; g.beginPath(); var st=false; a.forEach(function(v,i){ if(v==null)return; var x=i*bw+bw/2; if(!st){g.moveTo(x,y(v));st=true;} else g.lineTo(x,y(v)); }); g.stroke(); g.lineWidth=1; }
   mline(20,'#f0b90b'); mline(60,'#a78bfa');
-  if(L){ var ly=-99; [[L.b1,'#2ebd85','1차'],[L.b2,'#22a06b','2차'],[L.st,'#f6465d','손절']].forEach(function(z){ var yy=y(z[0]); g.setLineDash([5,4]); g.strokeStyle=z[1]; g.beginPath(); g.moveTo(0,yy); g.lineTo(PW,yy); g.stroke(); g.setLineDash([]);
+  if(L){ var ly=-99; [[L.tg,'#4a9eff','목표'],[L.b1,'#2ebd85','1차'],[L.b2,'#22a06b','2차'],[L.st,'#f6465d','손절']].filter(function(z){ return z[0]!=null; }).forEach(function(z){ var yy=y(z[0]); g.setLineDash([5,4]); g.strokeStyle=z[1]; g.beginPath(); g.moveTo(0,yy); g.lineTo(PW,yy); g.stroke(); g.setLineDash([]);
     var ty=Math.max(yy-3,ly+12); ly=ty; // 가격이 붙어 있으면 이름표가 겹치지 않게 아래로 민다
     var txt=z[2]+' '+(L.usd?_usd(z[0]):z[0].toLocaleString()); g.font='bold 10.5px sans-serif'; var tw=g.measureText(txt).width; g.fillStyle='rgba(0,0,0,.0)';
     g.fillStyle=getComputedStyle(cv).backgroundColor&&getComputedStyle(cv).backgroundColor!=='rgba(0, 0, 0, 0)'?getComputedStyle(cv).backgroundColor:'rgba(127,127,127,.12)'; g.fillRect(PW-tw-8,ty-10,tw+6,13);
     g.fillStyle=z[1]; g.fillText(txt,PW-tw-5,ty); }); }
   g.fillStyle=fa; g.font='10px sans-serif'; g.fillText(d.length+'일 · ━ 20일선(노랑) ━ 60일선(보라) · 오른쪽 막대 = 매물대(120일)',4,H-4);
+}
+/* 이대로면 — 예상 수익 · 예상 경로 · 지금 경로 대비 위치 (feeds/levels-model*.json · track-codes*.json, 2026-10-13) */
+var _RULE_NM=function(k){ if(!k)return ''; var a=k.split('|'), t=a[2]; return '1차 '+(a[0]==='ma20'?'20일선':'60일선')+' · 손절 2차−'+a[1].slice(1)+'ATR · 목표 '+(t==='hold'?'없음(보유 끝 정리)':t==='hi52'?'52주 고점':t==='vp'?'위쪽 최대 매물대':'1차+'+t.slice(3)+'ATR'); };
+function _rxExpect(L,US,code){
+  var e=L&&L.ex, M=L&&L.M; if(!e)return '';
+  var pc=function(v){ return v==null?'—':Math.round(v*100)+'%'; }, sg=function(v){ return v==null?'—':(v>=0?'+':'')+(v*100).toFixed(1)+'%'; };
+  var Mo=function(v){ return US?_usd(v):(+v).toLocaleString()+'원'; };
+  var rows=e.band.filter(function(b){ return [5,20,60].indexOf(b[0])>=0; }).map(function(b){ return '<tr><td class="l">'+b[0]+'거래일 뒤</td><td>'+Mo(b[2])+' ~ '+Mo(b[4])+'</td><td style="color:var(--faint)">'+Mo(b[1])+' ~ '+Mo(b[5])+'</td></tr>'; }).join('');
+  var tc=_TCODES[US?'US':'KR'], p=tc&&tc.items&&tc.items[code]&&tc.items[code].p, ZN={'2':'예상보다 크게 위 ↑↑','1':'예상보다 위 ↑','0':'예상 범위 안 ✓','-1':'예상보다 아래 ↓','-2':'예상보다 크게 아래 ↓↓'};
+  var posTxt=p&&p.z!=null?'<div style="margin-top:6px;font-size:12.5px">지금 위치: <b>'+ZN[p.z]+'</b> <span style="color:var(--faint)">('+(+p.d.slice(4,6))+'/'+(+p.d.slice(6,8))+' 추천 뒤 '+p.e+'거래일)</span></div>':'';
+  return '<div style="margin-top:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);background:var(--panel,transparent)">'
+    +'<div style="font-weight:800;font-size:13px">📊 이대로면</div>'
+    +'<div style="font-size:12.5px;line-height:1.7;margin-top:4px">예상 수익 <b class="'+(e.ret>=0?'up':'down')+'">'+sg(e.ret)+'</b> (들어간 돈 기준) · 이긴 비율 '+pc(e.win)+' · 보통 '+e.day+'거래일<br>'
+    +'목표 도달 <b>'+pc(e.hit)+'</b>(닿으면 '+sg(e.tgPct)+') · 손절 '+pc(e.stop)+'('+sg(e.stPct)+') · 1차 체결 '+pc(e.fill1)+'</div>'
+    +'<table style="width:100%;font-size:12px;margin-top:6px"><thead><tr><th class="l">예상 경로</th><th>가운데 절반(25~75%)</th><th>넓게(10~90%)</th></tr></thead><tbody>'+rows+'</tbody></table>'+posTxt
+    +'<div style="font-size:10.5px;color:var(--faint);margin-top:6px">과거 3년 비슷한 변동성의 추천 종목이 실제로 움직인 결과예요. 규칙('+_RULE_NM(M&&M.rule.key)+')과 경로는 매달 스스로 다시 골라요'+(M&&M.updated?' · '+M.updated.slice(0,10)+' 기준':'')+'.</div></div>';
 }
 function _rxHTML(x,DT,NW,IN,cs){
   var P=function(v,d){ return v==null?'—':'<b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+(+v).toFixed(d==null?1:d)+'%</b>'; };
@@ -1562,8 +1583,8 @@ function _rxHTML(x,DT,NW,IN,cs){
   var flowBox=US?'<div style="font-size:12px;color:var(--faint);line-height:1.6">미국 시장은 외국인·기관 매매 자료가 공개되지 않아요.</div>':fr.length?(bar('외국인 5일',fr[0])+bar('기관 5일',fr[1])+bar('외국인 20일',fr[2])+bar('기관 20일',fr[3])+(fr.length>4?bar('외국인 60일',fr[4])+bar('기관 60일',fr[5]):'')+'<div style="font-size:11px;color:var(--faint);margin-top:4px">순매수 금액 ÷ 같은 기간 거래대금 · '+_vsDate(DT.date)+' 기준</div>'):'<div style="font-size:12px;color:var(--faint)">수급 자료 없음</div>';
   // ③ 매수·손절 가격
   var lv=function(lab,p,col){ var d=L?(p/L.px-1)*100:null; return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--line2)"><span style="font-weight:800;color:'+col+'">'+lab+'</span><span><b style="font-size:15px">'+M(p)+'</b> <span style="font-size:11.5px;color:var(--faint)">현재가 대비 '+(d>=0?'+':'')+d.toFixed(1)+'%</span></span></div>'; };
-  var lvBox=L?('<div style="font-size:12px;color:var(--faint);margin-bottom:4px">현재가 '+M(L.px)+' · 하루 평균 변동폭(ATR) '+(US?_usd(Math.round(L.atr*100)/100):Math.round(L.atr).toLocaleString()+'원')+'</div>'+lv('1차 매수',L.b1,'#2ebd85')+lv('2차 매수',L.b2,'#22a06b')+lv('손절',L.st,'#f6465d')
-    +'<div style="font-size:11px;color:var(--faint);margin-top:6px;line-height:1.6">규칙: 1차 = 60일선 부근(현재가가 아래면 현재가) 50% · 2차 = 그 아래 가장 큰 매물대('+L.b2src+') 50% · 손절 = 2차 − ATR 2배 · 60거래일(약 3개월) 보유 기준.</div>'+(US?(_lvVerify1(_US.btl60)||_lvVerify1(_US.btl)):_lvVerify())):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>';
+  var lvBox=L?('<div style="font-size:12px;color:var(--faint);margin-bottom:4px">현재가 '+M(L.px)+' · 하루 평균 변동폭(ATR) '+(US?_usd(Math.round(L.atr*100)/100):Math.round(L.atr).toLocaleString()+'원')+'</div>'+(L.tg!=null?lv('목표 (팔 곳)',L.tg,'#4a9eff'):'')+lv('1차 매수',L.b1,'#2ebd85')+lv('2차 매수',L.b2,'#22a06b')+lv('손절',L.st,'#f6465d')+_rxExpect(L,US,x.c)
+    +'<div style="font-size:11px;color:var(--faint);margin-top:6px;line-height:1.6">규칙: '+(L.M?_RULE_NM(L.M.rule.key):'1차 60일선 · 손절 2차−2ATR')+' · 1차 50%·2차 50% 나눠 사기 · 2차 = 그 아래 가장 큰 매물대('+L.b2src+') · 목표에 닿으면 팔고, 아니면 60거래일(약 3개월)째 정리.</div>'+(US?(_lvVerify1(_US.btl60)||_lvVerify1(_US.btl)):_lvVerify())):'<div style="font-size:12px;color:var(--faint)">일봉을 불러오지 못했어요</div>';
   // ④ 섹터
   var secBox=US?(dt.indN?'<div style="font-size:15px;font-weight:800">'+esc(dt.indN)+'</div><div style="font-size:12px;color:var(--sub);margin-top:4px">이 종목 오늘 '+P(x.day,2)+'</div><div style="font-size:11px;color:var(--faint);margin-top:6px">미장은 업종 등락 자료가 없어 업종 이름만 보여줘요</div>':'<div style="font-size:12px;color:var(--faint)">업종 자료 없음</div>'):ind?('<div style="font-size:15px;font-weight:800">'+esc(ind[1])+' '+P(ind[2],2)+'</div><div style="font-size:12px;color:var(--sub);margin-top:4px">상승 '+ind[3]+' · 하락 '+ind[4]+' · 전체 '+ind[5]+'종목</div>'
     +'<div style="font-size:12px;color:var(--sub);margin-top:2px">이 종목 '+P(x.day,2)+'</div>'+_rxIndRank(IN,ind)):'<div style="font-size:12px;color:var(--faint)">업종 자료 없음</div>';

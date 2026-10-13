@@ -92,8 +92,15 @@ def brow(x, i, weak=False):
     hot = ' <i class="hot">⚠과열</i>' if (not weak and any(str(b).startswith("⚠ 과열") for b in x.get("bad") or [])) else ""
     tv = f'${x["tv20"] * 100:,.0f}M' if US else f'{x["tv20"]:,}억'
     px = f'${x["px"]:,.2f}' if US else f'{x["px"]:,.0f}원'
-    return f"""<div class="br"><div class="rk">{i}{chg(x, i, weak)}</div><b class="bs" style="color:{DN if weak else UP}">{x["total"]}</b>
- <div class="bn"><div class="b1">{E(x["n"])}{hot}</div><div class="b2">{E(why[0])}</div></div>
+    lvl = ""
+    if not weak and x.get("lv"):
+        L, ex = x["lv"], x.get("ex") or {}
+        M = (lambda v: "—" if v is None else f"${v:,.2f}") if US else (lambda v: "—" if v is None else f"{v:,.0f}")
+        exs = f' · <b style="color:{col(ex.get("ret"))}">예상 {ex["ret"] * 100:+.1f}%</b>' if ex.get("ret") is not None else ""
+        lvl = (f'<div class="b3"><span style="color:{UP}">1차 {M(L["b1"])}</span> · 2차 {M(L["b2"])} · <span style="color:{DN}">손절 {M(L["st"])}</span>'
+               + (f' · <span style="color:#4a9eff">목표 {M(L["tg"])}</span>' if L.get("tg") is not None else "") + exs + "</div>")
+    return f"""<div class="br{' tall' if lvl else ''}"><div class="rk">{i}{chg(x, i, weak)}</div><b class="bs" style="color:{DN if weak else UP}">{x["total"]}</b>
+ <div class="bn"><div class="b1">{E(x["n"])}{hot}</div><div class="b2">{E(why[0])}</div>{lvl}</div>
  <div class="bp"><div>{px} <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span></div><small>20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span> · {tv}</small></div></div>"""
 
 
@@ -123,6 +130,7 @@ body{background:#0b0f16;font-family:'Noto Sans CJK KR','Apple SD Gothic Neo','Ma
 .pg{padding:12px 16px 10px}.pg+.pg{border-left:3px solid #0b0f16;box-shadow:inset 8px 0 12px -10px #000}
 .pg h2{font-size:17px;font-weight:800;margin-bottom:4px;display:flex;justify-content:space-between;align-items:baseline}.pg h2 small{font-size:11.5px;color:#6f7a89;font-weight:600}
 .br{display:flex;align-items:center;gap:10px;border-top:1px solid #222b38;padding:6px 0;height:52px}
+.br.tall{height:70px}.b3{font-size:12px;color:#c6cfdb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
 .bs{width:30px;font-size:18px;text-align:center;flex:none}.bn{flex:1;min-width:0}.b1{font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .b2{font-size:11.5px;color:#9aa4b2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bp{text-align:right;font-size:12.5px;font-weight:700;flex:none}.bp small{font-size:11px;color:#6f7a89;font-weight:600}
 .hot{font-style:normal;font-size:10.5px;color:#f0b90b;border:1px solid #f0b90b;border-radius:5px;padding:0 4px;margin-left:4px}
@@ -165,6 +173,38 @@ def track_line(p):
     return f'<div class="trk"><div>{head}</div><div>{body}{" · " + nxt if nxt else ""}</div></div>'
 
 
+RULE_T = {"hold": "보유 끝 정리", "hi52": "52주 고점", "vp": "위쪽 최대 매물대"}
+
+
+def rule_line(p):
+    """매수·손절·목표 규칙과 예상 (feeds/levels-model*.json, 매달 스스로 고름) + 예상 경로 적중(실제 기록, 없으면 검증 구간)."""
+    r = p.get("lvRule")
+    if not r:
+        return ""
+    a = r["key"].split("|")
+    t = RULE_T.get(a[2], "1차+" + a[2][3:] + "ATR")
+    acc = ""
+    try:
+        with open(os.path.join(ROOT, f"feeds/track-summary{SFX}.json"), encoding="utf-8") as f:
+            pa = [x for x in (json.load(f).get("path") or []) if x["n"] >= 20]
+        if pa:
+            x = pa[-1]
+            acc = f' · 예상 경로 적중(실제 {x["d"]}거래일, {x["n"]}건): 가운데 범위 {x["in50"] * 100:.0f}% · 넓은 범위 {x["in80"] * 100:.0f}% <small>(목표 50%·80%)</small>'
+    except Exception:
+        pass
+    if not acc:
+        try:
+            with open(os.path.join(ROOT, f"feeds/levels-model{SFX}.json"), encoding="utf-8") as f:
+                cb = [x for x in json.load(f).get("calib") or [] if x["d"] == 20]
+            if cb:
+                acc = f' · 예상 경로 검증(과거 뒤 절반, 20거래일): 넓은 범위 적중 {cb[0]["in80"] * 100:.0f}% <small>(목표 80%, 실제 기록은 쌓이는 중)</small>'
+        except Exception:
+            pass
+    chg = ' <b style="color:#f0b90b">· 이번 달 규칙 바뀜</b>' if r.get("changed") else ""
+    return (f'<div class="trk"><div>🎯 매수·손절·목표 규칙 (매달 스스로 다시 고름){chg}</div>'
+            f'<div>1차 {"20일선" if a[0] == "ma20" else "60일선"} 50% · 2차 그 아래 매물대 50% · 손절 2차−{a[1][1:]}ATR · 목표 {t} · 과거 검증: 예상 {r["ret"] * 100:+.1f}% · 이긴 비율 {r["win"] * 100:.0f}% · 목표 도달 {r["hit"] * 100:.0f}% · 손절 {r["stop"] * 100:.0f}% · 보통 {r["day"]}거래일{acc}</div></div>')
+
+
 def spy_warn(p):
     s = p.get("spy") if US else None
     if not s or not s.get("below"):
@@ -198,6 +238,7 @@ def build(p):
 {"".join(brow(x, i + 1, True) for i, x in enumerate(p["weak"]))}</div></div>
 {dropped(p)}
 {track_line(p)}
+{rule_line(p)}
 <div class="ft">추천 = 그날 상위 20% · 매수 금지 = 하위 20% · {bt_line(p)}<br>
 교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 갱신 {E(p["updated"])}</div>
 </div></body></html>"""
@@ -232,7 +273,7 @@ def main():
     out = os.path.join(out_dir, f"picks{SFX}-{p['date']}.png")
     with sync_playwright() as pw:
         b = pw.chromium.launch()
-        pg = b.new_page(viewport={"width": 1320, "height": 1800}, device_scale_factor=2, locale="ko-KR")
+        pg = b.new_page(viewport={"width": 1320, "height": 2200}, device_scale_factor=2, locale="ko-KR")
         pg.set_content(build(p), wait_until="load")
         pg.evaluate("document.fonts.ready")
         pg.locator("#card").screenshot(path=out)

@@ -66,8 +66,14 @@ async function record() {
   // 국장 추천은 거래대금 50억↑ · 하락 추세 제외만 (2026-10-13 사용자 결정, score_all.mjs PICK_TV). 비교 기준(u)은 그대로 5억↑ 전체.
   const buys = liq.filter(([, it]) => it[1] === '추천' && (US || ((it[6] ?? 0) >= 50 && !(it[8] || []).includes('하락 추세')))), bans = liq.filter(([, it]) => it[1] === '매수 금지');
   const cs = await pool(buys.map(([c]) => c), (c) => candles(c, 250));
-  const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], US ? { usd: true } : undefined); return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null]; });
-  cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: US ? 'US 모멘텀67·흑자33 · 1차60일선·2차매물대·손절2차−2ATR' : 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
+  // 매수·손절·목표가 규칙과 예상 경로는 그날 쓰던 feeds/levels-model*.json 그대로 기록 (나중에 모델이 바뀌어도 그날 예상으로 채점)
+  let M = null; try { M = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/levels-model-us.json' : 'feeds/levels-model.json'), 'utf8')); } catch { /* 없으면 기본 규칙 */ }
+  const o = { ...((M && M.rule.o) || {}), ...(US ? { usd: true } : {}) };
+  // b = [코드, 점수, 1차, 2차, 손절, 목표, 그날 종가, ATR/종가, 변동성 구간]
+  const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], o); const e = L && M ? V.expect(L, M, US) : null;
+    return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null, L ? L.tg : null, L ? L.px : null, e ? +e.ap.toFixed(5) : null, e ? e.b : null]; });
+  cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: (US ? 'US 모멘텀67·흑자33' : 'v2 안정성40·고점근접30·이익30 · 50억↑·하락추세 제외') + ' · ' + (M ? M.rule.key : 'ma60|s2|hold'),
+    mz: M ? { days: M.days, vcut: M.vcut, path: M.model.map((m) => m.path), ex: M.model.map((m) => [m.ret, m.hit, m.stop]) } : undefined };
   fs.writeFileSync(file, JSON.stringify(cur));
   console.log(`기록 ${d}: 거래 활발 ${liq.length} · 추천 ${b.length} · 매수 금지 ${bans.length}`);
 }
@@ -91,12 +97,12 @@ async function evaluate() {
       const rt = (x.t || []).map(ret).filter((v) => v != null);
       // 적중 = 시장 평균(같은 날 거래 활발 종목)보다 나았던 종목 비율. 매수 금지는 평균보다 못했던 비율
       const hit = (a, up) => (a.length && m != null ? a.filter((v) => (up ? v > m : v < m)).length / a.length : null);
-      const sims = H < 20 ? [] : x.b.map(([c, , b1, b2, st]) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d);
-        if (b1 == null || i < 0 || i + H >= a.length) return null; return V.simulate(a, i, { b1, b2, st }, H); }).filter(Boolean);
+      const sims = H < 20 ? [] : x.b.map(([c, , b1, b2, st, tg]) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d);
+        if (b1 == null || i < 0 || i + H >= a.length) return null; return V.simulate(a, i, { b1, b2, st, tg: tg == null ? null : tg }, H); }).filter(Boolean);
       const inv = sims.filter((s) => s.ret != null);
       co['h' + H] = { end, mkt: m, buy: mean(rb) - m, ban: mean(rn) - m, buyAbs: mean(rb), banAbs: mean(rn),
         top: rt.length ? mean(rt) - m : null, nT: rt.length, hitB: hit(rb, true), hitT: hit(rt, true), hitN: hit(rn, false),
-        lv: { n: sims.length, fill1: mean(sims.map((s) => (s.f1 ? 1 : 0))), stop: mean(sims.map((s) => (s.stopped ? 1 : 0))), ret: mean(inv.map((s) => s.ret)), win: mean(inv.map((s) => (s.ret > 0 ? 1 : 0))) } };
+        lv: { n: sims.length, fill1: mean(sims.map((s) => (s.f1 ? 1 : 0))), stop: mean(sims.map((s) => (s.stopped ? 1 : 0))), hit: mean(inv.map((s) => (s.hit ? 1 : 0))), ret: mean(inv.map((s) => s.ret)), win: mean(inv.map((s) => (s.ret > 0 ? 1 : 0))) } };
     }
     cohorts.push(co);
   }
@@ -107,10 +113,28 @@ async function evaluate() {
       beat: done.length ? done.filter((h) => h.buy > 0).length / done.length : null, banLose: done.length ? done.filter((h) => h.ban < 0).length / done.length : null,
       top: mean(done.map((h) => h.top).filter((v) => v != null)), hitB: mean(done.map((h) => h.hitB).filter((v) => v != null)),
       hitT: mean(done.map((h) => h.hitT).filter((v) => v != null)), hitN: mean(done.map((h) => h.hitN).filter((v) => v != null)),
-      lvRet: mean(done.map((h) => h.lv.ret).filter((v) => v != null)), lvStop: mean(done.map((h) => h.lv.stop).filter((v) => v != null)),
+      lvRet: mean(done.map((h) => h.lv.ret).filter((v) => v != null)), lvStop: mean(done.map((h) => h.lv.stop).filter((v) => v != null)), lvHit: mean(done.map((h) => h.lv.hit).filter((v) => v != null)),
       next: (cohorts.map((c) => c['h' + H]).find((h) => h && h.pending && h.due) || {}).due || null };
   }
-  const out = { updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), start: days[0][0], days: days.length, agg, cohorts: cohorts.slice(-120) };
+  // 예상 경로 적중 (2026-10-13 사용자 결정) — 그날 기록한 예상 경로(mz)에 실제 종가가 들어왔는지. 잘 맞으면 25~75% 칸에 절반, 10~90% 칸에 80%.
+  //   경과일(1·2·3·5·10·…·60거래일)마다: in50 = 25~75% 안 비율, in80 = 10~90% 안 비율, up = 예상 가운데(50%)보다 위였던 비율, bias = 가운데와의 차이(ATR 배수)
+  const pathAcc = {}, pos = {};
+  for (const [d, x] of days) {
+    if (!x.mz) continue; const k0 = td.indexOf(d); if (k0 < 0) continue;
+    for (const bb of x.b) {
+      const [c, , , , , , px0, ap, bk] = bb; if (px0 == null || ap == null || bk == null) continue;
+      const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d); if (i < 0) continue;
+      const P = x.mz.path[bk];
+      x.mz.days.forEach((dd, di) => { if (k0 + dd >= td.length || !a[i + dd]) return; const z = (a[i + dd][4] / px0 - 1) / ap, q = P[di];
+        const g = pathAcc[dd] || (pathAcc[dd] = { n: 0, in50: 0, in80: 0, up: 0, bias: 0 });
+        g.n++; if (z >= q[1] && z <= q[3]) g.in50++; if (z >= q[0] && z <= q[4]) g.in80++; if (z > q[2]) g.up++; g.bias += z - q[2]; });
+      // 종목별 지금 위치 — 가장 최근 추천일 기준 (추천 화면 '예상 경로 대비')
+      const e = Math.min(60, a.length - 1 - i); if (e >= 1) { const band = x.mz.days.map((dd, di) => [dd].concat(P[di].map((z) => px0 * (1 + z * ap))));
+        pos[c] = { d, e, z: V.bandZone(band, e, a[a.length - 1][4]), b1: bb[2], b2: bb[3], st: bb[4], tg: bb[5], px0 }; }
+    }
+  }
+  const pathOut = Object.entries(pathAcc).map(([dd, g]) => ({ d: +dd, n: g.n, in50: g.in50 / g.n, in80: g.in80 / g.n, up: g.up / g.n, bias: +(g.bias / g.n).toFixed(3) })).sort((p, q) => p.d - q.d);
+  const out = { updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), start: days[0][0], days: days.length, agg, path: pathOut, cohorts: cohorts.slice(-120) };
 
   // 종목별 — 추천 화면 각 줄의 '추천 이후 성과'와 펼치면 보이는 '추천일별 결과' (2026-10-12 사용자 결정)
   //   s = 이번에 연속으로 추천되기 시작한 기록일, r = 그 다음 날 시가에 사서 최근 종가까지, m = 같은 날 거래 활발 종목 평균(같은 기간)
@@ -129,7 +153,7 @@ async function evaluate() {
     const [sd, , su] = recSets[st], r = between(c, sd, lastTd), m = r == null ? null : mkt(sd, lastTd, su);
     const h = recSets.filter(([, set]) => set.has(c)).slice(-6).map(([d]) => [d].concat([1, 5, 20].map((H) => {
       const co = coBy[d] && coBy[d]['h' + H]; if (!co || co.pending) return null; const v = between(c, d, co.end); return v == null || co.mkt == null ? null : +((v - co.mkt) * 100).toFixed(2); })));
-    items[c] = { s: sd, n: i - st + 1, now, r: r == null ? null : +(r * 100).toFixed(2), m: m == null ? null : +(m * 100).toFixed(2), h };
+    items[c] = { s: sd, n: i - st + 1, now, r: r == null ? null : +(r * 100).toFixed(2), m: m == null ? null : +(m * 100).toFixed(2), h, p: pos[c] || undefined };
   }
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-codes-us.json' : 'feeds/track-codes.json'), JSON.stringify({ updated: out.updated, last: lastTd, items }));
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-summary-us.json' : 'feeds/track-summary.json'), JSON.stringify(out));

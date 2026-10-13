@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const ROOT = path.dirname(path.dirname(new URL(import.meta.url).pathname));
 const { features, breakpoints, score, cuts } = require(path.join(ROOT, 'score-core.js'));
+const V = require(path.join(ROOT, 'score-core.js'));
 const API = 'https://m.stock.naver.com/api';
 const US = process.env.MKT === 'US', UAPI = 'https://api.stock.naver.com';
 const OUT = (nm) => path.join(ROOT, `feeds/${nm}${US ? '-us' : ''}.json`);
@@ -74,7 +75,7 @@ async function oneUS(s) {
   const candles = (Array.isArray(rows) ? rows : []).map((x) => [x.localDate, +x.openPrice, +x.highPrice, +x.lowPrice, +x.closePrice, +x.accumulatedTradingVolume]).slice(-270);
   const ti = {}; for (const x of (b && b.stockItemTotalInfos) || []) ti[x.code] = x.value;
   const f = features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks) });
-  if (f) f._ind = s.ind || ti.industryGroupKor || null;
+  if (f) { f._ind = s.ind || ti.industryGroupKor || null; f._cs = candles; } // _cs: 추천 목록 매수·목표가 계산용 (저장 안 함)
   return f;
 }
 async function one(s) {
@@ -89,6 +90,7 @@ async function one(s) {
   const flows = (Array.isArray(trend) ? trend : []).slice().reverse().map((x) => ({ f: n(x.foreignerPureBuyQuant), i: n(x.organPureBuyQuant), v: n(x.accumulatedTradingVolume) }));
   const f = features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks), flows });
   if (f) {
+    f._cs = candles; // 추천 목록 매수·목표가 계산용 (저장 안 함)
     f._ind = info && info.industryCode != null ? String(info.industryCode) : null;
     // 거래대금 대비 외국인·기관 순매수 금액 비율(%) — 순매수 수량 × 그날 종가 ÷ (거래량 × 종가)
     const tr = (Array.isArray(trend) ? trend : []).map((x) => ({ f: n(x.foreignerPureBuyQuant) || 0, i: n(x.organPureBuyQuant) || 0, v: n(x.accumulatedTradingVolume) || 0, c: n(x.closePrice) || 0 }));
@@ -140,11 +142,18 @@ const scores = { v: 2, market: US ? 'US' : 'KR', spy, date, n: fresh.length, upd
     .concat(US ? [x.n, x.mk, x.rc, x.f.mom == null ? null : r1(x.f.mom * 100, 1), x.f._ind || null, r1(x.f.px, 2)] : [])])) };
 const liquid = fresh.filter((x) => x.f.tv20 >= PICK_TV);
 const pickable = liquid.filter((x) => !(NO_DOWN && x.f.trend === '하락 추세'));
+// 매수·손절·목표가 + 종목별 예상 (2026-10-13 사용자 결정) — 규칙과 예상 모델은 feeds/levels-model*.json (scripts/levels_study.mjs 가 매달 스스로 고름)
+let LVM = null; try { LVM = JSON.parse(fs.readFileSync(OUT('levels-model'), 'utf8')); } catch { /* 모델 없으면 기본 규칙 · 예상 없음 */ }
+const r2 = (v) => v == null ? null : +v.toFixed(4);
+const lvOf = (x) => { const L = V.levels(x.f._cs, { ...((LVM && LVM.rule.o) || {}), ...(US ? { usd: true } : {}) }); if (!L) return {};
+  const e = V.expect(L, LVM, US);
+  return { lv: { b1: L.b1, b2: L.b2, st: L.st, tg: L.tg, rule: LVM ? LVM.rule.key : 'ma60|s2|hold' },
+    ex: e ? { b: e.b, ap: r2(e.ap), ret: r2(e.ret), win: r2(e.win), hit: r2(e.hit), stop: r2(e.stop), fill1: r2(e.fill1), day: e.day, tgPct: r2(e.tgPct), stPct: r2(e.stPct), band: e.band } : null }; };
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
 const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; pickable.forEach((x) => dist[x.r.view]++);
 const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: pickable.length, minTv: PICK_TV, noDown: NO_DOWN, updated: scores.updated, dist,
-  top: pickable.slice(0, 20).map(pick), weak: liquid.slice(-20).reverse().map(pick) }; // 책처럼 양쪽 20종씩 (2026-10-13 사용자 결정)
+  top: pickable.slice(0, 20).map((x) => ({ ...pick(x), ...lvOf(x) })), lvRule: LVM ? { key: LVM.rule.key, updated: LVM.updated, changed: LVM.changed, ret: LVM.rule.second.ret, win: LVM.rule.second.win, hit: LVM.rule.second.hit, stop: LVM.rule.second.stop, day: LVM.rule.second.day } : null, weak: liquid.slice(-20).reverse().map(pick) }; // 책처럼 양쪽 20종씩 (2026-10-13 사용자 결정)
 // 직전 거래일 대비 변화 (이미지의 NEW·순위 ▲▼·빠진 종목). 같은 날 다시 돌리면 그 전 거래일 기준을 그대로 물려받는다.
 {
   let old = null;

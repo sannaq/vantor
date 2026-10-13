@@ -107,25 +107,52 @@
     var below = vp.map(function (v, k) { return { v: v, p: lo + (k + 0.5) * step }; }).filter(function (z) { return z.p < b1 * 0.99 && z.p > b1 - b2Win * atr; }).sort(function (p, q) { return q.v - p.v; })[0];
     var b2 = below ? below.p : b1 - b2Fb * atr; if (m60 && m60 < b1 && m60 > b2) b2 = Math.max(b2, m60 * 0.995);
     var st = stopAtr > 0 ? b2 - stopAtr * atr : null;
+    // 목표가 (2026-10-13 사용자 결정: 목표가에 닿으면 판다) — o.tgt: 'vp' 1차 위 최대 매물대(없으면 1차+tgK·ATR) · 'hi52' 52주 고점 · 'atr' 1차+tgK·ATR · 없음 = 보유 기간 끝에 정리
+    var tgMode = o.tgt || null, tgK = o.tgK != null ? o.tgK : 4, tg = null;
+    if (tgMode === 'atr') tg = b1 + tgK * atr;
+    else if (tgMode === 'hi52') { var hw = cs.slice(-250).map(function (v) { return v[2]; }); tg = Math.max.apply(null, hw); if (tg < b1 + atr) tg = b1 + tgK * atr; }
+    else if (tgMode === 'vp') { var up = vp.map(function (v, k) { return { v: v, p: lo + (k + 0.5) * step }; }).filter(function (z) { return z.p > Math.max(b1, px) + atr; }).sort(function (p, q) { return q.v - p.v; })[0]; tg = up ? up.p : b1 + tgK * atr; }
     var zones = vp.map(function (v, k) { return { v: v, share: v / tot, lo: lo + k * step, hi: lo + (k + 1) * step }; }).sort(function (p, q) { return q.v - p.v; }).slice(0, 3);
-    return { px: px, atr: atr, m20: m20, m60: m60, b1: T(b1), b2: T(b2), st: st == null ? null : T(st), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
+    return { px: px, atr: atr, m20: m20, m60: m60, b1: T(b1), b2: T(b2), st: st == null ? null : T(st), tg: tg == null ? null : T(tg), vp: vp, lo: lo, step: step, zones: zones, b2src: below ? '매물대' : '1차−' + b2Fb + 'ATR' };
   }
-  /* 한 건 모의매매 — 1차 50%·2차 50% 지정가, 손절가 닿으면 매도, H거래일째 종가 정리.
+  /* 한 건 모의매매 — 1차 50%·2차 50% 지정가, 손절가 닿으면 매도, 목표가(L.tg) 닿으면 매도(같은 날 둘 다면 손절 우선), H거래일째 종가 정리.
      c = 일봉, i = 가격을 정한 날(그날 장마감 뒤), L = levels() 결과. 체결: 시가가 지정가 이하면 시가, 아니면 저가가 닿으면 지정가.
      같은 날 손절가도 닿으면 그날 손절(보수적). 시가·저가 0 = 거래 없던 날 → 종가로. */
   function simulate(c, i, L, H) {
-    var legs = [{ p: L.b1, w: 0.5, fill: null }, { p: L.b2, w: 0.5, fill: null }], exit = null, stopped = false;
-    for (var k = i + 1; k <= i + H; k++) {
+    var legs = [{ p: L.b1, w: 0.5, fill: null }, { p: L.b2, w: 0.5, fill: null }], exit = null, stopped = false, hit = false, day = null, k;
+    for (k = i + 1; k <= i + H; k++) {
       var cl = c[k][4], o = c[k][1] > 0 ? c[k][1] : cl, l = c[k][3] > 0 ? c[k][3] : Math.min(o, cl);
       legs.forEach(function (g) { if (g.fill == null && l <= g.p) g.fill = o <= g.p ? o : g.p; });
       if (legs.some(function (g) { return g.fill != null; }) && L.st != null && l <= L.st) { exit = o <= L.st ? o : L.st; stopped = true; break; }
+      var hh = c[k][2] > 0 ? c[k][2] : Math.max(o, cl);
+      if (L.tg != null && legs.some(function (g) { return g.fill != null; }) && hh >= L.tg) { exit = o >= L.tg ? o : L.tg; hit = true; day = k - i; break; }
     }
+    if (exit != null && day == null) day = k - i;
     if (exit == null) exit = c[i + H][4];
     var filled = legs.filter(function (g) { return g.fill != null; }), w = filled.reduce(function (s, g) { return s + g.w; }, 0);
     var ret = w ? filled.reduce(function (s, g) { return s + g.w * (exit / g.fill - 1); }, 0) / w : null;
-    return { f1: legs[0].fill != null, f2: legs[1].fill != null, w: w, ret: ret, alloc: ret == null ? 0 : ret * w, stopped: stopped, recovered: stopped ? c[i + H][4] > L.st : null };
+    return { f1: legs[0].fill != null, f2: legs[1].fill != null, w: w, ret: ret, alloc: ret == null ? 0 : ret * w, stopped: stopped, hit: hit, day: day == null ? H : day, recovered: stopped ? c[i + H][4] > L.st : null };
   }
-  var api = { features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, simulate: simulate, W: W, CUT: CUT,
+  /* 종목별 예상 (2026-10-13 사용자 결정) — feeds/levels-model*.json(scripts/levels_study.mjs, 매달 자동)의 변동성 구간별 과거 결과를 이 종목 가격에 맞춘다.
+     L = levels() 결과, M = 모델. 돌려주는 것: 구간 b, 예상 수익(들어간 돈 기준 ret·이긴 비율 win·목표 도달 hit·손절 stop·1차 체결 fill1·보유일 day),
+     목표·손절까지 %(평균 매수가 기준), 경로 band = [[거래일, 10%,25%,50%,75%,90% 가격], ...] (그날 종가 기준) */
+  function expect(L, M, usd) {
+    if (!L || !M || !M.model || !L.px || !L.atr) return null;
+    var T = usd ? function (p) { return Math.round(p * 100) / 100; } : tick, ap = L.atr / L.px, b = (M.vcut || []).filter(function (v) { return ap > v; }).length, m = M.model[b];
+    if (!m) return null;
+    var avgIn = (L.b1 + L.b2) / 2;
+    return { b: b, ap: ap, ret: m.ret, win: m.win, hit: m.hit, stop: m.stop, fill1: m.fill1, day: m.day, alloc: m.alloc,
+      tgPct: L.tg ? L.tg / avgIn - 1 : null, stPct: L.st ? L.st / avgIn - 1 : null,
+      band: M.days.map(function (d, i) { return [d].concat(m.path[i].map(function (z) { return T(L.px * (1 + z * ap)); })); }) };
+  }
+  /* 실제 가격이 예상 경로 어디쯤인지: 2 = 위쪽 끝(90%↑) · 1 = 예상보다 위(75~90%) · 0 = 예상 안(25~75%) · −1 = 예상보다 아래(10~25%) · −2 = 아래쪽 끝(10%↓) */
+  function bandZone(band, d, price) {
+    if (!band || !band.length || d < 1) return null;
+    var k = 0; while (k + 1 < band.length && band[k + 1][0] <= d) k++;
+    var r = band[k]; if (k + 1 < band.length && d > r[0]) { var nx = band[k + 1], t = (d - r[0]) / (nx[0] - r[0]); r = r.map(function (v, j) { return j ? v + (nx[j] - v) * t : d; }); }
+    return price > r[5] ? 2 : price > r[4] ? 1 : price >= r[2] ? 0 : price >= r[1] ? -1 : -2;
+  }
+  var api = { expect: expect, bandZone: bandZone, features: features, breakpoints: breakpoints, score: score, cuts: cuts, levels: levels, tick: tick, simulate: simulate, W: W, CUT: CUT,
     PARTS: [['안정성', W.stab], ['고점 근접', W.high], ['이익', W.earn]], PARTS_US: [['모멘텀', W_US.mom], ['흑자', W_US.prof]], W_US: W_US,
     VIEW_DESC: { '추천': '전 종목 상위 20% — 검증 기간 60일 보유 시 시장보다 나았던 구간', '중립': '뚜렷한 우위 없음', '매수 금지': '전 종목 하위 20% — 검증 기간 60일 보유 시 시장보다 못했던 구간' } };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.VScore = api;
