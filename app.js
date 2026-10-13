@@ -1441,7 +1441,7 @@ function renderReco(){
     Promise.all([_loadVScoresUS(),_loadJ('feeds/backtest-us.json'),_loadJ('feeds/backtest-us-60.json'),_loadJ('feeds/backtest-levels-us-60.json'),_loadJ('feeds/track-summary-us.json'),_loadJ('feeds/backtest-levels-us.json')]).then(function(a){ _US={bt:a[1],bt60:a[2],btl60:a[3],trk:a[4],btl:a[5]}; if(!_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 자료를 불러오지 못했어요 · 화~토 아침 7시에 갱신돼요</div></div>'; }); return; }
   _tcLoad(US);
   var j=_recoSc(), all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{}, minTv=US?0.1:5, SORTS=US?_RECO_SORTS_US:_RECO_SORTS;
-  var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=minTv)); });
+  var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=(US?minTv:50))&&(US||x.ref.indexOf('하락 추세')<0)); }); // 국장: 50억↑·하락 추세 제외 (2026-10-13)
   var dist={'추천':0,'중립':0,'매수 금지':0}; pool.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
   var list=pool.filter(function(x){ return F.view==='all'||x.view===F.view; });
   var si=(SORTS[F.sort]||SORTS[0])[1];
@@ -1452,7 +1452,7 @@ function renderReco(){
     +seg('view',[['추천','추천 '+dist['추천']],['중립','중립 '+dist['중립']],['매수 금지','매수 금지 '+dist['매수 금지']],['all','전체']])
     +seg('mk',US?[['all','전체'],['NASDAQ','나스닥'],['NYSE','NYSE'],['AMEX','AMEX']]:[['all','전체'],['KOSPI','코스피'],['KOSDAQ','코스닥']])
     +seg('sort',SORTS.map(function(s,i){return [i,s[0]+(i?'':'순')];}))
-    +'<label style="font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" '+(F.liq?'checked':'')+' onchange="_recoSet(\'liq\',this.checked?1:0)"> 거래 활발한 종목만 (20일 평균 거래대금 '+(US?'1천만 달러':'5억')+'↑)</label></div>';
+    +'<label style="font-size:12px;color:var(--sub);display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" '+(F.liq?'checked':'')+' onchange="_recoSet(\'liq\',this.checked?1:0)"> 거래 활발한 종목만 (20일 평균 거래대금 '+(US?'1천만 달러↑':'50억↑ · 하락 추세 제외')+')</label></div>';
   var rows=list.slice(0,F.show).map(function(x,i){ return _recoRow(x,i+1); }).join('');
   var formula=US?'1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30';
   var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};

@@ -168,7 +168,7 @@ def build(p):
     uni = f'나스닥·NYSE·AMEX {p["n"]:,}종목 채점' if US else f'코스피·코스닥 {p["n"]:,}종목 채점'
     src = "VANTOR · 미국 장마감 기준" if US else "VANTOR · 장마감 기준"
     rule = "1년 모멘텀 67<br>흑자 33" if US else "안정성 40 · 고점 근접 30<br>이익 30"
-    liq = f'20일 평균 거래대금 ${p["minTv"] * 100:,.0f}M 이상' if US else f'20일 평균 거래대금 {p["minTv"]}억 이상'
+    liq = f'20일 평균 거래대금 ${p["minTv"] * 100:,.0f}M 이상' if US else f'20일 평균 거래대금 {p["minTv"]}억 이상' + (' · 하락 추세 제외' if p.get("noDown") else '')
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><style>{CSS}</style></head><body><div id="card">
 <div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>

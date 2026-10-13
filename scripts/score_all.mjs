@@ -19,7 +19,10 @@ const US = process.env.MKT === 'US', UAPI = 'https://api.stock.naver.com';
 const OUT = (nm) => path.join(ROOT, `feeds/${nm}${US ? '-us' : ''}.json`);
 const LIMIT = +process.argv[2] || 0;
 const CONC = 8;
-const MIN_TV = US ? 0.1 : 5; // 미장: 0.1억 달러 = 1천만 달러 (2026-10-10 사용자 결정) · 추천 목록에 넣을 최소 20일 평균 거래대금(억) — 거래가 거의 없는 종목은 순위에서 뺀다
+const MIN_TV = US ? 0.1 : 5; // 채점 기준표(점수 분위)를 만드는 모집단 — 백테스트와 같게 둔다. 미장: 0.1억 달러 = 1천만 달러 (2026-10-10 사용자 결정) · 추천 목록에 넣을 최소 20일 평균 거래대금(억) — 거래가 거의 없는 종목은 순위에서 뺀다
+// 국장 추천 목록(TOP 10·분포·매수 금지 5)에 올리는 조건 (2026-10-13 사용자 결정): 20일 평균 거래대금 50억↑ + 하락 추세 제외.
+//   백테스트 124주(24.2~26.9): 추천 묶음 20일 시장 대비 5억↑ +0.81%p → 50억↑ +1.94%p(앞 +2.25 · 뒤 +1.63). 하락 추세 제외는 효과 거의 없음(+1.87%p) — 사용자가 그래도 빼기로 함.
+const PICK_TV = US ? MIN_TV : 50, NO_DOWN = !US;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function get(url, asText) {
@@ -135,19 +138,20 @@ const scores = { v: 2, market: US ? 'US' : 'KR', spy, date, n: fresh.length, upd
   //   미장은 뒤에 [12]이름, [13]거래소, [14]로이터 코드, [15]1년 모멘텀%, [16]업종, [17]종가 를 더 붙인다 (16·17 은 스크리너용, 2026-10-12) (국내는 stock-list.json 에서 이름을 찾는다)
   items: Object.fromEntries(fresh.map((x) => [x.c, [x.r.total, x.r.view, x.rank, x.r.parts, x.r.good, x.r.bad, r1(x.f.tv20, US ? 3 : 1), r1(x.f.day, 2), x.r.ref, r1(x.f.vol * 100, 2), r1(x.f.hiGap * 100, 1), x.f.per]
     .concat(US ? [x.n, x.mk, x.rc, x.f.mom == null ? null : r1(x.f.mom * 100, 1), x.f._ind || null, r1(x.f.px, 2)] : [])])) };
-const liquid = fresh.filter((x) => x.f.tv20 >= MIN_TV);
+const liquid = fresh.filter((x) => x.f.tv20 >= PICK_TV);
+const pickable = liquid.filter((x) => !(NO_DOWN && x.f.trend === '하락 추세'));
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
-const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; liquid.forEach((x) => dist[x.r.view]++);
-const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: liquid.length, minTv: MIN_TV, updated: scores.updated, dist,
-  top: liquid.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
+const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; pickable.forEach((x) => dist[x.r.view]++);
+const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: pickable.length, minTv: PICK_TV, noDown: NO_DOWN, updated: scores.updated, dist,
+  top: pickable.slice(0, 10).map(pick), weak: liquid.slice(-5).reverse().map(pick) };
 // 직전 거래일 대비 변화 (이미지의 NEW·순위 ▲▼·빠진 종목). 같은 날 다시 돌리면 그 전 거래일 기준을 그대로 물려받는다.
 {
   let old = null;
   try { old = JSON.parse(fs.readFileSync(OUT('stock-picks'), 'utf8')); } catch { /* 첫 실행 */ }
   const base = old && old.date && old.date !== date && Array.isArray(old.top) ? { date: old.date, top: old.top.map((x) => x.c), weak: (old.weak || []).map((x) => x.c) } : (old && old.prev) || null;
   if (base) {
-    const liqPos = new Map(liquid.map((x, i) => [x.c, i + 1]));
+    const liqPos = new Map(pickable.map((x, i) => [x.c, i + 1]));
     picks.prev = base;
     picks.top.forEach((x) => { const k = base.top.indexOf(x.c); x.was = k < 0 ? null : k + 1; });
     picks.weak.forEach((x) => { x.isNew = !base.weak.includes(x.c); });

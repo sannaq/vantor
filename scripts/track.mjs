@@ -63,7 +63,8 @@ async function record() {
     console.log('이미 기록됨', d); return;
   }
   const liq = Object.entries(sc.items).filter(([, it]) => (it[6] ?? 0) >= MIN_TV);
-  const buys = liq.filter(([, it]) => it[1] === '추천'), bans = liq.filter(([, it]) => it[1] === '매수 금지');
+  // 국장 추천은 거래대금 50억↑ · 하락 추세 제외만 (2026-10-13 사용자 결정, score_all.mjs PICK_TV). 비교 기준(u)은 그대로 5억↑ 전체.
+  const buys = liq.filter(([, it]) => it[1] === '추천' && (US || ((it[6] ?? 0) >= 50 && !(it[8] || []).includes('하락 추세')))), bans = liq.filter(([, it]) => it[1] === '매수 금지');
   const cs = await pool(buys.map(([c]) => c), (c) => candles(c, 250));
   const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], US ? { usd: true } : undefined); return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null]; });
   cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: US ? 'US 모멘텀67·흑자33 · 1차60일선·2차매물대·손절2차−2ATR' : 'v2 안정성40·고점근접30·이익30 · 1차60일선·2차매물대·손절2차−2ATR' };
