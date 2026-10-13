@@ -1,11 +1,11 @@
 {
   "week": "2026년 10월 3주차",
   "range": "10/12~10/16",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "events": [
     {"date": "2026-10-14", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "소비자물가(CPI)", "note": "물가가 뜨거우면 리스크오프로 하락 압력, 식으면 안도.", "src": "ff:Core CPI m/m", "fc": {"Core CPI m/m": "0.2%", "CPI m/m": "0.6%", "CPI y/y": "3.6%"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "생산자물가(PPI)", "note": "물가 선행지표 — 금리 기대를 흔듦.", "src": "ff:Core PPI m/m", "fc": {"Core PPI m/m": "0.3%", "PPI m/m": "0.5%"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.5%", "Retail Sales m/m": "0.3%"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "생산자물가(PPI)", "note": "물가 선행지표 — 금리 기대를 흔듦.", "src": "ff:Core PPI m/m", "fc": {"Core PPI m/m": "0.3%", "PPI m/m": "0.6%"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.6%", "Retail Sales m/m": "0.3%"}},
     {"date": "2026-10-16", "time": "12:30", "market": "COIN", "type": "policy", "imp": 3, "title": "연준 의장 발언 (Warsh)", "note": "의장 발언 — 크립토 변동성 주의.", "src": "ff:Fed Chairman Warsh Speaks"}
   ]
 }

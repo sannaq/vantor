@@ -1,15 +1,15 @@
 {
   "week": "2026년 10월 3주차",
   "range": "10/12~10/16",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "intro": "이번 주 핵심: **소비자물가(CPI)**, **생산자물가(PPI)**, **소매판매** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
     {"date": "2026-10-14", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소비자물가(CPI)", "note": "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담. (예상 0.2% · 직전 0.3%)", "src": "ff:Core CPI m/m", "fc": {"Core CPI m/m": "0.2%", "CPI m/m": "0.6%", "CPI y/y": "3.6%"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "생산자물가(PPI)", "note": "CPI 선행 성격. 기업 원가 압력 확인. (예상 0.3% · 직전 0.2%)", "src": "ff:Core PPI m/m", "fc": {"Core PPI m/m": "0.3%", "PPI m/m": "0.5%"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.5%", "Retail Sales m/m": "0.3%"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 26.5 · 직전 37.8)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "26.5"}},
-    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 195K · 직전 197K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "195K"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "생산자물가(PPI)", "note": "CPI 선행 성격. 기업 원가 압력 확인. (예상 0.3% · 직전 0.2%)", "src": "ff:Core PPI m/m", "fc": {"Core PPI m/m": "0.3%", "PPI m/m": "0.6%"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.6%", "Retail Sales m/m": "0.3%"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 26.5 · 직전 37.8)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "28.2"}},
+    {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 195K · 직전 197K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "199K"}},
     {"date": "2026-10-16", "time": "12:30", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 발언 (Warsh)", "note": "금리 경로 힌트. 발언 톤에 시장 민감.", "src": "ff:Fed Chairman Warsh Speaks"}
   ],
   "keys": [{"t": "소비자물가(CPI) (10/14 21:30)", "b": "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담. (예상 0.2% · 직전 0.3%)"}, {"t": "생산자물가(PPI) (10/15 21:30)", "b": "CPI 선행 성격. 기업 원가 압력 확인. (예상 0.3% · 직전 0.2%)"}, {"t": "소매판매 (10/15 21:30)", "b": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)"}]
