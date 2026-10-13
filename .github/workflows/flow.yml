@@ -27,6 +27,7 @@ jobs:
         run: |
           git add feeds/flow.json feeds/stock-list.json feeds/industries.json feeds/news-main.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"; git config user.email "41898099+github-actions[bot]@users.noreply.github.com"  # pull --rebase 도 커밋을 만든다
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 수급 갱신"
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
