@@ -200,8 +200,8 @@ def rule_line(p):
                 acc = f' · 예상 경로 검증(과거 뒤 절반, 20거래일): 넓은 범위 적중 {cb[0]["in80"] * 100:.0f}% <small>(목표 80%, 실제 기록은 쌓이는 중)</small>'
         except Exception:
             pass
-    chg = ' <b style="color:#f0b90b">· 이번 달 규칙 바뀜</b>' if r.get("changed") else ""
-    return (f'<div class="trk"><div>🎯 매수·손절·목표 규칙 (매달 스스로 다시 고름){chg}</div>'
+    chg = ' <b style="color:#f0b90b">· 이번 주 규칙 바뀜</b>' if r.get("changed") else ""
+    return (f'<div class="trk"><div>🎯 매수·손절·목표 규칙 (매주 스스로 다시 고름){chg}</div>'
             f'<div>1차 {"20일선" if a[0] == "ma20" else "60일선"} 50% · 2차 그 아래 매물대 50% · 손절 2차−{a[1][1:]}ATR · 목표 {t} · 과거 검증: 예상 {r["ret"] * 100:+.1f}% · 이긴 비율 {r["win"] * 100:.0f}% · 목표 도달 {r["hit"] * 100:.0f}% · 손절 {r["stop"] * 100:.0f}% · 보통 {r["day"]}거래일{acc}</div></div>')
 
 

@@ -1551,7 +1551,7 @@ function _rxExpect(L,US,code){
     +'<div style="font-size:12.5px;line-height:1.7;margin-top:4px">예상 수익 <b class="'+(e.ret>=0?'up':'down')+'">'+sg(e.ret)+'</b> (들어간 돈 기준) · 이긴 비율 '+pc(e.win)+' · 보통 '+e.day+'거래일<br>'
     +'목표 도달 <b>'+pc(e.hit)+'</b>(닿으면 '+sg(e.tgPct)+') · 손절 '+pc(e.stop)+'('+sg(e.stPct)+') · 1차 체결 '+pc(e.fill1)+'</div>'
     +'<table style="width:100%;font-size:12px;margin-top:6px"><thead><tr><th class="l">예상 경로</th><th>가운데 절반(25~75%)</th><th>넓게(10~90%)</th></tr></thead><tbody>'+rows+'</tbody></table>'+posTxt
-    +'<div style="font-size:10.5px;color:var(--faint);margin-top:6px">과거 3년 비슷한 변동성의 추천 종목이 실제로 움직인 결과예요. 규칙('+_RULE_NM(M&&M.rule.key)+')과 경로는 매달 스스로 다시 골라요'+(M&&M.updated?' · '+M.updated.slice(0,10)+' 기준':'')+'.</div></div>';
+    +'<div style="font-size:10.5px;color:var(--faint);margin-top:6px">과거 3년 비슷한 변동성의 추천 종목이 실제로 움직인 결과예요. 규칙('+_RULE_NM(M&&M.rule.key)+')과 경로는 매주 스스로 다시 골라요'+(M&&M.updated?' · '+M.updated.slice(0,10)+' 기준':'')+'.</div></div>';
 }
 function _rxHTML(x,DT,NW,IN,cs){
   var P=function(v,d){ return v==null?'—':'<b class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+(+v).toFixed(d==null?1:d)+'%</b>'; };

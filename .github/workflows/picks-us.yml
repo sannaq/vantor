@@ -12,6 +12,10 @@ on:
         description: "디스코드로 보낼까요? (yes/no)"
         required: false
         default: "yes"
+      force:
+        description: "미국 날짜가 바뀌었어도 직전 거래일 결과를 다시 올릴까요? (yes/no)"
+        required: false
+        default: "no"
 
 permissions:
   contents: write
@@ -54,7 +58,7 @@ jobs:
           d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks-us.json'))['date'])")
           today=$(TZ=America/New_York date +%Y%m%d)
           echo "채점 기준일 $d · 미국 오늘 $today"
-          if [ "$d" = "$today" ]; then echo "open=1" >> "$GITHUB_OUTPUT"; else echo "open=0" >> "$GITHUB_OUTPUT"; fi
+          if [ "$d" = "$today" ] || [ "${{ github.event.inputs.force }}" = "yes" ]; then echo "open=1" >> "$GITHUB_OUTPUT"; else echo "open=0" >> "$GITHUB_OUTPUT"; fi
       - name: 결과 올리기
         if: steps.day.outputs.open == '1'
         run: |
