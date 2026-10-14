@@ -1,11 +1,11 @@
 {
   "week": "2026년 10월 3주차",
   "range": "10/12~10/16",
-  "updated": "2026-10-13",
+  "updated": "2026-10-15",
   "intro": "이번 주 핵심: **소비자물가(CPI)**, **생산자물가(PPI)**, **소매판매** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-10-14", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소비자물가(CPI)", "note": "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담. (예상 0.2% · 직전 0.3%)", "src": "ff:Core CPI m/m", "fc": {"Core CPI m/m": "0.2%", "CPI m/m": "0.6%", "CPI y/y": "3.6%"}},
+    {"date": "2026-10-14", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소비자물가(CPI)", "note": "연준 금리 경로의 핵심. 예상보다 높으면 금리·달러↑ → 기술주·외국인 수급 부담. (예상 0.2% · 직전 0.3%)", "src": "ff:Core CPI m/m", "fc": {"Core CPI m/m": "0.2%", "CPI m/m": "0.6%", "CPI y/y": "3.6%"}, "result": {"v": "**전월비 0.6%** (예상 0.6%) · 근원 전월비 0.3% (예상 0.2%) · 전년비 3.7% (예상 3.6%) — 예상 수준", "verdict": "neutral"}, "rx": {"day": "2026-10-14", "mk": "US", "items": [["S&P500", -1.11, "pct"], ["나스닥", -1.88, "pct"], ["미 10년물", -3, "bp"], ["달러지수", 0.21, "pct"]]}},
     {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "생산자물가(PPI)", "note": "CPI 선행 성격. 기업 원가 압력 확인. (예상 0.3% · 직전 0.2%)", "src": "ff:Core PPI m/m", "fc": {"Core PPI m/m": "0.3%", "PPI m/m": "0.6%"}},
     {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.5% · 직전 1.4%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.6%", "Retail Sales m/m": "0.3%"}},
     {"date": "2026-10-15", "time": "21:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 26.5 · 직전 37.8)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "28.2"}},
