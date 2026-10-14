@@ -3743,7 +3743,7 @@ var LX_LESSONS=[
    warn:'박스는 언젠가 깨져요. 어느 쪽으로 깨지는지가 다음 방향이에요.'},
   {k:'breakout',k2:'fake',t:'3. 돌파는 거래량으로 확인',t1:'진짜 돌파 — 거래량 실림',t2:'가짜 돌파 — 거래량 없음',idea:_lxIdea('0,96 40,60 72,90 112,58 146,86 170,30 200,20 240,8','var(--up)',_lxHL(56,'#f6465d','저항')+'<rect x="164" y="104" width="12" height="24" fill="#e0a82e"/><rect x="40" y="118" width="10" height="10" fill="var(--faint)"/><rect x="110" y="116" width="10" height="12" fill="var(--faint)"/>'),
    look:['저항을 넘는 날 거래량이 평소의 2~3배 이상이면 많은 사람이 동의한 돌파예요(그림의 노란 막대).','거래량 없이 살짝 넘은 돌파는 금방 다시 선 아래로 돌아오는 경우가 많아요.','돌파 뒤 며칠 동안 선 위에서 버티는지 보세요.'],
-   warn:'거래량이 없는 돌파에서 따라 사면 고점에 물리기 쉬워요.'},
+   warn:'거래량 없는 돌파를 따라 사면 물리기 쉬워요. 다만 직접 검증해 보니 거래량만으로 결과가 크게 갈리지는 않았어요 — 🧪 배운 것·꿀팁 탭 참고.'},
   {k:'retest',t:'4. 저항이 지지로 바뀐다',idea:_lxIdea('0,104 40,64 70,90 104,60 132,40 160,58 196,24 240,6','var(--up)',_lxHL(60,'var(--gold)','저항 → 지지')),
    look:['한 번 뚫린 저항선은 다음에 <b>지지선</b> 역할을 해요.','돌파 뒤 그 선까지 되돌아와서 받치면(되돌림 지지) 비교적 안전한 매수 자리예요.','되돌림 때 거래량이 줄어들면 더 좋아요 — 파는 사람이 적다는 뜻이에요.'],
    warn:'되돌림에서 선 아래로 종가가 내려가면 돌파 실패로 봐요.'},
@@ -3805,19 +3805,69 @@ function learnReal(){
   if(_LX)return _lxBody(_LX,_LXM);
   var el=$('#learnBody');
   Promise.all([fetch('feeds/learn-examples.json?t='+Date.now()).then(function(r){return r.json();}),fetch('feeds/levels-model.json?t='+Date.now()).then(function(r){return r.json();}).catch(function(){return null;})])
-    .then(function(a){ _LX=a[0]; _LXM=a[1]; if(_learnTab==='real'&&el)el.innerHTML=_lxBody(_LX,_LXM); })
-    .catch(function(){ if(_learnTab==='real'&&el)el.innerHTML='<div class="lcard">예시 자료를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>'; });
+    .then(function(a){ _LX=a[0]; _LXM=a[1]; if(el&&(_learnTab==='real'||_learnTab==='lab'))el.innerHTML=_learnTab==='lab'?learnLab():_lxBody(_LX,_LXM); })
+    .catch(function(){ if((_learnTab==='real'||_learnTab==='lab')&&el)el.innerHTML='<div class="lcard">예시 자료를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>'; });
   return '<div class="lcard" style="color:var(--faint)">실제 차트 예시 불러오는 중…</div>';
 }
 function _lxBody(X,M){
-  return '<div class="lcard"><h3>📊 실전 차트 분석</h3><p class="lead">개념마다 <b>모양 그림</b>으로 먼저 보고, 바로 아래 <b>실제 종목 차트</b>에서 같은 장면을 찾아봐요. 1~9는 차트 분석 전반, 10~11은 우리 추천을 읽는 법이에요.</p>'
+  return '<div class="lcard"><h3>📊 실전 차트 분석</h3><p class="lead">개념마다 <b>모양 그림</b>으로 먼저 보고, 바로 아래 <b>실제 종목 차트</b>에서 같은 장면을 찾아봐요. 1~9는 차트 분석 전반, 10~11은 우리 추천을 읽는 법이에요. 이 신호들이 실제로 얼마나 맞는지는 <b style="cursor:pointer;text-decoration:underline dotted" onclick="document.querySelector(\'#ltabs button[data-l=lab]\').click()">🧪 배운 것·꿀팁</b> 탭에 정리했어요.</p>'
     +'<div style="font-size:12px;color:var(--sub);line-height:1.7">차트 보는 법: 빨강 = 오른 날, 파랑 = 내린 날 · <b style="color:#f0b90b">노랑 선</b> = 20일선 · <b style="color:#a78bfa">보라 선</b> = 60일선 · 아래 막대 = 거래량(<b style="color:#e0a82e">노란 막대</b> = 주목할 날) · 종목 이름을 누르면 지금 차트로 가요.</div>'
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:6px">예시는 시가총액 상위 300종목의 최근 2년 차트에서 개념에 딱 맞는 장면을 골라 온 거예요. 결과를 알고 고른 교과서 장면이라, 같은 모양이 늘 같은 결과로 끝나지는 않아요. 매주 토요일 새로 골라요'+(X.updated?' · '+X.updated.slice(0,10)+' 기준':'')+'.</div></div>'
     +LX_LESSONS.map(function(l){ return _lxLesson(l,X); }).join('')+_lxToday(X,M)+_lxRule(X,M);
 }
+/* ═══ 🧪 배운 것·꿀팁 — VANTOR 백테스트에서 배운 것 + 교과서 신호 직접 검증(feeds/learn-examples.json stats) + 실전 꿀팁 (2026-10-14) ═══ */
+var LAB_SIG=[ // k, 이름, 교과서가 말하는 방향(+1 오른다 / −1 내린다)
+  ['boStrong','거래량 3배↑ 실린 돌파',1],['boWeak','거래량 없는 돌파',-1],['breakdown','40일 바닥 이탈(거래량 1.5배↑)',-1],
+  ['golden','골든크로스',1],['dead','데드크로스',-1],['aligned','정배열(가격>20일>60일)',1],['reverse','역배열',-1],
+  ['rsiUp','RSI 30 아래→위 회복',1],['rsiHot','RSI 70 돌파(과매수)',-1],['nearHi','52주 고점 5% 안',1],['nearLo','52주 저점 5% 안("싸다")',1],
+  ['jump','하루 +15%↑ 급등한 날 종가에',1],['plunge','하루 −10%↓ 급락한 날 종가에',1]];
+function _labTable(st){ if(!st||!st.rows||!st.rows.all)return '<div style="color:var(--faint)">검증 자료가 아직 없어요.</div>';
+  var R=st.rows, pc=function(v){ return (v>=0?'+':'')+(v*100).toFixed(1)+'%'; }, pp=function(v){ return (v>=0?'+':'')+(v*100).toFixed(1)+'%p'; }, b=R.all;
+  var row=function(nm,r,exp){ var v, col='var(--sub)';
+    if(exp==null){ v='<span style="color:var(--faint)">기준</span>'; }
+    else if(r.ex>0&&r.win<b.win-0.05){ v='⚠ 평균만 높음'; col='var(--gold)'; }
+    else if(Math.abs(r.ex)<0.01){ v='≈ 차이 거의 없음'; }
+    else if(r.ex*exp>0){ v='✓ 교과서대로'; col='var(--up)'; } else { v='✗ 반대로 나옴'; col='var(--down)'; }
+    if(exp!=null&&r.n<500)v+=' <span style="color:var(--faint);font-weight:400">(표본 적음)</span>';
+    return '<tr><td class="l" style="text-align:left;padding:6px 6px;font-weight:700">'+nm+'</td><td style="padding:6px">'+r.n.toLocaleString()+'</td><td style="padding:6px">'+pc(r.avg)+'</td><td style="padding:6px">'+Math.round(r.win*100)+'%</td><td style="padding:6px">'+pc(r.p10)+'</td><td style="padding:6px;font-weight:800">'+(exp==null?'—':pp(r.ex))+'</td><td style="padding:6px;text-align:left;font-weight:800;color:'+col+'">'+v+'</td></tr>'; };
+  return '<div style="overflow-x:auto"><table style="width:100%;min-width:560px;font-size:12.5px;border-collapse:collapse"><thead><tr style="color:var(--faint);font-size:11.5px"><th style="text-align:left;padding:6px">신호</th><th>횟수</th><th>'+st.h+'일 뒤 평균</th><th>오른 비율</th><th>나쁜 10%</th><th>시장 대비</th><th style="text-align:left">판정</th></tr></thead><tbody>'
+    +row('아무 날이나 샀을 때',b,null)+LAB_SIG.filter(function(s){return R[s[0]];}).map(function(s){ return row(s[1],R[s[0]],s[2]); }).join('')+'</tbody></table></div>'; }
+var LAB_LEARN=[
+  ['🪨','덜 흔들리는 종목이 더 나았어요','3년 검증에서 최근 20일 변동이 작은 종목이 이후 시장보다 꾸준히 나았어요. 그래서 우리 점수의 40%가 "안정성"이에요. 많이 출렁이는 종목은 기대만큼 안 벌어요.'],
+  ['🏔','52주 고점 근처는 비싸 보여도 강한 종목','고점에서 덜 빠진 종목이 더 갔어요. 고점 근처에서 "너무 올랐다"고 피하는 것보다, 많이 빠진 종목을 "싸다"고 줍는 쪽이 못했어요(아래 직접 검증에서도 52주 고점 근처가 저점 근처보다 나았어요).'],
+  ['💰','이익 대비 싼 종목, 적자는 최하','PER이 낮은 종목이 나았어요. 적자 기업은 이익이 없으니 점수에서 가장 낮게 봐요.'],
+  ['🧭','이평 추세·외국인·기관 수급은 예측력이 거의 없었어요','많이들 보는 지표지만 3년 검증에서 앞으로의 수익과 거의 관계가 없었어요(오히려 살짝 반대). 그래서 점수에서 빼고 참고로만 보여줘요.'],
+  ['🚫','"뭘 살까"보다 "뭘 피할까"가 더 확실해요','60거래일 기준 추천(상위 20%)은 시장보다 +2.6%p, 매수 금지(하위 20%)는 −4.7%p였어요. 나쁜 종목을 걸러내는 효과가 더 컸어요.'],
+  ['⏳','짧게 볼수록 운이에요','20일로 보면 추천이 시장을 이긴 주가 절반 정도라 들쭉날쭉해요. 60일로 늘리면 신호가 훨씬 또렷해져요. 며칠 결과로 판단하지 마세요.'],
+  ['📊','거래대금이 작은 종목은 빼세요','추천 묶음의 20일 성적이 거래대금 5억↑만 걸렀을 때 시장보다 +0.8%p, 50억↑로 올리자 +1.9%p가 됐어요. 거래가 적은 종목은 점수가 좋아도 잘 안 움직여요.'],
+  ['✂️','손절이 너무 촘촘하면 손해예요','2차 매수가에서 1ATR 아래에 손절을 두면 39%가 걸렸고, 그중 54%는 다시 올라왔어요. 하루 평균 움직임의 2~3배는 여유를 줘야 해요.'],
+  ['🔁','목표가에 팔면 돈이 더 빨리 돌아요','한 종목만 보면 끝까지 들고 있는 게 더 벌 때도 있지만, 목표가에 팔고 다음 종목으로 넘어가면 같은 기간에 돈이 더 일했어요(회전).'],
+  ['🇺🇸','미장은 다르게 움직여요','국장 공식을 미장에 그대로 쓰면 추천이 시장보다 못했어요. 미장은 "1년 상승세(최근 한 달 제외) + 흑자"가 통했어요. 시장마다 따로 검증해야 해요.'],
+  ['🔥','1년에 3배 넘게 오른 종목은 조심','평균은 좋아 보여도 중간값은 시장보다 −5%p, 나쁜 5%는 −40~−53%였어요. 그래서 미장 추천에 "⚠ 과열 주의"를 붙여요.'],
+  ['📉','좋은 공식도 몇 달씩 안 맞아요','3년 검증을 통과한 공식도 최근 3달은 20일 성적이 마이너스였어요. 그래서 실제 추천 성과를 매일 기록하고, 규칙은 매주 다시 검증해요.']];
+var LAB_TIPS=[
+  ['🎯','사기 전에 손절가부터','얼마에 살지보다 어디서 틀렸다고 인정할지를 먼저 정해요. 들어간 뒤에는 기준이 흐려져요.'],
+  ['🪜','반씩 나눠 사기','1차에서 절반, 더 빠지면 2차에서 절반. 바로 오르면 절반은 벌고, 빠지면 평균 단가가 낮아져요.'],
+  ['🧺','한 종목에 몰지 않기','아무 날이나 사도 20일 뒤 나쁜 10%는 −14% 넘게 빠졌어요. 추천 20개 중 여러 개로 나누면 한 종목의 사고가 전체를 망치지 않아요.'],
+  ['🚀','급등 추격 금지','하루 +15% 넘게 오른 날 종가에 따라 사면 몇몇 대박 때문에 평균은 높아 보여도, 오른 비율은 아무 날보다 낮고 중간값은 마이너스, 나쁜 10%는 −30%쯤이었어요(위 표). 놓쳤으면 보내 주세요.'],
+  ['🕯','장중보다 종가로 판단','지지 이탈·돌파는 장중에 잠깐 뚫는 일이 많아요. 판단은 종가 기준으로 해요.'],
+  ['🧩','신호는 겹칠 때만','위 표처럼 신호 하나는 시장 평균과 거의 차이가 없어요. 위치(지지·매물대) + 거래량 + 추세가 같은 쪽을 가리킬 때만 의미가 있어요.'],
+  ['📅','실적·이벤트 날짜 확인','실적 발표·금통위·CPI 같은 날은 차트 규칙이 잘 안 먹혀요. 이벤트 탭에서 미리 보고 그 전후는 크기를 줄여요.'],
+  ['📒','기록하기','왜 샀는지, 어디서 손절할지 한 줄 적어 두면 나중에 같은 실수를 덜 해요(코인 매매일지처럼).']];
+function _labRows(a){ return a.map(function(x){ return '<div class="lrow"><div class="ic">'+x[0]+'</div><div><p class="tt">'+x[1]+'</p><p class="bd">'+x[2]+'</p></div></div>'; }).join(''); }
+function learnLab(){
+  if(!_LX){ learnReal(); return '<div class="lcard" style="color:var(--faint)">불러오는 중…</div>'; }
+  var st=_LX.stats;
+  return '<div class="lcard"><h3>🧪 VANTOR가 검증하면서 배운 것</h3><p class="lead">추천 공식을 만들면서 국장 약 2,600종목 3년 자료로 직접 확인한 내용이에요. 교과서와 다른 것도 있어요.</p>'+_labRows(LAB_LEARN)+'</div>'
+    +'<div class="lcard"><h3>📐 교과서 신호, 진짜 맞을까?</h3><p class="lead">시가총액 상위 300종목의 최근 2년에서 신호가 난 <b>모든 날</b>을 모아, '+(st?st.h:20)+'거래일 뒤 결과를 봤어요. <b>시장 대비</b>는 같은 날 전체 종목 평균을 뺀 값이라, 시장이 다 같이 오르내린 건 빠져 있어요.</p>'
+    +_labTable(st)
+    +'<div style="font-size:12.5px;line-height:1.7;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--panel2)"><b>읽는 법</b> — 대부분 시장 대비 ±1~2%p 안이에요. "⚠ 평균만 높음"은 대박 몇 개가 평균을 끌어올렸을 뿐 오른 비율은 아무 날보다 낮은 신호예요. <b>신호 하나만으로는 결과가 거의 갈리지 않는다</b>는 뜻이에요. 그래서 우리 추천은 이런 신호 대신 검증에서 통한 안정성·고점 근접·이익으로 점수를 매겨요. 실전 차트 탭의 예시들은 "이렇게 생겼다"를 보여 주는 교과서 장면이지, 늘 그렇게 된다는 뜻은 아니에요.</div>'
+    +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">주의: 대상이 지금 살아남은 대형주라 전체적으로 좋게 나오고(오른 비율·평균이 높음), 2년간 강세장이었어요. 횟수가 500번 아래인 신호는 우연일 수 있어요. 매주 토요일 다시 계산해요'+(_LX.updated?' · '+_LX.updated.slice(0,10)+' 기준':'')+'.</div></div>'
+    +'<div class="lcard"><h3>💡 실전 꿀팁</h3><p class="lead">위 검증과 매매 규칙을 만들면서 정리한 습관이에요.</p>'+_labRows(LAB_TIPS)+'</div>';
+}
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
-  var fn={real:learnReal,basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  var fn={lab:learnLab,real:learnReal,basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
   el.innerHTML=fn();
 }
 window.renderLearn=renderLearn;

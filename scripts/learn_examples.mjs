@@ -265,6 +265,41 @@ await Promise.all(Array.from({ length: 6 }, async () => {
 }));
 console.log('일봉 받음', DATA.length);
 
+
+/* ── 교과서 신호 직접 검증 (2026-10-14 사용자 요청 '네가 배운 것도 추가'): 같은 300종목 2년에서 신호가 난 모든 날의 20거래일 뒤 결과.
+   비교 기준 = 아무 날이나 샀을 때(전체 평균). exp = 교과서가 말하는 방향(+1 오른다 / −1 내린다). ── */
+function studyStats() {
+  const H = 20, S = {};
+  const DM = {}, add = (k, d, i) => { const r = d.C[i + H] / d.C[i] - 1, dt = d.cs[i][0]; (S[k] = S[k] || []).push([dt, r]); if (k === 'all') (DM[dt] = DM[dt] || []).push(r); };
+  for (const { d } of DATA) {
+    const hi250 = d.H.map((_, i) => (i < 250 ? null : maxOf(d.H, i - 249, i))), lo250 = d.L.map((_, i) => (i < 250 ? null : minOf(d.L, i - 249, i)));
+    for (let i = 70; i + H < d.n; i++) {
+      add('all', d, i);
+      const vr = d.Vo[i] / d.av[i], up40 = maxOf(d.H, i - 40, i - 1), lo40 = minOf(d.L, i - 40, i - 1);
+      if (d.C[i] > up40 * 1.02 && vr >= 3) add('boStrong', d, i);
+      if (d.C[i] > up40 * 1.01 && vr < 1) add('boWeak', d, i);
+      if (d.C[i] < lo40 * 0.98 && vr >= 1.5) add('breakdown', d, i);
+      const a0 = d.m20[i - 1] - d.m60[i - 1], a1 = d.m20[i] - d.m60[i];
+      if (a0 <= 0 && a1 > 0) add('golden', d, i);
+      if (a0 >= 0 && a1 < 0) add('dead', d, i);
+      if (d.rsi[i - 1] < 30 && d.rsi[i] >= 30) add('rsiUp', d, i);
+      if (d.rsi[i - 1] <= 70 && d.rsi[i] > 70) add('rsiHot', d, i);
+      if (d.C[i] > d.m20[i] && d.m20[i] > d.m60[i]) add('aligned', d, i);
+      if (d.C[i] < d.m20[i] && d.m20[i] < d.m60[i]) add('reverse', d, i);
+      if (hi250[i] && d.C[i] >= hi250[i] * 0.95) add('nearHi', d, i);
+      if (lo250[i] && d.C[i] <= lo250[i] * 1.05) add('nearLo', d, i);
+      if (d.C[i] / d.C[i - 1] - 1 >= 0.15) add('jump', d, i);
+      if (d.C[i] / d.C[i - 1] - 1 <= -0.1) add('plunge', d, i);
+    }
+  }
+  // 같은 날 전체 종목 평균을 빼서 '시장이 다 같이 오르고 내린 것'은 지운다 (폭락 다음 반등 같은 시기 효과 제거)
+  const dm = {}; for (const k in DM) dm[k] = DM[k].reduce((t, x) => t + x, 0) / DM[k].length;
+  const sum = (a0) => { const a = a0.map(([dt, r]) => r), x = a0.map(([dt, r]) => r - dm[dt]), s2 = a.slice().sort((p, q) => p - q), m = a.reduce((t, v) => t + v, 0) / a.length, xm = x.reduce((t, v) => t + v, 0) / x.length;
+    return { n: a.length, avg: +m.toFixed(4), ex: +xm.toFixed(4), beat: +(x.filter((v) => v > 0).length / x.length).toFixed(3), med: +s2[Math.floor(a.length / 2)].toFixed(4), win: +(a.filter((v) => v > 0).length / a.length).toFixed(3), p10: +s2[Math.floor(a.length * 0.1)].toFixed(4) }; };
+  const R = {}; for (const k in S) if (S[k].length >= 20) R[k] = sum(S[k]);
+  return { h: H, rows: R };
+}
+
 const LVM = JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/levels-model.json'), 'utf8'));
 const ruleO = LVM.rule && LVM.rule.o ? LVM.rule.o : {};
 const KEYS = ['trend', 'box', 'breakout', 'fake', 'retest', 'golden', 'dead', 'dbottom', 'vp', 'rsi', 'breakdown', 'ruleHit', 'ruleStop'];
@@ -303,6 +338,8 @@ try {
   }
 } catch (e) { console.log('오늘 추천 예시 실패', e.message); }
 
+out.stats = studyStats();
+console.log('신호 검증', JSON.stringify(out.stats.rows));
 out.rule = LVM.rule ? LVM.rule.key : null;
 out.updated = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
 fs.writeFileSync(path.join(ROOT, 'feeds/learn-examples.json'), JSON.stringify(out));
