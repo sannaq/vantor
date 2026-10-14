@@ -3685,9 +3685,139 @@ function learnEcon(){
       return '<div class="lrow" style="border:none;padding:8px 0"><div class="ic">'+x[0]+'</div><div><p class="tt">'+x[1]+'</p><p class="bd">'+x[2]+'</p></div></div>';}).join('')+'</div>'
     +'<div style="margin-top:12px"><a class="rulechip" style="cursor:pointer" onclick="showView(\'news\')">📰 VANTOR 뉴스 탭에서 실시간 헤드라인 보기 →</a></div></div>';
 }
+/* ═══ 📊 실전 차트 — 개념 모양 그림 + 실제 종목 예시 (2026-10-14 사용자 결정) ═══
+   예시 장면은 scripts/learn_examples.mjs 가 시총 상위 300종목 2년 일봉에서 골라 feeds/learn-examples.json 에 담는다(매주 토 갱신). */
+var _LX=null, _LXM=null;
+var _LXC={up:'var(--up)',down:'var(--down)',gold:'#e0a82e',ok:'#2ebd85',info:'#4a9eff',stop:'#f6465d',res:'#f6465d',sup:'#4a9eff'};
+function _lxEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function _lxWon(p){ return Math.round(p).toLocaleString()+'원'; }
+function _lxDate(s){ return s?(+s.slice(2,4))+'.'+(+s.slice(4,6))+'.'+(+s.slice(6,8)):''; }
+/* 실제 차트 SVG: 캔들·20일선(노랑)·60일선(보라)·가로선·표시점·매물대·거래량·(RSI)·(예상 경로) */
+function _lxSVG(ex){
+  var cs=ex.cs, n=cs.length, band=ex.ex&&ex.ex.band, FUT=band?Math.round(n*0.42):0;
+  var W=(window.innerWidth||1000)<700?420:720, PL=8, VPW=ex.vp?(W<500?40:56):0, PR=8+VPW, top=10, PH=250, VH=54, RH=ex.rsi?64:0, gap=10, H=top+PH+gap+VH+(RH?gap+RH:0)+22;
+  var CW=W-PL-PR, bw=CW/(n+FUT), X=function(i){ return PL+i*bw+bw/2; };
+  var lo=Infinity, hi=-Infinity; cs.forEach(function(v){ if(v[3]<lo)lo=v[3]; if(v[2]>hi)hi=v[2]; });
+  (ex.lines||[]).forEach(function(z){ lo=Math.min(lo,z.p); hi=Math.max(hi,z.p); });
+  if(band)band.forEach(function(b){ lo=Math.min(lo,b[1]); hi=Math.max(hi,b[5]); });
+  var pd=(hi-lo)*0.06; lo-=pd; hi+=pd; var Y=function(p){ return top+(hi-p)/(hi-lo)*PH; };
+  var s='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:12px" font-family="inherit">';
+  for(var k=0;k<=4;k++){ var yy=top+k*PH/4, pv=hi-(hi-lo)*k/4; s+='<line x1="'+PL+'" y1="'+yy+'" x2="'+(W-PR)+'" y2="'+yy+'" stroke="var(--line)" stroke-width="1"/><text x="'+(PL+2)+'" y="'+(yy-3)+'" font-size="10" fill="var(--faint)">'+Math.round(pv).toLocaleString()+'</text>'; }
+  (ex.shade||[]).forEach(function(z){ s+='<rect x="'+(X(z.i0)-bw/2)+'" y="'+top+'" width="'+((z.i1-z.i0+1)*bw)+'" height="'+PH+'" fill="var(--gold)" opacity=".07"/><text x="'+(X(z.i0)+3)+'" y="'+(top+PH-4)+'" font-size="10" fill="var(--faint)">'+_lxEsc(z.t)+'</text>'; });
+  if(ex.zone){ var zc=_LXC[ex.zone.c]||'#4a9eff'; s+='<rect x="'+PL+'" y="'+Y(ex.zone.p1)+'" width="'+CW+'" height="'+Math.max(2,Y(ex.zone.p0)-Y(ex.zone.p1))+'" fill="'+zc+'" opacity=".13"/><text x="'+(PL+4)+'" y="'+(Y(ex.zone.p1)-4)+'" font-size="11" font-weight="800" fill="'+zc+'">'+_lxEsc(ex.zone.t)+'</text>'; }
+  if(ex.vp){ var mx=Math.max.apply(null,ex.vp.v)||1; ex.vp.v.forEach(function(v,i){ var p0=ex.vp.lo+i*ex.vp.step, p1=p0+ex.vp.step, y0=Math.max(top,Y(p1)), y1=Math.min(top+PH,Y(p0)); if(y1<=y0)return; s+='<rect x="'+(W-VPW-4)+'" y="'+y0+'" width="'+((VPW-4)*v/mx).toFixed(1)+'" height="'+Math.max(1,y1-y0-1).toFixed(1)+'" fill="#4a9eff" opacity="'+(0.18+0.5*v/mx).toFixed(2)+'"/>'; }); s+='<text x="'+(W-VPW-4)+'" y="'+(top+PH-4)+'" font-size="9.5" fill="var(--faint)">매물대</text>'; }
+  if(band){ var L0=n-1, bx=function(d){ return X(L0+d*FUT/60); }, last=cs[n-1][4];
+    var poly=function(a,b,op){ var pts=[[X(L0),Y(last)]].concat(band.map(function(r){return [bx(r[0]),Y(r[a])];})), back=band.slice().reverse().map(function(r){return [bx(r[0]),Y(r[b])];}).concat([[X(L0),Y(last)]]);
+      return '<polygon points="'+pts.concat(back).map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'" fill="var(--gold)" opacity="'+op+'"/>'; };
+    s+=poly(1,5,'.10')+poly(2,4,'.18')+'<polyline points="'+[[X(L0),Y(last)]].concat(band.map(function(r){return [bx(r[0]),Y(r[3])];})).map(function(p){return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' ')+'" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-dasharray="4 3"/>';
+    s+='<line x1="'+(X(L0)+bw/2)+'" y1="'+top+'" x2="'+(X(L0)+bw/2)+'" y2="'+(top+PH)+'" stroke="var(--faint)" stroke-dasharray="2 3"/><text x="'+(X(L0)+bw+3)+'" y="'+(top+12)+'" font-size="10.5" font-weight="800" fill="var(--gold)">앞으로 60거래일 예상 경로</text>'; }
+  cs.forEach(function(v,i){ var o=v[1],h=v[2],l=v[3],c=v[4], col=c>=o?'var(--up)':'var(--down)', x=X(i), w=Math.max(1,bw*0.66);
+    s+='<line x1="'+x.toFixed(1)+'" y1="'+Y(h).toFixed(1)+'" x2="'+x.toFixed(1)+'" y2="'+Y(l).toFixed(1)+'" stroke="'+col+'" stroke-width="1"/><rect x="'+(x-w/2).toFixed(1)+'" y="'+Y(Math.max(o,c)).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+Math.max(1,Math.abs(Y(o)-Y(c))).toFixed(1)+'" fill="'+col+'"/>'; });
+  function ml(a,col){ var p=[]; a.forEach(function(v,i){ if(v!=null)p.push(X(i).toFixed(1)+','+Y(v).toFixed(1)); }); return p.length?'<polyline points="'+p.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.6" opacity=".9"/>':''; }
+  s+=ml(ex.m20||[],'#f0b90b')+ml(ex.m60||[],'#a78bfa');
+  var used=[]; (ex.lines||[]).forEach(function(z){ var c=_LXC[z.c]||'var(--sub)', y=Y(z.p), x0=X(z.i0)-bw/2, x1=band?W-PR:X(z.i1)+bw/2;
+    s+='<line x1="'+x0.toFixed(1)+'" y1="'+y.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="'+c+'" stroke-width="1.6" stroke-dasharray="6 4"/>';
+    var ty=y-4; used.forEach(function(u){ if(Math.abs(u-ty)<13)ty=u+13; }); used.push(ty); var tw=z.t.length*10.5+8, tx=Math.max(PL,x1-tw);
+    s+='<rect x="'+tx+'" y="'+(ty-11)+'" width="'+tw+'" height="15" rx="3" fill="var(--panel)" opacity=".88"/><text x="'+(tx+4)+'" y="'+ty+'" font-size="11" font-weight="800" fill="'+c+'">'+_lxEsc(z.t)+'</text>'; });
+  var placed=[]; (ex.pts||[]).forEach(function(z){ var c=_LXC[z.c]||'var(--ink)', x=X(z.i), y=Y(z.p), dn=z.dir==='below', ay=dn?y+6:y-6, ty=dn?y+30:y-22, tw=z.t.length*10.5+10, tx=Math.min(W-PR-tw,Math.max(PL,x-tw/2));
+    for(var g=0;g<6&&placed.some(function(q){ return tx<q[0]+q[2]&&q[0]<tx+tw&&Math.abs(q[1]-ty)<19; });g++)ty+=dn?20:-20; placed.push([tx,ty,tw]); // 이름표가 겹치면 한 줄씩 밀어낸다
+    s+='<path d="M'+x.toFixed(1)+' '+ay.toFixed(1)+' l-5 '+(dn?9:-9)+' h10 z" fill="'+c+'"/><rect x="'+tx.toFixed(1)+'" y="'+(ty-12)+'" width="'+tw+'" height="17" rx="4" fill="'+c+'"/><text x="'+(tx+5).toFixed(1)+'" y="'+(ty+1)+'" font-size="11" font-weight="800" fill="#fff">'+_lxEsc(z.t)+'</text>'; });
+  var vy=top+PH+gap, vmx=Math.max.apply(null,cs.map(function(v){return v[5];}))||1, hl={}; (ex.vhl||[]).forEach(function(i){hl[i]=1;});
+  s+='<text x="'+(PL+2)+'" y="'+(vy+10)+'" font-size="10" fill="var(--faint)">거래량</text>';
+  cs.forEach(function(v,i){ var h=v[5]/vmx*(VH-4), w=Math.max(1,bw*0.66); s+='<rect x="'+(X(i)-w/2).toFixed(1)+'" y="'+(vy+VH-h).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+Math.max(.5,h).toFixed(1)+'" fill="'+(hl[i]?'#e0a82e':(v[4]>=v[1]?'var(--up)':'var(--down)'))+'" opacity="'+(hl[i]?1:.45)+'"/>'; });
+  if(RH){ var ry=vy+VH+gap, R=function(v){ return ry+(100-v)/100*RH; }; s+='<rect x="'+PL+'" y="'+R(70)+'" width="'+CW+'" height="'+(R(30)-R(70))+'" fill="var(--line)" opacity=".35"/>';
+    [30,70].forEach(function(v){ s+='<line x1="'+PL+'" y1="'+R(v)+'" x2="'+(W-PR)+'" y2="'+R(v)+'" stroke="var(--faint)" stroke-dasharray="3 3"/><text x="'+(W-PR-16)+'" y="'+(R(v)-2)+'" font-size="9.5" fill="var(--faint)">'+v+'</text>'; });
+    var rp=[]; ex.rsi.forEach(function(v,i){ if(v!=null)rp.push(X(i).toFixed(1)+','+R(v).toFixed(1)); }); s+='<polyline points="'+rp.join(' ')+'" fill="none" stroke="#a78bfa" stroke-width="1.6"/><text x="'+(PL+2)+'" y="'+(ry+10)+'" font-size="10" fill="var(--faint)">RSI(14)</text>'; }
+  var by=H-6; [0,Math.floor(n/2),n-1].forEach(function(i,k){ s+='<text x="'+X(i).toFixed(1)+'" y="'+by+'" font-size="10" fill="var(--faint)" text-anchor="'+(k===0?'start':k===2?'end':'middle')+'">'+_lxDate(cs[i][0])+'</text>'; });
+  return s+'</svg>';
+}
+/* 개념 모양 그림 (작게) */
+function _lxIdea(pts,col,extra){ return '<svg viewBox="0 0 240 130" style="width:100%;max-width:220px;height:auto;display:block;margin:0 auto">'+(extra||'')+'<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>'; }
+function _lxHL(y,c,t,x0,x1){ return '<line x1="'+(x0||0)+'" y1="'+y+'" x2="'+(x1||240)+'" y2="'+y+'" stroke="'+c+'" stroke-width="2" stroke-dasharray="6 4"/>'+(t?'<text x="'+((x0||0)+2)+'" y="'+(y-4)+'" font-size="12" font-weight="800" fill="'+c+'">'+t+'</text>':''); }
+var LX_LESSONS=[
+  {k:'trend',t:'1. 추세 — 고점과 저점이 같이 높아지나',idea:_lxIdea('0,118 34,86 54,98 92,58 114,72 152,36 176,50 220,12','var(--up)'),
+   look:['저점이 앞 저점보다 높고(저점↑), 고점도 앞 고점보다 높으면 <b>상승 추세</b>예요.','가격 > 20일선 > 60일선 순서로 놓이면 <b>정배열</b> — 추세가 살아 있다는 뜻이에요.','추세 안에서는 20일선 근처로 눌릴 때가 보통 다시 사는 자리가 돼요.'],
+   warn:'저점이 앞 저점 아래로 내려가는 순간 추세는 끝났다고 봐요.'},
+  {k:'box',t:'2. 지지·저항 — 여러 번 막힌 가격',idea:_lxIdea('0,70 30,24 60,100 96,26 128,98 162,24 196,100 240,60','var(--gold)',_lxHL(22,'#f6465d','저항')+_lxHL(102,'#4a9eff','지지')),
+   look:['위에서 여러 번 막힌 가격이 <b>저항</b>, 아래에서 여러 번 받친 가격이 <b>지지</b>예요.','많이 닿을수록 그 가격에 사고팔려는 사람이 많다는 뜻이라 더 단단해요.','박스 안에서는 지지 근처가 싸고, 저항 근처가 비싸요.'],
+   warn:'박스는 언젠가 깨져요. 어느 쪽으로 깨지는지가 다음 방향이에요.'},
+  {k:'breakout',k2:'fake',t:'3. 돌파는 거래량으로 확인',t1:'진짜 돌파 — 거래량 실림',t2:'가짜 돌파 — 거래량 없음',idea:_lxIdea('0,96 40,60 72,90 112,58 146,86 170,30 200,20 240,8','var(--up)',_lxHL(56,'#f6465d','저항')+'<rect x="164" y="104" width="12" height="24" fill="#e0a82e"/><rect x="40" y="118" width="10" height="10" fill="var(--faint)"/><rect x="110" y="116" width="10" height="12" fill="var(--faint)"/>'),
+   look:['저항을 넘는 날 거래량이 평소의 2~3배 이상이면 많은 사람이 동의한 돌파예요(그림의 노란 막대).','거래량 없이 살짝 넘은 돌파는 금방 다시 선 아래로 돌아오는 경우가 많아요.','돌파 뒤 며칠 동안 선 위에서 버티는지 보세요.'],
+   warn:'거래량이 없는 돌파에서 따라 사면 고점에 물리기 쉬워요.'},
+  {k:'retest',t:'4. 저항이 지지로 바뀐다',idea:_lxIdea('0,104 40,64 70,90 104,60 132,40 160,58 196,24 240,6','var(--up)',_lxHL(60,'var(--gold)','저항 → 지지')),
+   look:['한 번 뚫린 저항선은 다음에 <b>지지선</b> 역할을 해요.','돌파 뒤 그 선까지 되돌아와서 받치면(되돌림 지지) 비교적 안전한 매수 자리예요.','되돌림 때 거래량이 줄어들면 더 좋아요 — 파는 사람이 적다는 뜻이에요.'],
+   warn:'되돌림에서 선 아래로 종가가 내려가면 돌파 실패로 봐요.'},
+  {k:'golden',k2:'dead',t:'5. 이동평균선 교차 — 골든크로스·데드크로스',t1:'골든크로스 (20일선이 60일선 위로)',t2:'데드크로스 (20일선이 60일선 아래로)',idea:'<svg viewBox="0 0 240 130" style="width:100%;max-width:240px;height:auto;display:block;margin:0 auto"><polyline points="0,110 60,96 110,70 160,40 240,14" fill="none" stroke="#f0b90b" stroke-width="5" stroke-linecap="round"/><polyline points="0,70 80,74 140,64 240,46" fill="none" stroke="#a78bfa" stroke-width="5" stroke-linecap="round"/><circle cx="120" cy="66" r="9" fill="none" stroke="var(--up)" stroke-width="3"/></svg>',
+   look:['노랑 = 20일선(짧은 흐름), 보라 = 60일선(긴 흐름).','짧은 선이 긴 선을 위로 뚫으면 <b>골든크로스</b>, 아래로 뚫으면 <b>데드크로스</b>예요.','이미 많이 오른 뒤에 나오는 신호라 늦어요. 방향 확인용으로 써요.'],
+   warn:'횡보장에서는 교차가 자주 나와 헛신호가 많아요.'},
+  {k:'dbottom',t:'6. 쌍바닥 (W 모양)',idea:_lxIdea('0,10 44,104 90,50 140,104 186,50 240,12','var(--up)',_lxHL(48,'var(--gold)','목선',30,240)),
+   look:['비슷한 높이에서 두 번 받친 바닥 — 그 가격을 지키려는 매수세가 있다는 뜻이에요.','두 바닥 사이 가장 높은 곳을 이은 선이 <b>목선</b>. 목선을 넘어야 완성이에요.','둘째 바닥에서 거래량이 줄면 파는 힘이 약해진 신호예요.'],
+   warn:'목선을 넘기 전에는 아직 쌍바닥이 아니에요. 셋째 바닥으로 깨질 수도 있어요.'},
+  {k:'vp',t:'7. 매물대 — 거래가 많이 몰린 가격',idea:'<svg viewBox="0 0 240 130" style="width:100%;max-width:240px;height:auto;display:block;margin:0 auto"><rect x="170" y="20" width="20" height="12" fill="#4a9eff" opacity=".4"/><rect x="170" y="36" width="44" height="12" fill="#4a9eff" opacity=".5"/><rect x="170" y="52" width="66" height="12" fill="#4a9eff" opacity=".85"/><rect x="170" y="68" width="30" height="12" fill="#4a9eff" opacity=".45"/><rect x="170" y="84" width="14" height="12" fill="#4a9eff" opacity=".3"/><polyline points="0,20 40,30 80,44 110,58 130,60 160,34" fill="none" stroke="var(--up)" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+   look:['오른쪽 가로 막대가 <b>매물대</b> — 그 가격에서 거래가 얼마나 많았는지예요.','막대가 긴 가격은 많은 사람이 그 값에 샀다는 뜻이라, 위에서 내려오면 <b>지지</b>, 아래에서 올라가면 <b>저항</b>이 되기 쉬워요.','우리 추천의 <b>2차 매수가</b>가 바로 1차 아래 가장 큰 매물대예요.'],
+   warn:'매물대도 거래량 실린 하락에는 뚫려요.'},
+  {k:'rsi',t:'8. RSI — 너무 많이 빠졌나',idea:'<svg viewBox="0 0 240 130" style="width:100%;max-width:240px;height:auto;display:block;margin:0 auto"><rect x="0" y="34" width="240" height="56" fill="var(--line)" opacity=".4"/>'+_lxHL(34,'var(--faint)','70')+_lxHL(90,'var(--faint)','30')+'<polyline points="0,50 40,70 80,104 110,116 140,96 170,64 240,46" fill="none" stroke="#a78bfa" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+   look:['RSI는 최근 14일 동안 오른 힘과 내린 힘의 비율(0~100)이에요.','30 아래 = 너무 많이 빠짐(과매도), 70 위 = 너무 많이 오름(과매수).','30 아래로 내려갔다가 <b>다시 30 위로 올라오는 날</b>이 반등 확인이에요.'],
+   warn:'하락 추세에서는 RSI가 30 아래에 오래 머물 수 있어요. 내려간 것만 보고 사지 마세요.'},
+  {k:'breakdown',t:'9. 지지가 깨지면 — 손절 자리',idea:_lxIdea('0,40 36,70 70,44 106,72 140,46 176,74 204,108 240,124','var(--down)',_lxHL(72,'#4a9eff','지지')),
+   look:['오래 지켜 온 지지선을 거래량 실린 종가로 깨면 그 아래로 한 번 더 밀리는 경우가 많아요.','지지선 아래가 <b>손절 자리</b>예요. 미리 정해 두면 큰 손실을 막아요.','우리 추천의 손절가도 같은 생각 — 2차 매수가(매물대) 아래로 3ATR 더 내려가면 정리해요.'],
+   warn:'손절 뒤 다시 오르는 경우도 있어요. 그래도 규칙대로 하는 게 오래 살아남는 방법이에요.'}
+];
+function _lxCard(ex,title){ if(!ex)return '<div class="ltile" style="color:var(--faint)">예시를 아직 못 찾았어요</div>';
+  return '<div style="text-align:left">'+(title?'<div style="font-weight:800;font-size:13.5px;margin:2px 0 6px">'+title+'</div>':'')
+    +'<div style="font-size:12.5px;color:var(--sub);margin-bottom:6px"><b style="color:var(--ink);cursor:pointer;text-decoration:underline dotted" onclick="openStock(\''+ex.c+'\')">'+_lxEsc(ex.n)+'</b> · '+_lxDate(ex.from)+' ~ '+_lxDate(ex.to)+'</div>'
+    +_lxSVG(ex)+'<div style="font-size:12.5px;line-height:1.6;margin-top:7px;padding:8px 10px;border-radius:9px;background:var(--panel2)">👉 '+_lxEsc(ex.res)+'</div></div>'; }
+function _lxLesson(l,X){
+  var real=l.k2?_lxCard(X[l.k],l.t1)+'<div style="height:14px"></div>'+_lxCard(X[l.k2],l.t2):_lxCard(X[l.k]);
+  return '<div class="lcard"><h3>'+l.t+'</h3>'
+    +'<div style="display:grid;grid-template-columns:minmax(150px,240px) 1fr;gap:16px;align-items:center;margin:6px 0 14px" class="lx-top"><div class="ltile" style="padding:10px"><div style="font-size:10.5px;font-weight:800;color:var(--faint)">개념 그림</div>'+l.idea+'</div>'
+    +'<div><div style="font-size:12px;font-weight:800;color:var(--faint);margin-bottom:4px">🔍 이렇게 봐요</div><ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.75;color:var(--sub)">'+l.look.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul>'
+    +'<div style="font-size:12.5px;margin-top:6px;color:var(--sub)">⚠️ '+l.warn+'</div></div></div>'
+    +'<div style="font-size:12px;font-weight:800;color:var(--faint);margin-bottom:6px">📈 실제 종목에서</div>'+real+'</div>';
+}
+function _lxRuleTxt(key){ var a=(key||'ma20|s3|atr6').split('|'), m=a[0]==='ma60'?'60일선':'20일선', t=a[2]||'';
+  return { b1:m+' 부근. 지금 가격이 '+m+' 위면 '+m+'까지 눌릴 때 절반을 사요('+(a[0]==='ma60'?'현재가에서 3ATR':'현재가에서 1ATR')+'보다 깊게는 안 내려가요). '+m+' 아래면 현재가.', s:(a[1]||'s3').slice(1),
+    tg:t==='hi52'?'52주 고점. 닿으면 팔아요.':t==='vp'?'1차 위 가장 큰 매물대. 닿으면 팔아요.':t.indexOf('atr')===0?'1차에서 '+t.slice(3)+'ATR 위. 닿으면 팔아요.':'목표 없이 보유 기간 끝에 정리해요.' }; }
+function _lxToday(X,M){ var t=X.today; if(!t)return ''; var R=_lxRuleTxt((t.lv&&t.lv.rule)||X.rule);
+  var e=t.ex||{}, lv=t.lv||{}, pc=function(v){ return v==null?'—':Math.round(v*100)+'%'; }, sg=function(v){ return v==null?'—':(v>=0?'+':'')+(v*100).toFixed(1)+'%'; };
+  var b20=(e.band||[]).filter(function(b){return b[0]===20;})[0], b60=(e.band||[]).filter(function(b){return b[0]===60;})[0];
+  var rows=[['노랑·보라 선','20일선·60일선. 지금 가격이 어느 선 위에 있는지로 추세를 봐요.'],
+    ['오른쪽 막대','매물대. 가장 긴 막대 가격대에서 지지·저항이 생기기 쉬워요.'],
+    ['1차 '+_lxWon(lv.b1),R.b1],
+    ['2차 '+_lxWon(lv.b2),'1차 아래 가장 큰 매물대(없으면 1차에서 1.5ATR 아래). 더 빠지면 여기서 나머지 절반을 사요.'],
+    ['손절 '+_lxWon(lv.st),'2차에서 '+R.s+'ATR 아래. ATR = 하루 평균 움직임 폭이에요. 여기 닿으면 정리해요.'],
+    ['목표 '+_lxWon(lv.tg),R.tg],
+    ['노란 띠','앞으로 60거래일 예상 경로. 진한 띠 = 가운데 절반(25~75%), 옅은 띠 = 넓게(10~90%). 과거 비슷한 종목들이 실제로 움직인 범위예요.']];
+  return '<div class="lcard"><h3>10. 오늘 추천 1위 차트 읽기 — '+_lxEsc(t.n)+'</h3><p class="lead">'+_lxDate(t.date)+' 국장 추천 1위예요. 추천 화면에서 종목을 펼쳤을 때 나오는 가격들이 차트 어디에 있는지 같이 봐요.</p>'
+    +_lxSVG(t)
+    +'<div style="margin-top:10px;font-size:12.5px">'+rows.map(function(r){return '<div style="display:grid;grid-template-columns:118px 1fr;gap:10px;padding:7px 4px;border-top:1px solid var(--line2);text-align:left"><b>'+r[0]+'</b><span style="color:var(--sub);line-height:1.6">'+r[1]+'</span></div>';}).join('')+'</div>'
+    +'<div style="font-size:12.5px;line-height:1.7;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--panel2)"><b>📊 이대로면</b> — 예상 수익 <b>'+sg(e.ret)+'</b>(들어간 돈 기준) · 이긴 비율 '+pc(e.win)+' · 목표 도달 '+pc(e.hit)+' · 손절 '+pc(e.stop)+' · 보통 '+(e.day||'—')+'거래일'
+    +(b20?'<br>20거래일 뒤 가운데 범위 '+_lxWon(b20[2])+' ~ '+_lxWon(b20[4]):'')+(b60?' · 60거래일 뒤 '+_lxWon(b60[2])+' ~ '+_lxWon(b60[4]):'')
+    +'<br><span style="color:var(--faint);font-size:11.5px">매일 실제 가격이 이 띠 안(✓)·위(↑)·아래(↓) 어디 있는지 추천 화면에 표시돼요.</span></div>'
+    +'<div style="margin-top:10px"><span class="rulechip" style="cursor:pointer;background:var(--gold);color:#fff" onclick="showView(\'reco\')">📋 오늘 추천 전체 보기 →</span></div></div>';
+}
+function _lxRule(X,M){ var f=M&&M.rule&&M.rule.second, pc=function(v){ return v==null?'—':Math.round(v*100)+'%'; }, sg=function(v){ return v==null?'—':(v>=0?'+':'')+(v*100).toFixed(1)+'%'; };
+  return '<div class="lcard"><h3>11. 규칙대로 하면 실제로 어떻게 되나</h3><p class="lead">같은 1차·2차·손절·목표 규칙을 과거 차트에 그대로 적용한 두 장면이에요. 하나는 목표에 닿았고, 하나는 손절됐어요. <b>손절도 규칙의 일부</b>예요.</p>'
+    +_lxCard(X.ruleHit,'✅ 목표 도달')+'<div style="height:14px"></div>'+_lxCard(X.ruleStop,'⛔ 손절')
+    +(f?'<div style="font-size:12.5px;line-height:1.7;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--panel2)">과거 2년 추천 종목 '+(f.n||0).toLocaleString()+'건에 이 규칙을 적용한 평균: 수익 <b>'+sg(f.ret)+'</b> · 이긴 비율 '+pc(f.win)+' · 목표 도달 '+pc(f.hit)+' · 손절 '+pc(f.stop)+' · 보통 '+f.day+'거래일. 열 번 중 두 번쯤은 손절돼요.</div>':'')+'</div>';
+}
+function learnReal(){
+  if(_LX)return _lxBody(_LX,_LXM);
+  var el=$('#learnBody');
+  Promise.all([fetch('feeds/learn-examples.json?t='+Date.now()).then(function(r){return r.json();}),fetch('feeds/levels-model.json?t='+Date.now()).then(function(r){return r.json();}).catch(function(){return null;})])
+    .then(function(a){ _LX=a[0]; _LXM=a[1]; if(_learnTab==='real'&&el)el.innerHTML=_lxBody(_LX,_LXM); })
+    .catch(function(){ if(_learnTab==='real'&&el)el.innerHTML='<div class="lcard">예시 자료를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>'; });
+  return '<div class="lcard" style="color:var(--faint)">실제 차트 예시 불러오는 중…</div>';
+}
+function _lxBody(X,M){
+  return '<div class="lcard"><h3>📊 실전 차트 분석</h3><p class="lead">개념마다 <b>모양 그림</b>으로 먼저 보고, 바로 아래 <b>실제 종목 차트</b>에서 같은 장면을 찾아봐요. 1~9는 차트 분석 전반, 10~11은 우리 추천을 읽는 법이에요.</p>'
+    +'<div style="font-size:12px;color:var(--sub);line-height:1.7">차트 보는 법: 빨강 = 오른 날, 파랑 = 내린 날 · <b style="color:#f0b90b">노랑 선</b> = 20일선 · <b style="color:#a78bfa">보라 선</b> = 60일선 · 아래 막대 = 거래량(<b style="color:#e0a82e">노란 막대</b> = 주목할 날) · 종목 이름을 누르면 지금 차트로 가요.</div>'
+    +'<div style="font-size:11.5px;color:var(--faint);margin-top:6px">예시는 시가총액 상위 300종목의 최근 2년 차트에서 개념에 딱 맞는 장면을 골라 온 거예요. 결과를 알고 고른 교과서 장면이라, 같은 모양이 늘 같은 결과로 끝나지는 않아요. 매주 토요일 새로 골라요'+(X.updated?' · '+X.updated.slice(0,10)+' 기준':'')+'.</div></div>'
+    +LX_LESSONS.map(function(l){ return _lxLesson(l,X); }).join('')+_lxToday(X,M)+_lxRule(X,M);
+}
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
-  var fn={basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  var fn={real:learnReal,basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
   el.innerHTML=fn();
 }
 window.renderLearn=renderLearn;
