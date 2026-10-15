@@ -156,6 +156,24 @@ async function evaluate() {
     items[c] = { s: sd, n: i - st + 1, now, r: r == null ? null : +(r * 100).toFixed(2), m: m == null ? null : +(m * 100).toFixed(2), h, p: pos[c] || undefined };
   }
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-codes-us.json' : 'feeds/track-codes.json'), JSON.stringify({ updated: out.updated, last: lastTd, items }));
+
+  // 추천일별 변동 — 사이트 '추천 변동' 화면 (2026-10-15 사용자 요청: 투자 안 해도 추천한 날 종가 대비 지금 얼마나 변했는지)
+  //   추천일 종가 → 최근 종가 (위 r 은 다음 날 시가 매수 기준이라 다름). mkt = 같은 날 거래 활발 종목 평균(같은 기간)
+  //   i = [코드, 이름, 점수, 추천일 종가, 최근 종가, 변동%, TOP10 여부(, 미장 티커, 거래소)] 점수 높은 순
+  const names = {}, tick = {}; // 미장은 사이트에서 종목 열 때 티커·거래소가 필요 → i 뒤에 [티커, 거래소]
+  try { if (US) Object.entries(JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/stock-scores-us.json'), 'utf8')).items).forEach(([tk, it]) => { if (it[14]) { names[it[14]] = it[12] || tk; tick[it[14]] = [tk, it[13] || '']; } });
+    else JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/stock-list.json'), 'utf8')).forEach((x) => { names[x[0]] = x[1]; }); } catch { /* 이름 없으면 코드로 */ }
+  const closeTo = (c, d) => { const a = cs.get(c) || [], i = a.findIndex((v) => v[0] === d); if (i < 0 || !a.length) return null; return [a[i][4], a[a.length - 1][4]]; };
+  const hist = days.slice(-60).reverse().map(([d, x]) => {
+    const top = new Set(x.t || []);
+    const rows = x.b.map((b) => { const p = closeTo(b[0], d), p0 = p ? p[0] : b[6], p1 = p ? p[1] : null;
+      return [b[0], names[b[0]] || b[0], b[1], p0, p1, p0 && p1 != null ? +((p1 / p0 - 1) * 100).toFixed(2) : null, top.has(b[0]) ? 1 : 0].concat(US ? tick[b[0]] || [b[0].replace(/\..*$/, ''), ''] : []); })
+      .sort((p, q) => q[2] - p[2] || (q[6] - p[6]));
+    const um = mean(x.u.map((c) => { const p = closeTo(c, d); return p && p[0] ? p[1] / p[0] - 1 : null; }).filter((v) => v != null));
+    const k0 = td.indexOf(d);
+    return { d, e: k0 < 0 ? null : td.length - 1 - k0, mkt: um == null ? null : +(um * 100).toFixed(2), i: rows };
+  });
+  fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-days-us.json' : 'feeds/track-days.json'), JSON.stringify({ updated: out.updated, last: lastTd, days: hist }));
   fs.writeFileSync(path.join(ROOT, US ? 'feeds/track-summary-us.json' : 'feeds/track-summary.json'), JSON.stringify(out));
   console.log(`기록 ${days.length}일 (${out.start}~) · ` + HS.map((H) => `${H}일 결과 ${agg['h' + H].n}건`).join(' · '));
 }

@@ -1470,6 +1470,54 @@ function renderReco(){
   if(typeof initCards==='function')setTimeout(initCards,0);
 }
 window._recoSet=function(k,v){ if(k==='sort'||k==='show'||k==='liq')v=+v; if(k==='liq')v=!!v; if(k==='m'&&_recoF.m!==v){ _recoF.mk='all'; _recoF.sort=0; _recoOpen=null; } _recoF[k]=v; if(k!=='show')_recoF.show=50; renderReco(); };
+/* 추천 변동 — 추천했던 날 종가 대비 지금 얼마나 변했는지, 추천일별로 (feeds/track-days*.json — scripts/track.mjs eval, 2026-10-15 사용자 요청) */
+var _RH={m:'KR',open:null,show:{}}, _RHD={};
+function renderRecoHist(){
+  var el=$('#recoHist'); if(!el)return; var US=_RH.m==='US', k=_RH.m, j=_RHD[k];
+  var tabs='<div style="display:flex;gap:6px;margin-bottom:12px">'+[['KR','🇰🇷 국장'],['US','🇺🇸 미장']].map(function(o){ var on=_RH.m===o[0];
+    return '<button onclick="_rhSet(\'m\',\''+o[0]+'\')" style="border:1px solid '+(on?'#2b6cff':'var(--line2)')+';border-radius:10px;padding:8px 18px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:var(--panel2);color:var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</div>';
+  if(j===undefined){ _RHD[k]=null; el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">불러오는 중…</div></div>';
+    _loadJ('feeds/track-days'+(US?'-us':'')+'.json').then(function(r){ _RHD[k]=r||false; if(_RH.m===k)renderRecoHist(); }); return; }
+  if(j===null){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">불러오는 중…</div></div>'; return; }
+  if(!j||!j.days||!j.days.length){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">아직 기록이 없어요 · 추천이 갱신될 때 함께 쌓여요</div></div>'; return; }
+  var Mo=function(v){ return v==null?'—':US?_usd(v):(+v).toLocaleString(); };
+  var P=function(v,b){ return v==null?'<span style="color:var(--faint)">—</span>':'<'+(b?'b':'span')+' class="'+(v>=0?'up':'down')+'">'+(v>=0?'+':'')+v.toFixed(2)+'%</'+(b?'b':'span')+'>'; };
+  var WD='일월화수목금토';
+  if(_RH.open==null){ var f=j.days.filter(function(x){return x.e>0;})[0]; _RH.open=f?f.d:j.days[0].d; }
+  var cards=j.days.map(function(x){
+    var rs=x.i.map(function(r){return r[5];}).filter(function(v){return v!=null;}), avg=rs.length?rs.reduce(function(a,b){return a+b;},0)/rs.length:null;
+    var up=rs.filter(function(v){return v>0;}).length, beat=x.mkt==null?null:rs.filter(function(v){return v>x.mkt;}).length;
+    var t10=x.i.filter(function(r){return r[6]&&r[5]!=null;}), tav=t10.length?t10.reduce(function(a,r){return a+r[5];},0)/t10.length:null;
+    var dt=new Date(+x.d.slice(0,4),+x.d.slice(4,6)-1,+x.d.slice(6,8)), on=_RH.open===x.d, today=!x.e;
+    var head='<div onclick="_rhSet(\'open\',\''+x.d+'\')" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 14px;cursor:pointer">'
+      +'<b style="font-size:15px;min-width:92px">'+(on?'▾ ':'▸ ')+_vsDate(x.d)+'('+WD[dt.getDay()]+') 추천</b>'
+      +(today?'<span style="font-size:12.5px;color:var(--faint)">오늘 추천 — 변동은 다음 거래일부터</span>'
+        :'<span style="font-size:12.5px;color:var(--sub)">'+x.e+'거래일 지남</span>'
+         +'<span style="font-size:13px">추천 '+x.i.length+'종목 평균 '+P(avg,1)+'</span>'
+         +(tav!=null?'<span style="font-size:13px">TOP10 '+P(tav,1)+'</span>':'')
+         +'<span style="font-size:13px;color:var(--sub)">시장 평균 '+P(x.mkt)+'</span>'
+         +'<span style="font-size:12.5px;color:var(--sub)">오른 종목 '+up+'/'+rs.length+(beat!=null?' · 시장보다 나음 '+beat+'/'+rs.length:'')+'</span>')+'</div>';
+    if(!on)return '<div class="card" style="margin-bottom:8px;padding:0">'+head+'</div>';
+    var n=_RH.show[x.d]||30, list=x.i.slice(0,n);
+    var rows=list.map(function(r,ix){
+      var op=US?'openStock(\''+(r[7]||r[0])+'\',{n:\''+esc(r[1]).replace(/'/g,'')+'\',mk:\''+(r[8]||'')+'\'})':'openStock(\''+r[0]+'\')';
+      var ex=r[5]==null||x.mkt==null||today?null:+(r[5]-x.mkt).toFixed(2);
+      return '<tr onclick="'+op+'" style="cursor:pointer;border-top:1px solid var(--line2)"><td style="padding:6px 4px;color:var(--faint);text-align:right">'+(ix+1)+'</td>'
+        +'<td style="padding:6px 4px;text-align:left"><b>'+esc(r[1])+'</b>'+(r[6]?' <span style="font-size:10px;font-weight:800;color:#2b6cff;border:1px solid #2b6cff;border-radius:5px;padding:0 4px">TOP10</span>':'')+'</td>'
+        +'<td style="padding:6px 4px;text-align:center;font-weight:800;color:#2ebd85">'+r[2]+'</td>'
+        +'<td style="padding:6px 4px;text-align:right">'+Mo(r[3])+'</td><td style="padding:6px 4px;text-align:right">'+(today?'—':Mo(r[4]))+'</td>'
+        +'<td style="padding:6px 4px;text-align:right">'+(today?'—':P(r[5],1))+'</td><td style="padding:6px 4px;text-align:right">'+P(ex)+'</td></tr>'; }).join('');
+    return '<div class="card" style="margin-bottom:8px;padding:0">'+head+'<div style="padding:0 14px 12px;overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap">'
+      +'<thead><tr style="font-size:11.5px;color:var(--faint)"><th></th><th style="text-align:left;padding:4px">종목</th><th style="padding:4px">점수</th><th style="text-align:right;padding:4px">추천일 종가</th><th style="text-align:right;padding:4px">지금('+_vsDate(j.last)+')</th><th style="text-align:right;padding:4px">변동</th><th style="text-align:right;padding:4px">시장 대비</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +(x.i.length>n?'<button class="tf" onclick="event.stopPropagation();_rhMore(\''+x.d+'\')" style="width:100%;margin-top:8px">더 보기 ('+(x.i.length-n)+'종목 남음)</button>':'')+'</div></div>'; }).join('');
+  el.innerHTML=tabs+'<div class="card" style="margin-bottom:10px"><div class="ch"><h2>🗓 추천했던 종목 변동</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.last)+' 종가 기준</span></div></div>'
+    +'<div class="pad" style="padding-top:4px;font-size:12px;color:var(--sub)">그날 추천한 종목을 <b>추천일 종가에 샀다고 치면</b> 지금 얼마인지예요. 시장 평균 = 같은 날 거래 활발 종목 전체의 같은 기간 변동 · 시장 대비 = 변동 − 시장 평균 · 날짜를 누르면 펼쳐지고 종목을 누르면 상세로 가요.'
+    +(US?'':' · 10/8·10/12 은 거래대금 5억↑ 기준 추천(10/13부터 50억↑·하락 추세 제외)이라 종목 수가 많아요.')+'</div></div>'+cards
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px">교육용 기록이며 매매 신호가 아닙니다 · 수수료·세금 미반영 · 최근 60개 추천일 · '+(US?'화~토 아침 7시':'평일 16:40')+' 추천 갱신 때 함께 갱신</div>';
+  if(typeof initCards==='function')setTimeout(initCards,0);
+}
+window._rhSet=function(k,v){ if(k==='open')v=_RH.open===v?'':v; if(k==='m'&&_RH.m!==v)_RH.open=null; _RH[k]=v; renderRecoHist(); };
+window._rhMore=function(d){ _RH.show[d]=(_RH.show[d]||30)+50; renderRecoHist(); };
 /* ═══════════ 추천 — 종목 펼침 (이유·수급·매수/손절 가격·차트·매물대·섹터·성장률·뉴스) ═══════════
    자료: feeds/stock-detail.json(수급 비율·업종·재무, 매일) · stock-news.json(종목 뉴스, 매일) · industries.json(업종 등락, 장중 30분)
          + 워커 일봉(차트·매물대·가격 계산, 지금 시세) */
@@ -2059,6 +2107,7 @@ function showView(v,noScroll){
   if(v==='watch')renderWatch();
   if(v==='learn')renderLearn();
   if(v==='reco')renderReco();
+  if(v==='recohist')renderRecoHist();
   if(v==='events'){ if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
   if(v==='brief'){ if(typeof renderBriefBoard==='function')renderBriefBoard('#briefPanel'); if(typeof renderBriefing==='function')renderBriefing(); renderMainNews(); }
   if(v==='market')renderHeatmap();
