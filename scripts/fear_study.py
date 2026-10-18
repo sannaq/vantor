@@ -194,6 +194,11 @@ def main():
         hy = fred('BAMLH0A0HYM2')
     except Exception:  # noqa: BLE001
         hy = []
+    if not hy:  # FRED 가 Actions 에서 막히면 지난 값을 그대로 쓴다
+        try:
+            hy = [tuple(x) for x in json.load(open(os.path.join(ROOT, 'feeds/fear-study.json'))).get('hyTrend') or []]
+        except Exception:  # noqa: BLE001
+            hy = []
     vix_s = vix
     # 미장: 그날 장 마감 지수와 그날 공포탐욕(장 마감 값)을 같이 본다. 국장: 미국 전날 값.
     sig_spx_fg = same_or_before(fg_s, [d for d, _ in spx])
@@ -212,7 +217,7 @@ def main():
         },
         'fgTrend': [[d, round(v, 1)] for d, v in fg_s[-260:]],
         'vixTrend': [[d, round(v, 2)] for d, v in vix_s[-260:]],
-        'hyTrend': [[d, v] for d, v in hy[-520:]],
+        'hyTrend': [[d, v] for d, v in hy[-520:]],  # 21줄 차이(hy20)는 이 목록으로 계산
         'fgFrom': fg0,
         'spxFg': bucket_study(spx, sig_spx_fg, FNG_B, since=fg0),
         'ksFg': bucket_study(ks, sig_ks_fg, FNG_B, since=fg0),
