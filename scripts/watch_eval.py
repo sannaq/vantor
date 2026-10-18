@@ -6,6 +6,8 @@
   실적 when=A(장 마감 후, 기본)는 다음 거래일 종가/그날 종가, when=B(장 전)는 그날 종가/전날 종가.
 - feeds/claims.json 의 checks: 기간이 끝나면 적중·빗나감, 진행 중이면 지금까지 값을 쓴다.
 뉴스는 30분마다 바뀌어 사라지므로 한 번 모은 제목은 지우지 않고 쌓는다(일정당 8개까지).
+- 뉴스 자동 수집(2026-10-18 사용자 결정 '나'): WATCH 인물 이름 + 따옴표·발언 낱말이 든 기사 제목을 feeds/claims-auto.json 에 쌓고,
+  낱말 사전으로 낙관·비관을 나눠 20거래일 뒤 지수(한국 인물 = 코스피, 그 밖 = S&P500) 방향으로 채점한다. 자동 분류라 틀릴 수 있다.
 --news-only: 뉴스만 모은다(news.yml, 30분). 기본: 뉴스 + 시세 채점(events.yml, 매일 아침).
 """
 import json, os, sys, time, urllib.request
@@ -166,12 +168,90 @@ def check(c, today):
     return {'st': 'nodata'}
 
 
+# 지켜볼 인물: [표시 이름, 시장(KR=코스피·US=S&P500), 제목에서 찾을 낱말들]
+WATCH = [
+    ['폴 튜더 존스', 'US', ['튜더 존스', 'Tudor Jones']], ['워런 버핏', 'US', ['버핏', 'Buffett']], ['제이미 다이먼', 'US', ['다이먼', 'Dimon']],
+    ['스탠리 드러켄밀러', 'US', ['드러켄밀러', 'Druckenmiller']], ['레이 달리오', 'US', ['달리오', 'Dalio']], ['캐시 우드', 'US', ['캐시 우드', 'Cathie Wood']],
+    ['빌 애크먼', 'US', ['애크먼', 'Ackman']], ['마이클 버리', 'US', ['마이클 버리', 'Burry']], ['제러미 시겔', 'US', ['시겔', 'Siegel']],
+    ['톰 리', 'US', ['톰 리', 'Tom Lee']], ['마이크 윌슨(모건스탠리)', 'US', ['마이크 윌슨', 'Mike Wilson']], ['데이비드 코스틴(골드만)', 'US', ['코스틴', 'Kostin']],
+    ['제롬 파월', 'US', ['파월', 'Powell']], ['연준 의장', 'US', ['연준 의장', 'Fed Chair']], ['스콧 베센트', 'US', ['베센트', 'Bessent']],
+    ['젠슨 황', 'US', ['젠슨 황', 'Jensen Huang']], ['일론 머스크', 'US', ['머스크', 'Musk']], ['래리 핑크', 'US', ['래리 핑크', 'Larry Fink']],
+    ['이창용', 'KR', ['이창용']], ['신현송', 'KR', ['신현송']],
+]
+SAY = ['"', '“', '”', "'", '‘', '’', '말했', '밝혔', '전망', '경고', '예상', '예측', '주장', 'says', 'said', 'warns', 'predicts', 'sees', 'expects', 'thinks', 'believes']
+BULL = ['랠리', '상승', '강세', '반등', '기회', '매수', '낙관', '호황', '오른다', '사라', '저점', '바닥', 'rally', 'bull', 'buy', 'upside', 'record high', 'optimis', 'opportunity', 'soar', 'boom']
+BEAR = ['하락', '약세', '경고', '위기', '침체', '버블', '거품', '폭락', '조정', '하방', '우려', '매도', '최악', '비관', '위험', '팔아', 'bear', 'crash', 'recession', 'bubble', 'warn', 'downside', 'correction', 'sell', 'risk', 'worst', 'plunge', 'pessimis']
+
+
+def tone(t):
+    lo = t.lower()
+    b = sum(1 for w in BULL if w.lower() in lo)
+    r = sum(1 for w in BEAR if w.lower() in lo)
+    return 1 if b > r else -1 if r > b else 0
+
+
+def auto_collect(now):
+    """news-all.json → claims-auto.json (쌓기만, 지우지 않음)"""
+    A = load('feeds/claims-auto.json', {'v': 1, 'items': []})
+    have = {x['link'] for x in A['items']}
+    nw = load('feeds/news-all.json')
+    for k in ('USKO', 'KR', 'US'):
+        for n in nw.get(k) or []:
+            ti = n.get('title', '')
+            ko = any('가' <= ch <= '힣' for ch in ti)
+            say = SAY if ko else ['"', '“', ' says', ' said', ' warns', ' predicts', ' sees ', ' expects', ' thinks', ' believes']  # 영어 제목의 ' 는 소유격이라 뺀다
+            if n.get('link') in have or not any(w in ti or w in ti.lower() for w in say):
+                continue
+            for nm, mk, kws in WATCH:
+                if any(w.lower() in ti.lower() for w in kws):
+                    d = datetime.fromtimestamp(n['t'] / 1000, KST).strftime('%Y-%m-%d')
+                    if sum(1 for x in A['items'] if x['who'] == nm and x['d'] == d) >= 3:  # 같은 사람·같은 날 3개까지
+                        break
+                    A['items'].append({'d': d, 'who': nm, 'mk': mk, 'title': ti, 'link': n['link'], 'src': n.get('src'), 'tone': tone(ti)})
+                    have.add(n['link'])
+                    break
+    A['items'].sort(key=lambda x: x['d'], reverse=True)
+    A['updated'] = now.strftime('%Y-%m-%d %H:%M')
+    return A
+
+
+def auto_eval(A, H=20):
+    """낙관(+1)·비관(−1) 기사: 기사 날짜 종가(국장은 다음 거래일 기준 없이 그날·직전 종가) → H 거래일 뒤 지수 방향으로 채점"""
+    for x in A['items']:
+        if x.get('st') in ('hit', 'miss') or not x.get('tone'):
+            continue
+        px = yahoo('^KS11' if x['mk'] == 'KR' else '^GSPC')
+        i = idx_of(px, x['d'])
+        if i is None:
+            continue
+        if i + H < len(px):
+            r = px[i + H][1] / px[i][1] - 1
+            x['r'] = round(r * 100, 2)
+            x['st'] = 'hit' if r * x['tone'] > 0 else 'miss'
+        else:
+            x['r'] = round((px[-1][1] / px[i][1] - 1) * 100, 2)
+            x['st'] = 'wait'
+            x['left'] = i + H - (len(px) - 1)
+    sc = {}
+    for x in A['items']:
+        s = sc.setdefault(x['who'], {'n': 0, 'hit': 0, 'miss': 0, 'bull': 0, 'bear': 0})
+        s['n'] += 1
+        if x.get('tone') == 1:
+            s['bull'] += 1
+        elif x.get('tone') == -1:
+            s['bear'] += 1
+        if x.get('st') in ('hit', 'miss'):
+            s[x['st']] += 1
+    A['who'] = sc
+    return A
+
+
 def main():
     now = datetime.now(KST)
     today = now.date()
     cal, cl = load('feeds/calendar.json'), load('feeds/claims.json')
     old = load('feeds/watch-eval.json', {'cal': {}, 'claims': {}})
-    res = {'v': 1, 'updated': now.strftime('%Y-%m-%d %H:%M'), 'cal': old.get('cal', {}), 'claims': old.get('claims', {}), 'earn': old.get('earn', {})}
+    res = {'v': 1, 'updated': now.strftime('%Y-%m-%d %H:%M'), 'cal': old.get('cal', {}), 'claims': old.get('claims', {}), 'earn': old.get('earn', {}), 'who': old.get('who', {})}
     # ① 캘린더 일정
     for w in cal.get('weeks', []):
         for d, items in w.get('days', {}).items():
@@ -215,6 +295,11 @@ def main():
                     s[r['st']] += 1
         res['who'] = score
     json.dump(res, open(os.path.join(ROOT, 'feeds/watch-eval.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    A = auto_collect(now)
+    if not NEWS_ONLY:
+        A = auto_eval(A)
+    json.dump(A, open(os.path.join(ROOT, 'feeds/claims-auto.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    print('자동 발언', len(A['items']), '건')
     print('캘린더', len(res['cal']), '· 실적 반응', len(res['earn']), '· 전망', {k: v for k, v in (res.get('who') or {}).items()})
 
 

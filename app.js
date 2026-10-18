@@ -4576,7 +4576,7 @@ function renderHomeEvents(){ var el=document.getElementById('homeEvents'); if(!e
 var _WC=null, _wcWk=null;
 var WC_CAT={ev:['주요 이벤트','#f6465d','rgba(246,70,93,.12)'],pol:['정책/통화','#d39a12','rgba(240,185,11,.16)'],data:['지표','#1f9d63','rgba(46,189,133,.14)'],earn:['실적','#2b7fd9','rgba(74,158,255,.14)'],talk:['발언','#9a6bff','rgba(167,139,250,.16)']};
 function _wcLoad(){ if(_WC)return; _WC={};
-  Promise.all([_loadJ('feeds/calendar.json'),_loadJ('feeds/claims.json'),_loadJ('feeds/watch-eval.json')]).then(function(a){ _WC={cal:a[0],cl:a[1],ev:a[2]||{}}; renderWeekCal(); }); }
+  Promise.all([_loadJ('feeds/calendar.json'),_loadJ('feeds/claims.json'),_loadJ('feeds/watch-eval.json'),_loadJ('feeds/claims-auto.json')]).then(function(a){ _WC={cal:a[0],cl:a[1],ev:a[2]||{},au:a[3]}; renderWeekCal(); }); }
 function _wcSg(v,u){ return v==null?'—':'<span class="'+(v>0?'up':v<0?'down':'')+'" style="font-weight:700">'+(v>0?'+':'')+v.toFixed(2)+(u||'%')+'</span>'; }
 function _wcMD(d){ var t=new Date(d+'T00:00:00'); return (t.getMonth()+1)+'/'+t.getDate()+'('+'일월화수목금토'[t.getDay()]+')'; }
 window._wcSet=function(i){ _wcWk=i; renderWeekCal(); };
@@ -4612,6 +4612,22 @@ function renderWeekCal(){
     +'<div style="font-size:11px;color:var(--faint);margin-top:8px">시간은 미국 기준 · 지난 일정은 [결과]를 누르면 관련 기사와 주가 반응이 나와요(기사는 30분마다, 반응은 매일 아침 모아요). 아래 \'이번주 증시 이벤트\'는 자동 수집 경제지표예요.</div></div></div>'
     +renderClaims();
 }
+/* 뉴스에서 자동으로 모은 발언 (scripts/watch_eval.py auto_collect → feeds/claims-auto.json). 낙관·비관은 낱말 분류, 20거래일 뒤 지수 방향으로 채점 */
+var _auWho='all', _auN=20;
+window._auSet=function(k,v){ if(k==='who'){ _auWho=v; _auN=20; } else _auN+=30; renderWeekCal(); };
+function _claimsAuto(){ var A=_WC&&_WC.au; if(!A||!A.items||!A.items.length)return '<div style="font-size:12px;color:var(--faint);margin-top:8px">🤖 뉴스 자동 수집: 아직 모인 발언이 없어요. 30분마다 기사를 훑어요.</div>';
+  var W=A.who||{}, names=Object.keys(W).sort(function(a,b){ return W[b].n-W[a].n; });
+  var TN={'1':['낙관','var(--up)'],'-1':['비관','var(--down)'],'0':['중립','var(--faint)']}, ST={hit:'✓ 맞음',miss:'✗ 틀림',wait:'⏳'};
+  var list=A.items.filter(function(x){ return _auWho==='all'||x.who===_auWho; });
+  var chips='<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 8px"><button class="tf" onclick="_auSet(\'who\',\'all\')" style="'+(_auWho==='all'?'background:#2b6cff;color:#fff;border-color:transparent':'')+'">전체 '+A.items.length+'</button>'
+    +names.map(function(n){ var w=W[n], sc=w.hit+w.miss; return '<button class="tf" onclick="_auSet(\'who\',\''+n.replace(/'/g,'')+'\')" style="'+(_auWho===n?'background:#2b6cff;color:#fff;border-color:transparent':'')+'">'+_bbEsc(n)+' '+w.n+(sc?' · 적중 '+Math.round(w.hit/sc*100)+'%':'')+'</button>'; }).join('')+'</div>';
+  var rows=list.slice(0,_auN).map(function(x){ var t=TN[String(x.tone||0)];
+    return '<div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line2);flex-wrap:wrap"><b style="min-width:44px;color:var(--faint);font-weight:600">'+x.d.slice(5).replace('-','/')+'</b><b style="min-width:84px">'+_bbEsc(x.who)+'</b>'
+      +'<span style="font-size:11px;font-weight:800;color:'+t[1]+';min-width:28px">'+t[0]+'</span><a href="'+_bbEsc(x.link)+'" target="_blank" rel="noopener" style="flex:1;min-width:200px;color:var(--ink);text-decoration:none">'+_bbEsc(x.title)+' <small style="color:var(--faint)">'+_bbEsc(x.src||'')+'</small></a>'
+      +(x.tone?'<span style="font-size:11.5px;white-space:nowrap;color:'+(x.st==='hit'?'var(--up)':x.st==='miss'?'var(--down)':'var(--sub)')+'">'+(ST[x.st]||'⏳')+' '+(x.r!=null?(x.mk==='KR'?'코스피 ':'S&P ')+(x.r>0?'+':'')+x.r+'%':'')+(x.st==='wait'&&x.left?' · '+x.left+'일 남음':'')+'</span>':'')+'</div>'; }).join('');
+  return '<div style="margin-top:14px;border-top:1px dashed var(--line2);padding-top:10px"><div style="font-weight:800;font-size:13.5px">🤖 뉴스에서 자동으로 모은 발언</div>'
+    +'<div style="font-size:11.5px;color:var(--faint);line-height:1.6;margin-top:2px">유명 투자자·연준·재무장관·빅테크 CEO 이름과 발언(따옴표·"말했다"·says 등)이 들어간 기사 제목을 30분마다 모아요. 제목 낱말로 낙관·비관을 나누고, 20거래일 뒤 지수(한국 인물은 코스피, 그 밖은 S&P500)가 그 방향이면 ✓예요. <b>제목만 보고 자동으로 나눈 거라 틀릴 수 있어요</b> — 중립은 채점하지 않아요.</div>'
+    +chips+rows+(list.length>_auN?'<button class="tf" onclick="_auSet(\'n\')" style="width:100%;margin-top:6px">더 보기 ('+(list.length-_auN)+')</button>':'')+'</div>'; }
 function renderClaims(){ var CL=_WC&&_WC.cl, R=(_WC&&_WC.ev&&_WC.ev.claims)||{}, WHO=(_WC&&_WC.ev&&_WC.ev.who)||{}; if(!CL||!CL.items||!CL.items.length)return '';
   var ST={hit:['✓ 적중','var(--up)'],miss:['✗ 빗나감','var(--down)'],wait:['⏳ 진행 중','var(--gold)'],nodata:['— 자료 없음','var(--faint)']};
   var cards=CL.items.slice().sort(function(a,b){return a.d<b.d?1:-1;}).map(function(it){ var rs=R[it.id]||[], sc=WHO[it.who];
@@ -4624,7 +4640,7 @@ function renderClaims(){ var CL=_WC&&_WC.cl, R=(_WC&&_WC.ev&&_WC.ev.claims)||{},
         return '<div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line2);flex-wrap:wrap"><b style="color:'+s[1]+';min-width:78px">'+s[0]+'</b><span style="flex:1;min-width:180px">'+_bbEsc(c.q)+'<br><small style="color:var(--faint)">'+_bbEsc(c.how)+'</small></span><span style="font-size:12px;color:var(--sub)">'+_bbEsc(r.txt||'')+'</span></div>'; }).join('')+'</div>'
       +(sc&&(sc.hit+sc.miss)?'<div style="font-size:11.5px;color:var(--faint);margin-top:4px">'+_bbEsc(it.who)+' 지금까지 적중 '+sc.hit+' / 채점 '+(sc.hit+sc.miss)+'</div>':'')+'</div>'; }).join('');
   return '<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🎤 전망·발언 기록 & 평가</h2><div class="r"><span style="font-size:11px;color:var(--faint)">기한이 되면 실제 시세로 자동 채점</span></div></div><div class="pad" style="padding-top:6px">'
-    +'<div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">유명 투자자·방송이 말한 전망을 모아 두고, 확인할 수 있는 주장은 <b>언제 무엇이 되면 맞은 건지</b> 미리 정해 기한이 되면 S&P500·코스피·VIX 실제 값으로 채점해요. 매일 아침 갱신.</div>'+cards+'</div></div>'; }
+    +'<div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">유명 투자자·방송이 말한 전망을 모아 두고, 확인할 수 있는 주장은 <b>언제 무엇이 되면 맞은 건지</b> 미리 정해 기한이 되면 S&P500·코스피·VIX 실제 값으로 채점해요. 매일 아침 갱신.</div>'+cards+_claimsAuto()+'</div></div>'; }
 window.renderHomeEvents=renderHomeEvents;
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); };
