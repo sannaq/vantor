@@ -1,0 +1,39 @@
+name: 시장 심리·전망 채점 (매일)
+
+# 매일 아침 미국장 마감 뒤: 공포탐욕지수(CNN)·VIX·하이일드 스프레드 지금 값과 구간별 검증 → feeds/fear-study.json (scripts/fear_study.py)
+# 위클리 캘린더 지난 일정의 주가 반응·전망 기록 채점 → feeds/watch-eval.json (scripts/watch_eval.py)
+# 국면별 '우리 추천' 성적(picks)은 매달 backtest.yml 이 다시 계산하고, 여기서는 지난 값을 유지한다. (2026-10-18)
+on:
+  schedule:
+    - cron: "20 21 * * *"   # 매일 06:20 KST
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fear-study
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 공포·탐욕 연구
+        run: python3 scripts/fear_study.py -q
+      - name: 캘린더·전망 채점
+        run: python3 scripts/watch_eval.py
+      - name: 결과 올리기
+        run: |
+          git add feeds/fear-study.json feeds/watch-eval.json
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git config user.name "github-actions[bot]"; git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
+            commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 시장 심리·전망 채점"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1

@@ -213,6 +213,25 @@ def spy_warn(p):
             f'⚠ <b>하락장 주의</b> — S&amp;P500(SPY ${s["px"]:,.2f})이 200일선(${s["ma200"]:,.2f})보다 {abs(s["gap"])}% 아래 · 모멘텀 종목 급반전 주의 (점수는 그대로)</div>')
 
 
+def fear_line(p):
+    """시장 심리 한 줄 (feeds/fear-study.json, scripts/fear_study.py 매일 아침) — 공포탐욕지수 + 과거 같은 구간 추천 60일 성적 (2026-10-18)"""
+    try:
+        with open(os.path.join(ROOT, "feeds/fear-study.json"), encoding="utf-8") as f:
+            j = json.load(f)
+        n = j["now"]
+        v = n["fg"]
+        k = 0 if v < 25 else 1 if v < 45 else 2 if v < 55 else 3
+        g = (j.get("picks") or {}).get("us60" if US else "kr60", {}).get("fg", [None] * 4)[k]
+    except Exception:
+        return ""
+    c = DN if v < 25 else "#f0b90b" if v < 45 else "#c6cfdb" if v < 55 else UP
+    tip = " · 과거엔 대체로 기회였지만 더 빠진 적도 있어 <b>나눠 사기</b>" if v < 25 else " · 과열 구간 → 새로 사는 크기 줄이기" if v >= 75 else ""
+    past = f' · 과거 3년 같은 구간 추천 60일 뒤 평균 <b>{g["pick"]:+.1f}%</b> (시장 {g["mkt"]:+.1f}%, {g["n"]}주)' if g and g.get("n") else ""
+    hy = f' · 하이일드 스프레드 {n["hy"]:.2f}%' if n.get("hy") is not None else ""
+    return (f'<div style="margin-top:12px;padding:10px 14px;border:1px solid {c};border-radius:12px;font-size:13px">'
+            f'😱 시장 심리 — 공포탐욕지수 <b style="color:{c}">{round(v)} {n["zone"]}</b> (지난주 {round(n["fgPrev1w"])}) · VIX {n["vix"]:.1f}{hy}{past}{tip}</div>')
+
+
 def cmp_note(p):
     d = (p.get("prev") or {}).get("date")
     return f"순위 변화는 {int(d[4:6])}/{int(d[6:8])} 대비 · " if d else ""
@@ -231,7 +250,7 @@ def build(p):
 <div class="hd"><h1>🧭 {day} {title}</h1><div class="src">{src}<br>{uni}</div></div>
 <div class="dist"><div>추천 ({p["cut"]["buy"]}점↑)<b style="color:{UP}">{dist["추천"]:,}</b></div><div>중립<b style="color:#f0b90b">{dist["중립"]:,}</b></div>
 <div>매수 금지 ({p["cut"]["ban"]}점 미만)<b style="color:{DN}">{dist["매수 금지"]:,}</b></div><div>평점 기준 (백테스트로 고름)<b style="font-size:13px;line-height:1.5;color:#c6cfdb">{rule}</b></div></div>
-{spy_warn(p)}<div class="book">
+{spy_warn(p)}{fear_line(p)}<div class="book">
 <div class="pg"><h2><span style="color:{UP}">📈 추천 상위 {len(p["top"])}</span><small>{cmp_note(p)}{liq} {p["liquidN"]:,}종목 중</small></h2>
 {"".join(brow(x, i + 1) for i, x in enumerate(p["top"]))}</div>
 <div class="pg"><h2><span style="color:{DN}">📉 매수 금지 하위 {len(p["weak"])}</span><small>점수 낮은 순 · 약한 이유</small></h2>

@@ -28,15 +28,18 @@ jobs:
         with:
           node-version: "20"
       - name: 백테스트
-        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs && node scripts/audit_backtest.mjs
+        run: mkdir -p /tmp/fear-dump && BT_DUMP=/tmp/fear-dump/kr20.json node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 BT_DUMP=/tmp/fear-dump/kr60.json node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs && node scripts/audit_backtest.mjs
       - name: 미장 백테스트 (미장 공식, 캐시 따로)
         env:
           MKT: US
           BT_CACHE: /tmp/vantor-bt3-us
-        run: node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs
+        run: BT_DUMP=/tmp/fear-dump/us20.json node scripts/backtest.mjs --refresh && node scripts/backtest_levels.mjs && BT_H=60 BT_DUMP=/tmp/fear-dump/us60.json node scripts/backtest.mjs && BT_H=60 node scripts/backtest_levels.mjs
+      - name: 공포·탐욕 국면별 추천 성적 (feeds/fear-study.json picks — 위 백테스트의 날짜별 성적으로)
+        continue-on-error: true
+        run: FEAR_DUMP=/tmp/fear-dump python3 scripts/fear_study.py -q
       - name: 결과 올리기
         run: |
-          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json feeds/backtest-audit.json feeds/backtest-us.json feeds/backtest-levels-us.json feeds/backtest-us-60.json feeds/backtest-levels-us-60.json
+          git add feeds/backtest.json feeds/backtest-levels.json feeds/backtest-60.json feeds/backtest-levels-60.json feeds/backtest-audit.json feeds/backtest-us.json feeds/backtest-levels-us.json feeds/backtest-us-60.json feeds/backtest-levels-us-60.json feeds/fear-study.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898099+github-actions[bot]@users.noreply.github.com"  # pull --rebase 도 커밋을 만든다
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \

@@ -126,6 +126,9 @@ for (const dt of evalDates) {
   byDate.set(dt, arr);
 }
 const dates = [...byDate.keys()].sort();
+if (process.env.BT_DUMP) { // 날짜별 묶음 성적(국면 연구용, scripts/fear_study.mjs 가 읽음): [날짜, 시장 평균 f20, 추천 f20, 매수 금지 f20, 시장 f5, 추천 f5]
+  fs.writeFileSync(process.env.BT_DUMP, JSON.stringify(dates.map((d) => { const a = byDate.get(d), g = (v, k) => mean(a.filter((o) => o.r.view === v).map((o) => o[k]));
+    return [d, +mean(a.map((o) => o.f20)).toFixed(5), +g('추천', 'f20').toFixed(5), +g('매수 금지', 'f20').toFixed(5), +mean(a.map((o) => o.f5)).toFixed(5), +g('추천', 'f5').toFixed(5)]; }))); }
 const nObs = dates.reduce((s, d) => s + byDate.get(d).length, 0);
 console.log(`평가일 ${dates.length}개 (${dates[0]} ~ ${dates[dates.length - 1]}) · 관측 ${nObs.toLocaleString()}건`);
 

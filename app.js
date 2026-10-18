@@ -1439,7 +1439,7 @@ function renderReco(){
     Promise.all([_loadVScores(),_loadStockList(),_loadJ('feeds/backtest.json'),_loadJ('feeds/backtest-60.json'),_loadJ('feeds/backtest-levels-60.json'),_loadJ('feeds/track-summary.json'),_loadJ('feeds/backtest-audit.json')]).then(function(a){ _BT=a[2]; _BT60=a[3]; _BTL60=a[4]; _TRK=a[5]; _AUD=a[6]; if(_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">추천 자료를 불러오지 못했어요 · 평일 16:40에 갱신돼요</div></div>'; }); return; }
   if(US&&!_VSCU){ el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 불러오는 중…</div></div>';
     Promise.all([_loadVScoresUS(),_loadJ('feeds/backtest-us.json'),_loadJ('feeds/backtest-us-60.json'),_loadJ('feeds/backtest-levels-us-60.json'),_loadJ('feeds/track-summary-us.json'),_loadJ('feeds/backtest-levels-us.json')]).then(function(a){ _US={bt:a[1],bt60:a[2],btl60:a[3],trk:a[4],btl:a[5]}; if(!_recoUS())return; if(a[0])renderReco(); else el.innerHTML=tabs+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px">미장 추천 자료를 불러오지 못했어요 · 화~토 아침 7시에 갱신돼요</div></div>'; }); return; }
-  _tcLoad(US);
+  _tcLoad(US); if(!_FS)_fsLoad(function(j){ if(j)renderReco(); });
   var j=_recoSc(), all=_recoRows(j), cut=(j.bp&&j.bp.cut)||{}, minTv=US?0.1:5, SORTS=US?_RECO_SORTS_US:_RECO_SORTS;
   var pool=all.filter(function(x){ return (F.mk==='all'||x.mk===F.mk)&&(!F.liq||(x.tv==null||x.tv>=(US?minTv:50))&&(US||x.ref.indexOf('하락 추세')<0)); }); // 국장: 50억↑·하락 추세 제외 (2026-10-13)
   var dist={'추천':0,'중립':0,'매수 금지':0}; pool.forEach(function(x){ dist[x.view]=(dist[x.view]||0)+1; });
@@ -1457,7 +1457,7 @@ function renderReco(){
   var formula=US?'1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30';
   var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};
   el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
-    +'<div class="pad" style="padding-top:6px">'+_tcSummary(D.trk)+_recoBook(US)+bar
+    +'<div class="pad" style="padding-top:6px">'+_fsLine(US)+_tcSummary(D.trk)+_recoBook(US)+bar
     +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
     +(US&&j.spy&&j.spy.below?'<div style="font-size:12.5px;color:var(--ink);margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid #f6465d;background:rgba(246,70,93,.08)">⚠ <b>하락장 주의</b> — S&amp;P500(SPY '+_usd(j.spy.px)+')이 200일선('+_usd(j.spy.ma200)+')보다 '+Math.abs(j.spy.gap)+'% 아래예요. 모멘텀 종목은 하락장에서 한꺼번에 급반전할 수 있어요. 점수는 그대로예요(3년 중 이런 구간이 13주뿐이라 검증 근거 부족).</div>':'')
     +(US&&j.spy&&!j.spy.below?'<div style="font-size:11.5px;color:var(--faint);margin:2px 0">시장 국면: S&amp;P500이 200일선 위('+(j.spy.gap>=0?'+':'')+j.spy.gap+'%) — 정상</div>':'')
@@ -2060,6 +2060,7 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
     if(nw&&nw.KR){ T.push(tile('news','📰','뉴스 <small>'+E(String(nw.updated||'').slice(11))+'</small>',nw.KR.slice(0,4).map(function(n){ return '<div class="gl-n">'+E(n.title)+'</div>'; }).join(''))); }
     T.push('<div class="gl-t" data-gv="watch" id="gl-watch"></div>');
     T.push(tile('ai','🤖','차트 분석 도우미','<div class="gl-s" style="white-space:normal">종목·코인을 입력하거나 차트 사진을 올리면 지지·저항·추세를 읽어 줘요</div>'));
+    if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('learn','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>',' data-gl="fear"')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
     T.push(tile('learn','📚','스터디','<div class="gl-s" style="white-space:normal">차트·지표·수급 기초부터 차근차근</div>'));
     el.innerHTML='<style>#glance .gl-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:1100px){#glance .gl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#glance .gl-g{grid-template-columns:1fr}}'
       +'#glance .gl-t{border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card,transparent);min-width:0}#glance .gl-t:hover{border-color:var(--gold)}'
@@ -2069,7 +2070,7 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
       +'#glance .gl-n{font-size:12px;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub)}</style>'
       +'<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🧭 한눈에 보기</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">누르면 해당 화면으로</span></div></div><div class="pad" style="padding-top:6px"><div class="gl-g">'+T.join('')+'</div></div></div>';
     _glLive();
-    $$('#glance .gl-t').forEach(function(t){ t.onclick=function(){ if(t.dataset.gus&&typeof _recoF!=='undefined'){ try{ _recoF.m='US'; }catch(e){} } showView(t.dataset.gv); }; });
+    $$('#glance .gl-t').forEach(function(t){ t.onclick=function(){ if(t.dataset.gus&&typeof _recoF!=='undefined'){ try{ _recoF.m='US'; }catch(e){} } showView(t.dataset.gv); if(t.dataset.gl){ var lb=document.querySelector('#ltabs button[data-l='+t.dataset.gl+']'); if(lb)lb.click(); } }; });
   });
 }
 /* 실시간 타일 — 레이더(RADAR)·종목(KBOARD 거래대금 상위)·스마트머니(SMART)·관심(WATCH) */
@@ -2108,7 +2109,7 @@ function showView(v,noScroll){
   if(v==='learn')renderLearn();
   if(v==='reco')renderReco();
   if(v==='recohist')renderRecoHist();
-  if(v==='events'){ if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
+  if(v==='events'){ renderWeekCal(); if(typeof _ECAL!=='undefined'&&_ECAL)renderEconCal('#eventsPanel'); else if(typeof _loadEcal==='function')_loadEcal(); }
   if(v==='brief'){ if(typeof renderBriefBoard==='function')renderBriefBoard('#briefPanel'); if(typeof renderBriefing==='function')renderBriefing(); renderMainNews(); }
   if(v==='market')renderHeatmap();
   if(v==='ai'&&typeof mountHomeAsk==='function')mountHomeAsk('#aiAsk','stock');
@@ -3893,6 +3894,8 @@ var LAB_LEARN=[
   ['🔁','목표가에 팔면 돈이 더 빨리 돌아요','한 종목만 보면 끝까지 들고 있는 게 더 벌 때도 있지만, 목표가에 팔고 다음 종목으로 넘어가면 같은 기간에 돈이 더 일했어요(회전).'],
   ['🇺🇸','미장은 다르게 움직여요','국장 공식을 미장에 그대로 쓰면 추천이 시장보다 못했어요. 미장은 "1년 상승세(최근 한 달 제외) + 흑자"가 통했어요. 시장마다 따로 검증해야 해요.'],
   ['🔥','1년에 3배 넘게 오른 종목은 조심','평균은 좋아 보여도 중간값은 시장보다 −5%p, 나쁜 5%는 −40~−53%였어요. 그래서 미장 추천에 "⚠ 과열 주의"를 붙여요.'],
+  ['😱','극단적 공포는 평균적으로 기회, 그래도 나눠서','공포탐욕지수 10 미만이던 날 S&P500을 샀다면 60일 뒤 평균 +11.5%로 아무 날(+3.5%)보다 훨씬 나았어요. 하지만 VIX 30 첫 돌파 22번 중 10번은 60일 뒤에도 더 빠져 있었어요(2008년 −25%). 공포 구간에선 한 번에 말고 나눠 사요. 자세한 건 😱 공포·탐욕 탭.'],
+  ['🧭','시장 심리는 "언제", 공식은 "무엇을"','공포 구간에 낸 추천도 시장보다 나았어요(국장 60일 +12.6% vs 시장 +8.3%). 종목 고르는 공식은 국면과 상관없이 통해서 그대로 두고, 공포탐욕은 사는 시기·크기를 정하는 데만 써요.'],
   ['📉','좋은 공식도 몇 달씩 안 맞아요','3년 검증을 통과한 공식도 최근 3달은 20일 성적이 마이너스였어요. 그래서 실제 추천 성과를 매일 기록하고, 규칙은 매주 다시 검증해요.']];
 var LAB_TIPS=[
   ['🎯','사기 전에 손절가부터','얼마에 살지보다 어디서 틀렸다고 인정할지를 먼저 정해요. 들어간 뒤에는 기준이 흐려져요.'],
@@ -3914,9 +3917,84 @@ function learnLab(){
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">주의: 대상이 지금 살아남은 대형주라 전체적으로 좋게 나오고(오른 비율·평균이 높음), 2년간 강세장이었어요. 횟수가 500번 아래인 신호는 우연일 수 있어요. 매주 토요일 다시 계산해요'+(_LX.updated?' · '+_LX.updated.slice(0,10)+' 기준':'')+'.</div></div>'
     +'<div class="lcard"><h3>💡 실전 꿀팁</h3><p class="lead">위 검증과 매매 규칙을 만들면서 정리한 습관이에요.</p>'+_labRows(LAB_TIPS)+'</div>';
 }
+/* ═══ 😱 공포·탐욕 — 시장 심리 지표 요약 + 직접 검증(feeds/fear-study.json, scripts/fear_study.py) (2026-10-18) ═══ */
+var _FS=null;
+function _fsLoad(cb){ if(_FS){ cb&&cb(_FS); return; } _loadJ('feeds/fear-study.json').then(function(j){ _FS=j; cb&&cb(j); }); }
+function _fsZoneKey(v){ return v<25?0:v<45?1:v<55?2:3; } // picks.fg 행 순서: 극단적 공포·공포·중립·탐욕(55↑)
+function _fsColor(v){ return v<25?'#f6465d':v<45?'#f0b90b':v<55?'var(--sub)':'#2ebd85'; }
+/* 추천 화면·홈 공용 한 줄: 지금 심리 + 과거 같은 구간에서 우리 추천 60일 성적 */
+function _fsLine(US){ var j=_FS; if(!j||!j.now)return '';
+  var n=j.now, pk=j.picks&&j.picks[US?'us60':'kr60'], g=pk&&pk.fg&&pk.fg[_fsZoneKey(n.fg)], sg=function(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; };
+  var tip=n.fg<25?'과거엔 대체로 기회였지만 더 빠진 적도 있어요 → <b>한 번에 사지 말고 나눠서</b>':n.fg>=75?'과열 구간 → 새로 사는 크기는 줄이기':'';
+  return '<div style="font-size:12.5px;line-height:1.7;margin:6px 0 10px;padding:9px 12px;border-radius:10px;border:1px solid '+(n.fg<25?'#f6465d':'var(--line2)')+';background:'+(n.fg<25?'rgba(246,70,93,.07)':'var(--panel2)')+'">'
+    +'<b>😱 시장 심리</b> — 공포탐욕지수 <b style="color:'+_fsColor(n.fg)+'">'+Math.round(n.fg)+' '+n.zone+'</b> <span style="color:var(--faint)">(지난주 '+Math.round(n.fgPrev1w)+')</span> · VIX <b>'+n.vix.toFixed(1)+'</b> · 하이일드 스프레드 <b>'+(n.hy==null?'—':n.hy.toFixed(2)+'%')+'</b>'
+    +(g&&g.n?'<br>과거 3년 같은 구간에 낸 '+(US?'미장':'국장')+' 추천: 60거래일 뒤 평균 <b class="'+(g.pick>=0?'up':'down')+'">'+sg(g.pick)+'</b> (시장 '+sg(g.mkt)+', '+g.n+'주)':'')
+    +(tip?' · '+tip:'')+' <span style="cursor:pointer;color:var(--gold);white-space:nowrap" onclick="_fsOpen()">자세히 →</span></div>'; }
+function _fsOpen(){ showView('learn'); var b=document.querySelector('#ltabs button[data-l=fear]'); if(b)b.click(); }
+function _fsSpark(s,o){ if(!s||s.length<2)return ''; var W=o.w||520,H=o.h||120,P=26, v=s.map(function(x){return x[1];}), lo=o.lo!=null?o.lo:Math.min.apply(null,v), hi=o.hi!=null?o.hi:Math.max.apply(null,v); if(hi===lo)hi=lo+1;
+  var X=function(i){ return P+i*(W-P-6)/(s.length-1); }, Y=function(y){ return 6+(hi-y)*(H-22)/(hi-lo); };
+  var bands=(o.bands||[]).map(function(b){ var y1=Y(Math.min(hi,b[1])), y0=Y(Math.max(lo,b[0])); return '<rect x="'+P+'" y="'+y1+'" width="'+(W-P-6)+'" height="'+Math.max(0,y0-y1)+'" fill="'+b[2]+'" opacity=".13"/>'; }).join('');
+  var lines=(o.lines||[]).map(function(l){ return '<line x1="'+P+'" x2="'+(W-6)+'" y1="'+Y(l[0])+'" y2="'+Y(l[0])+'" stroke="'+l[1]+'" stroke-dasharray="4 3"/><text x="'+(W-8)+'" y="'+(Y(l[0])-3)+'" text-anchor="end" font-size="10" fill="'+l[1]+'">'+l[2]+'</text>'; }).join('');
+  var path=s.map(function(x,i){ return (i?'L':'M')+X(i).toFixed(1)+' '+Y(x[1]).toFixed(1); }).join('');
+  var tk=[0,Math.floor(s.length/2),s.length-1].map(function(i){ return '<text x="'+X(i)+'" y="'+(H-3)+'" font-size="10" fill="var(--faint)" text-anchor="'+(i?(i===s.length-1?'end':'middle'):'start')+'">'+String(s[i][0]).slice(2,7).replace('-','.')+'</text>'; }).join('');
+  var last=s[s.length-1];
+  return '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;height:auto;display:block">'+bands+lines
+    +'<text x="2" y="'+(Y(hi)+8)+'" font-size="10" fill="var(--faint)">'+hi+'</text><text x="2" y="'+Y(lo)+'" font-size="10" fill="var(--faint)">'+lo+'</text>'
+    +'<path d="'+path+'" fill="none" stroke="'+(o.c||'#2b6cff')+'" stroke-width="1.6"/><circle cx="'+X(s.length-1)+'" cy="'+Y(last[1])+'" r="3.5" fill="'+(o.c||'#2b6cff')+'"/>'+tk+'</svg>'; }
+function _fsTable(rows,cols){ var c=function(x,k){ if(!x)return '<td>—</td>'; var v=x[k]; return '<td style="padding:6px">'+(k==='up'?v+'%':k==='n'?x.n.toLocaleString()+' <span style="color:var(--faint)">('+x.ep+'번)</span>':'<span class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+v+'%</span>')+'</td>'; };
+  var base=rows[rows.length-1];
+  return '<div style="overflow-x:auto"><table style="width:100%;min-width:560px;font-size:12.5px;border-collapse:collapse"><thead><tr style="color:var(--faint);font-size:11.5px"><th style="text-align:left;padding:6px">구간</th><th>날 수 (묶음)</th><th>20일 뒤 평균</th><th>60일 뒤 평균</th><th>60일 뒤 오른 비율</th><th>60일 뒤 나쁜 10%</th></tr></thead><tbody>'
+    +rows.map(function(r){ var b=r===base, hot=!b&&r.h60&&base.h60&&r.h60.avg>base.h60.avg+1; return '<tr style="border-top:1px solid var(--line2)'+(b?';color:var(--faint)':'')+'"><td style="text-align:left;padding:6px;font-weight:700">'+r.nm+(hot?' ✓':'')+'</td>'+c(r.h20,'n')+c(r.h20,'avg')+c(r.h60,'avg')+c(r.h60,'up')+c(r.h60,'p10')+'</tr>'; }).join('')+'</tbody></table></div>'; }
+function _fsPicks(p){ if(!p)return '<div style="color:var(--faint)">추천 검증 자료가 아직 없어요.</div>';
+  var sg=function(v){ return '<span class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+v.toFixed(1)+'%</span>'; };
+  var tb=function(k,nm){ var x=p[k]; if(!x)return ''; return '<tr style="border-top:1px solid var(--line2)"><td colspan="5" style="text-align:left;padding:8px 6px 4px;font-weight:800">'+nm+' <span style="color:var(--faint);font-weight:400">'+x.from.slice(2,7).replace('-','.')+'~'+x.to.slice(2,7).replace('-','.')+'</span></td></tr>'
+    +x.fg.concat([x.all]).map(function(r){ return r.n?'<tr><td style="text-align:left;padding:5px 6px'+(r.nm==='전체'?';color:var(--faint)':'')+'">'+(r.nm==='전체'?'전체(아무 주)':r.nm)+'</td><td>'+r.n+'주</td><td>'+sg(r.mkt)+'</td><td style="font-weight:800">'+sg(r.pick)+'</td><td>'+sg(r.ex)+'p · 이긴 주 '+r.win+'%</td></tr>':''; }).join(''); };
+  return '<div style="overflow-x:auto"><table style="width:100%;min-width:560px;font-size:12.5px;border-collapse:collapse"><thead><tr style="color:var(--faint);font-size:11.5px"><th style="text-align:left;padding:6px">그 주의 공포탐욕</th><th>횟수</th><th>시장 평균</th><th>우리 추천</th><th>차이</th></tr></thead><tbody>'
+    +tb('kr60','🇰🇷 국장 추천 · 60거래일 뒤')+tb('us60','🇺🇸 미장 추천 · 60거래일 뒤')+tb('kr20','🇰🇷 국장 추천 · 20거래일 뒤')+tb('us20','🇺🇸 미장 추천 · 20거래일 뒤')+'</tbody></table></div>'; }
+var FS_SUM=[ // 2026-10-18 방진호 님이 보낸 '소몽카페' 라이브 슬라이드 5장 요약
+  ['🚨','증시 리스크 경계 모드 진입 (단기 유의)','VIX(앞으로 한 달 변동성에 거는 값)가 20을 넘었어요. 보통 20 = 주의, 30 = 공포로 봐요. 26년 3월 미-이란 전쟁 때는 30까지 갔어요. "당분간 고변동이 본격화될 수 있다"는 신호예요.'],
+  ['📉','위기 선행지표, 하이일드 스프레드 박스권 돌파','신용이 낮은 회사채 금리가 국채보다 얼마나 높은지(하이일드 스프레드)가 3.2% 박스를 뚫고 3.3%가 됐어요. 돈 빌리기 어려워진다는 뜻이라 위기를 먼저 알려 주는 지표예요. 25년 3월 관세 쇼크(4.5%↑), 26년 3월 미-이란 쇼크 때 올랐고, 이번엔 코어위브발 AI 자금 조달 우려가 원인으로 꼽혀요.'],
+  ['😱','공포탐욕지수 18 — 하반기 첫 극단적 공포','CNN 공포탐욕지수가 지난주 46(중립)에서 18(극단적 공포)로 떨어졌어요(10/17 아침 기준). 25 아래가 극단적 공포예요. 이런 구간은 1년에 1~2번 와요(25년 10월, 26년 3~4월, 26년 10월).'],
+  ['💎','"10 이하는 절호의 기회" — 극단적 공포는 지나고 보면 기회','역대 가장 낮았던 날: ① 1 — 2020.3.23 코로나 ② 2 — 2008.9.17 금융위기 ③ 3 — 2020.3.12 코로나 ④ 4 — 2025.4.5 관세 전쟁 ⑤ 5 — 2008.9.29·2008.10.10·2011.8.8(미국 신용등급 강등)·2022.6.16 ⑨ 6 — 2018.12.24 미중 무역전쟁·2020.3.16. 지나고 보면 대부분 좋은 매수 자리였다는 주장이에요.'],
+  ['🏦','공포지수 한 자리일 때 연금·절세 계좌로 매수','상반기 1번, 하반기 1번쯤 오는 기회라 장기·절세 계좌(연금저축·IRP)에서 미국 지수 ETF를 사거나, 적립식 금액을 늘리는 방법을 권해요. 예: TIGER 미국S&P500(360750, 올해 +3.6%, 고점 대비 −11.6%), KODEX 미국S&P500(379800), TIGER 미국나스닥100(133690, 올해 +8.4%, −15.4%), KODEX 미국나스닥100(379810), ACE 미국S&P500(360200) 등(10/18 기준).']];
+function learnFear(){
+  if(!_FS){ _fsLoad(function(){ if(_learnTab==='fear'){ var el=$('#learnBody'); if(el)el.innerHTML=_FS?learnFear():'<div class="lcard">자료를 불러오지 못했어요. 잠시 뒤 다시 열어 주세요.</div>'; } }); return '<div class="lcard" style="color:var(--faint)">불러오는 중…</div>'; }
+  var j=_FS, n=j.now, sg=function(v){ return v==null?'—':'<span class="'+(v>0?'up':v<0?'down':'')+'">'+(v>0?'+':'')+v+'%</span>'; };
+  var ev=function(a,nm){ return '<div style="overflow-x:auto"><table style="width:100%;min-width:480px;font-size:12.5px;border-collapse:collapse"><thead><tr style="color:var(--faint);font-size:11.5px"><th style="text-align:left;padding:6px">'+nm+'</th><th>그날 값</th><th>20일 뒤</th><th>60일 뒤</th><th>그 뒤 60일 안 최저</th></tr></thead><tbody>'
+    +a.map(function(e){ return '<tr style="border-top:1px solid var(--line2)"><td style="text-align:left;padding:5px 6px">'+e.d+'</td><td>'+e.v+'</td><td>'+sg(e.r20)+'</td><td style="font-weight:800">'+sg(e.r60)+'</td><td>'+sg(e.dd)+'</td></tr>'; }).join('')+'</tbody></table></div>'; };
+  var vx=j.spxVixEvents||[], vxBad=vx.filter(function(e){return e.r60!=null&&e.r60<0;}).length, sp=j.spxFg, ks=j.ksFg, pk=j.picks||{};
+  var a10=sp[0].h60, ka=ks[0].h60, kr60=pk.kr60&&pk.kr60.fg[0], us60=pk.us60&&pk.us60.fg[0], kr20=pk.kr20&&pk.kr20.fg[0];
+  var LEARN=[
+    ['✓','극단적 공포는 평균적으로 좋은 매수 자리였어요','공포탐욕지수 10 미만이던 날 S&P500을 샀으면 60거래일 뒤 평균 +'+a10.avg+'%, '+a10.up+'%가 올랐어요(아무 날: 평균 +'+sp[sp.length-1].h60.avg+'%, '+sp[sp.length-1].h60.up+'%). 코스피도 60일 뒤 평균 '+ka.avg+'%였어요. 다만 2020.9 이후 6년 자료이고 묶음은 '+a10.ep+'번뿐이에요.'],
+    ['⚠','하지만 늘 바로 오르진 않아요','VIX가 30을 처음 넘은 날 '+vx.length+'번(1990~) 중 '+vxBad+'번은 60일 뒤에도 더 빠져 있었어요. 2008년 9월은 −25%, 2020년 2월은 그 뒤 −25%까지 더 빠졌어요. 공포가 "시작"된 날보다 이미 깊어진 뒤가 나았어요.'],
+    ['🪜','그래서 한 번에 말고 나눠서','슬라이드 말처럼 적립식·분할 매수가 맞는 방법이에요. 공포 구간에 들어오면 나눠 사기 시작하고, 더 빠지면 더 사는 식으로요. 연금·절세 계좌처럼 오래 묻어 둘 돈이 이 전략에 맞아요.'],
+    ['🧭','종목 고르는 공식은 그대로 둬요',(kr60?'공포탐욕 25 미만인 주에 낸 국장 추천은 60일 뒤 평균 '+kr60.pick+'%(시장 '+kr60.mkt+'%), ':'')+(us60?'미장 추천은 '+us60.pick+'%(시장 '+us60.mkt+'%)였어요. ':'')+'공포 구간에도 추천이 시장보다 나았어요. 다만 20일로 보면 국장 차이가 '+(kr20?kr20.ex:'—')+'%p로 거의 없고, 횟수도 17~18주라 공식을 바꿀 근거는 부족해요. 공포탐욕은 "무엇을"이 아니라 <b>"언제·얼마나"</b>를 정하는 데 써요.'],
+    ['🔥','반대로 극단적 탐욕(75↑)은 조심','코스피는 공포탐욕 75 이상이던 날 산 경우 60일 뒤 평균 '+ks[5].h60.avg+'%(아무 날 '+ks[ks.length-1].h60.avg+'%), S&P500도 '+sp[5].h60.avg+'%로 평균보다 낮았어요.']];
+  var now='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:6px">'
+    +[['공포탐욕지수 (CNN)',Math.round(n.fg),n.zone+' · 지난주 '+Math.round(n.fgPrev1w)+' · 한 달 전 '+Math.round(n.fgPrev1m),_fsColor(n.fg)],
+      ['VIX',n.vix.toFixed(1),'20 주의 · 30 공포 · '+n.vixDate.slice(5).replace('-','/')+' 마감',n.vix>=30?'#f6465d':n.vix>=20?'#f0b90b':'var(--ink)'],
+      ['하이일드 스프레드',n.hy==null?'—':n.hy.toFixed(2)+'%','20일 '+(n.hy20>=0?'+':'')+n.hy20+'%p · 3.2% 위면 경계',n.hy>=3.2?'#f0b90b':'var(--ink)']].map(function(t){
+      return '<div style="border:1px solid var(--line2);border-radius:12px;padding:10px 12px"><div style="font-size:12px;color:var(--sub)">'+t[0]+'</div><div style="font-size:26px;font-weight:900;color:'+t[3]+'">'+t[1]+'</div><div style="font-size:11.5px;color:var(--faint)">'+t[2]+'</div></div>'; }).join('')+'</div>';
+  return '<div class="lcard"><h3>😱 공포·탐욕 — 시장 심리 지표</h3><p class="lead">방진호 님이 보낸 라이브 슬라이드 5장을 요약하고, 그 주장이 맞는지 과거 자료로 직접 확인했어요. 지금 값은 매일 아침 갱신돼요.</p>'+now
+    +'<div style="margin-top:12px">'+_fsSpark(j.fgTrend,{lo:0,hi:100,c:'#2b6cff',bands:[[0,25,'#f6465d'],[75,100,'#2ebd85']],lines:[[25,'#f6465d','25 극단적 공포'],[10,'#f6465d','10']]})+'<div style="font-size:11.5px;color:var(--faint);text-align:center">공포탐욕지수 최근 1년</div></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:8px"><div>'+_fsSpark(j.vixTrend,{c:'#e0a82e',lines:[[20,'#f0b90b','20 주의'],[30,'#f6465d','30 공포']]})+'<div style="font-size:11.5px;color:var(--faint);text-align:center">VIX 최근 1년</div></div>'
+    +'<div>'+_fsSpark(j.hyTrend,{c:'#a78bfa',lines:[[3.2,'#f0b90b','3.2 박스 상단']]})+'<div style="font-size:11.5px;color:var(--faint);text-align:center">하이일드 스프레드 최근 2년 (%)</div></div></div></div>'
+    +'<div class="lcard"><h3>📝 슬라이드 요약</h3>'+_labRows(FS_SUM)+'</div>'
+    +'<div class="lcard"><h3>🧪 직접 검증 — VANTOR가 배운 것</h3>'+_labRows(LEARN)+'</div>'
+    +'<div class="lcard"><h3>📐 공포탐욕지수 구간별, 그날 샀다면</h3><p class="lead">'+j.fgFrom.slice(0,7).replace('-','.')+' 이후 매일의 공포탐욕지수로 나눠, 그날 종가에 지수를 샀을 때 20·60거래일 뒤 결과예요. 국장은 미국 전날 값을 보고 다음 날 산 걸로 쳤어요. (묶음) = 20거래일 넘게 떨어진 별개 구간 수예요. ✓ = 60일 평균이 아무 날보다 1%p 넘게 나은 구간.</p>'
+    +'<b style="font-size:13px">🇺🇸 S&P500</b>'+_fsTable(sp)+'<div style="height:10px"></div><b style="font-size:13px">🇰🇷 코스피</b>'+_fsTable(ks)
+    +'<div style="font-size:11.5px;color:var(--faint);margin-top:6px">코스피는 25~26년 큰 상승장이 섞여 60일 숫자가 크게 나와요. 공포탐욕 과거 자료는 CNN 이 주는 2020.9 이후만 있어요.</div></div>'
+    +'<div class="lcard"><h3>📐 VIX 구간별 (1990년부터, 36년)</h3><p class="lead">더 긴 자료로 같은 질문을 해 봤어요. VIX 30 이상이던 날 산 경우 평균은 좋았지만, 나쁜 10%는 여전히 크게 빠졌어요.</p>'
+    +'<b style="font-size:13px">🇺🇸 S&P500</b>'+_fsTable(j.spxVix)+'<div style="height:10px"></div><b style="font-size:13px">🇰🇷 코스피 (2000년부터)</b>'+_fsTable(j.ksVix)+'</div>'
+    +'<div class="lcard"><h3>📅 사건별로 보기</h3><p class="lead">구간 평균에 가려진 개별 사건이에요. 공포탐욕 25 아래로 "처음" 들어간 날(직전 60거래일 안에 없던 경우)과 VIX가 30을 처음 넘은 날이에요.</p>'
+    +ev(j.spxEvents,'S&P500 · 공포탐욕 25 아래 첫날')+'<div style="height:10px"></div>'+ev(j.ksEvents,'코스피 · (미국 다음 날)')+'<div style="height:10px"></div>'+ev(vx,'S&P500 · VIX 30 첫 돌파')+'</div>'
+    +'<div class="lcard"><h3>🧭 우리 추천에 적용 — 공포 구간에도 통했나</h3><p class="lead">3년 백테스트의 매주 추천을 그 주 공포탐욕지수로 나눴어요. 시장 평균 = 그 주 거래 활발한 종목 전체 평균.</p>'+_fsPicks(pk)
+    +'<div style="font-size:12.5px;line-height:1.7;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--panel2)"><b>적용한 것</b> — 추천 공식은 그대로 두고, 추천 화면과 디스코드 추천 이미지 위에 <b>지금 시장 심리 + 과거 같은 구간에서 우리 추천 성적</b>을 한 줄로 보여 줘요. 극단적 공포(25 미만)면 "나눠서 사기", 극단적 탐욕(75 이상)이면 "크기 줄이기"를 같이 띄워요. 추천 성적 표는 매달 1일 백테스트 때 다시 계산해요.</div>'
+    +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">한계: 공포탐욕 과거 자료가 6년뿐이고, 극단적 공포 구간은 몇 번 되지 않아요. 지나간 결과이고 앞으로도 그렇다는 보장은 없어요 · 갱신 '+esc(j.updated)+'</div></div>';
+}
 function renderLearn(){
   var el=$('#learnBody'); if(!el) return;
-  var fn={lab:learnLab,real:learnReal,basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
+  var fn={fear:learnFear,lab:learnLab,real:learnReal,basic:learnBasic,candle:learnCandle,pattern:learnPattern,struct:learnStruct,ind:learnInd,tips:learnTips,mind:learnMind,wave:learnWave,econ:learnEcon}[_learnTab]||learnBasic;
   el.innerHTML=fn();
 }
 window.renderLearn=renderLearn;
@@ -4494,6 +4572,59 @@ function renderHomeEvents(){ var el=document.getElementById('homeEvents'); if(!e
     return '<tr class="rowbtn" onclick="showView(\'events\')"><td class="l num" style="color:var(--sub);white-space:nowrap">'+md+' ('+wd+') '+_bbEsc(e.time||'')+'</td><td style="text-align:center">'+(FLAG[e.market]||'🌐')+'</td><td class="l" style="font-weight:700">'+_bbEsc(e.title)+'</td><td style="color:#e0a83e;letter-spacing:-1px;white-space:nowrap">'+new Array(((e.imp||1)+1)).join('★')+'</td><td class="l" style="color:var(--sub);font-size:11.5px">'+_bbEsc((e.note||'')).slice(0,46)+'</td></tr>'; }).join('');
   el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>📅 이번주 주요 이벤트</h2><div class="r"><span class="more" data-v="events">더보기 ›</span></div></div><div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table><thead><tr><th class="l">날짜/시간</th><th>국가</th><th class="l">이벤트</th><th>중요도</th><th class="l">시장 영향</th></tr></thead><tbody>'+rows+'</tbody></table></div></div></div>';
 }
+/* ═══ 🗓 위클리 캘린더 + 🎤 전망·발언 평가 (feeds/calendar.json·claims.json 손으로 정리, scripts/watch_eval.py 가 뉴스·주가 반응·채점) (2026-10-18) ═══ */
+var _WC=null, _wcWk=null;
+var WC_CAT={ev:['주요 이벤트','#f6465d','rgba(246,70,93,.12)'],pol:['정책/통화','#d39a12','rgba(240,185,11,.16)'],data:['지표','#1f9d63','rgba(46,189,133,.14)'],earn:['실적','#2b7fd9','rgba(74,158,255,.14)'],talk:['발언','#9a6bff','rgba(167,139,250,.16)']};
+function _wcLoad(){ if(_WC)return; _WC={};
+  Promise.all([_loadJ('feeds/calendar.json'),_loadJ('feeds/claims.json'),_loadJ('feeds/watch-eval.json')]).then(function(a){ _WC={cal:a[0],cl:a[1],ev:a[2]||{}}; renderWeekCal(); }); }
+function _wcSg(v,u){ return v==null?'—':'<span class="'+(v>0?'up':v<0?'down':'')+'" style="font-weight:700">'+(v>0?'+':'')+v.toFixed(2)+(u||'%')+'</span>'; }
+function _wcMD(d){ var t=new Date(d+'T00:00:00'); return (t.getMonth()+1)+'/'+t.getDate()+'('+'일월화수목금토'[t.getDay()]+')'; }
+window._wcSet=function(i){ _wcWk=i; renderWeekCal(); };
+function renderWeekCal(){
+  var el=$('#weekCal'); if(!el)return; if(!_WC){ _wcLoad(); return; } if(!_WC.cal){ el.innerHTML=''; return; }
+  var C=_WC.cal, EV=(_WC.ev&&_WC.ev.cal)||{}, ER=(_WC.ev&&_WC.ev.earn)||{}, today=_bbToday(), W=C.weeks||[];
+  if(_wcWk==null){ _wcWk=W.length-1; W.forEach(function(w,i){ if(w.from<=today&&today<=w.to)_wcWk=i; }); }
+  var w=W[_wcWk]; if(!w){ el.innerHTML=''; return; }
+  var chip=function(it,key){ var c=WC_CAT[it.c]||WC_CAT.ev, e=EV[key]||{}, rx=e.rx||{}, nw=e.news||[];
+    var rxs=Object.keys(rx).map(function(tk){ var r=rx[tk]; return '<span style="white-space:nowrap">'+_bbEsc(tk)+' '+_wcSg(r.r)+(r.x!=null?' <small style="color:var(--faint)">(QQQ 대비 '+(r.x>0?'+':'')+r.x.toFixed(1)+'%p)</small>':'')+'</span>'; }).join(' · ');
+    var det=(rxs?'<div style="margin-top:4px">📈 반응 '+rxs+'</div>':'')+(nw.length?'<div style="margin-top:4px">'+nw.slice(0,5).map(function(n){ return '<a href="'+_bbEsc(n.link)+'" target="_blank" rel="noopener" style="display:block;color:var(--sub);text-decoration:none;line-height:1.5">· '+_bbEsc(n.title)+' <small style="color:var(--faint)">'+_bbEsc(n.src||'')+'</small></a>'; }).join('')+'</div>':'');
+    return '<div style="border-left:3px solid '+c[1]+';background:'+c[2]+';border-radius:6px;padding:5px 8px;margin-bottom:5px;font-size:12px;line-height:1.45">'
+      +'<b>'+_bbEsc(it.t)+'</b>'+(it.imp?' <span style="color:#f6465d;letter-spacing:-1px">'+new Array(it.imp+1).join('★')+'</span>':'')
+      +(it.sub?'<div style="color:var(--sub);font-size:11.5px">'+_bbEsc(it.sub)+'</div>':'')
+      +(det?'<details style="margin-top:3px"><summary style="cursor:pointer;font-size:11px;color:var(--faint)">결과 '+(rxs?'· 반응 ':'')+(nw.length?'· 기사 '+nw.length+'건':'')+'</summary>'+det+'</details>':'')+'</div>'; };
+  var days=[], d0=new Date(w.from+'T00:00:00');
+  for(var i=0;i<7;i++){ var t=new Date(d0.getTime()+i*864e5), ds=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); days.push(ds); }
+  var grid=days.filter(function(ds,i){ return i<5||(w.days[ds]&&w.days[ds].length); }).map(function(ds){ var a=w.days[ds]||[], isT=ds===today;
+    return '<div style="border:1px solid '+(isT?'#f6465d':'var(--line2)')+';border-radius:10px;padding:8px;min-width:0"><div style="font-weight:800;font-size:12.5px;margin-bottom:6px">'+_wcMD(ds)+(isT?' <span style="font-size:10px;color:#fff;background:#f6465d;padding:1px 5px;border-radius:5px">TODAY</span>':'')+'</div>'
+      +(a.length?a.map(function(it,k){ return chip(it,ds+'#'+k); }).join(''):'<div style="font-size:11.5px;color:var(--faint)">—</div>')+'</div>'; }).join('');
+  var leg=Object.keys(WC_CAT).map(function(k){ var c=WC_CAT[k]; return '<span style="font-size:11px;padding:1px 7px;border-radius:5px;background:'+c[2]+';color:'+c[1]+';font-weight:800">'+c[0]+'</span>'; }).join(' ');
+  var earn=(C.earnings||[]).map(function(e){ var r=ER[e.tk+'@'+e.d], past=e.d<today;
+    return '<div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:4px 0;border-top:1px solid var(--line2)'+(past&&!r?';color:var(--faint)':'')+'"><b style="min-width:70px">'+_wcMD(e.d)+'</b><span style="flex:1">'+_bbEsc(e.n)+' <small style="color:var(--faint)">'+_bbEsc(e.tk||'')+'</small></span>'+(r?'<span>다음 날 '+_wcSg(r.r)+(r.x!=null?' <small style="color:var(--faint)">QQQ 대비 '+(r.x>0?'+':'')+r.x.toFixed(1)+'%p</small>':'')+'</span>':'<span style="color:var(--faint);font-size:11.5px">'+(past?'반응 집계 중':'예정')+'</span>')+'</div>'; }).join('');
+  var up=(C.upcoming||[]).slice().sort(function(a,b){return a.d<b.d?-1:1;}).map(function(u){ var c=WC_CAT[u.c]||WC_CAT.ev; return '<div style="font-size:12.5px;padding:4px 0;border-top:1px solid var(--line2);'+(u.d<today?'color:var(--faint);text-decoration:line-through':'')+'"><b style="display:inline-block;min-width:70px">'+(u.approx?'11월 중순':_wcMD(u.d))+'</b><span style="color:'+c[1]+';font-weight:800;font-size:11px;margin-right:5px">'+c[0]+'</span>'+_bbEsc(u.t)+'</div>'; }).join('');
+  var tabs=W.length>1?'<div style="display:flex;gap:6px;margin-bottom:8px">'+W.map(function(x,i){ return '<button class="tf" onclick="_wcSet('+i+')" style="'+(i===_wcWk?'background:#2b6cff;color:#fff;border-color:transparent':'')+'">'+_wcMD(x.from)+'~</button>'; }).join('')+'</div>':'';
+  el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🗓 위클리 캘린더 <span style="font-weight:600;color:var(--faint);font-size:12px">'+_wcMD(w.from)+' ~ '+_wcMD(w.to)+'</span></h2><div class="r"><span style="font-size:11px;color:var(--faint)">'+_bbEsc(w.src||'')+'</span></div></div><div class="pad" style="padding-top:6px">'+tabs
+    +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">'+leg+'</div>'
+    +(w.focus&&w.focus.length?'<div style="font-size:12.5px;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:var(--panel2)"><b>🎯 이번 주 포인트</b> — '+w.focus.map(function(f,i){ return '①②③④⑤'[i]+' '+_bbEsc(f); }).join(' &nbsp; ')+'</div>':'')
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">'+grid+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px">'
+    +'<div style="border:1px solid var(--line2);border-radius:10px;padding:10px 12px"><div style="font-weight:800;font-size:13px;margin-bottom:4px">📊 주요 기업 실적 발표 일정</div><div style="font-size:11px;color:var(--faint);margin-bottom:4px">'+_bbEsc(C.earningsNote||'')+' · 지나면 다음 날 주가 반응을 자동으로 채워요</div>'+earn+'</div>'
+    +'<div style="border:1px solid var(--line2);border-radius:10px;padding:10px 12px"><div style="font-weight:800;font-size:13px;margin-bottom:4px">📌 다가오는 일정</div>'+up+'</div></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:8px">시간은 미국 기준 · 지난 일정은 [결과]를 누르면 관련 기사와 주가 반응이 나와요(기사는 30분마다, 반응은 매일 아침 모아요). 아래 \'이번주 증시 이벤트\'는 자동 수집 경제지표예요.</div></div></div>'
+    +renderClaims();
+}
+function renderClaims(){ var CL=_WC&&_WC.cl, R=(_WC&&_WC.ev&&_WC.ev.claims)||{}, WHO=(_WC&&_WC.ev&&_WC.ev.who)||{}; if(!CL||!CL.items||!CL.items.length)return '';
+  var ST={hit:['✓ 적중','var(--up)'],miss:['✗ 빗나감','var(--down)'],wait:['⏳ 진행 중','var(--gold)'],nodata:['— 자료 없음','var(--faint)']};
+  var cards=CL.items.slice().sort(function(a,b){return a.d<b.d?1:-1;}).map(function(it){ var rs=R[it.id]||[], sc=WHO[it.who];
+    return '<div style="border:1px solid var(--line2);border-radius:12px;padding:12px 14px;margin-bottom:10px">'
+      +'<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="font-size:14px">'+_bbEsc(it.who)+'</b><span style="font-size:13px;font-weight:700">'+_bbEsc(it.title)+'</span><span style="margin-left:auto;font-size:11px;color:var(--faint)">'+_wcMD(it.d)+' · '+_bbEsc(it.src)+'</span></div>'
+      +(it.role?'<div style="font-size:11.5px;color:var(--faint);margin-top:2px">'+_bbEsc(it.role)+'</div>':'')
+      +'<ul style="margin:8px 0 0 18px;padding:0;font-size:12.5px;line-height:1.65">'+it.points.map(function(p){ return '<li>'+_bbEsc(p)+'</li>'; }).join('')+'</ul>'
+      +(it.view?'<div style="font-size:12.5px;line-height:1.65;margin-top:8px;padding:8px 11px;border-radius:9px;background:var(--panel2)"><b>🧭 VANTOR 평가</b> — '+_bbEsc(it.view)+'</div>':'')
+      +'<div style="margin-top:8px">'+(it.checks||[]).map(function(c,i){ var r=rs[i]||{st:'wait'}, s=ST[r.st]||ST.wait;
+        return '<div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:5px 0;border-top:1px solid var(--line2);flex-wrap:wrap"><b style="color:'+s[1]+';min-width:78px">'+s[0]+'</b><span style="flex:1;min-width:180px">'+_bbEsc(c.q)+'<br><small style="color:var(--faint)">'+_bbEsc(c.how)+'</small></span><span style="font-size:12px;color:var(--sub)">'+_bbEsc(r.txt||'')+'</span></div>'; }).join('')+'</div>'
+      +(sc&&(sc.hit+sc.miss)?'<div style="font-size:11.5px;color:var(--faint);margin-top:4px">'+_bbEsc(it.who)+' 지금까지 적중 '+sc.hit+' / 채점 '+(sc.hit+sc.miss)+'</div>':'')+'</div>'; }).join('');
+  return '<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🎤 전망·발언 기록 & 평가</h2><div class="r"><span style="font-size:11px;color:var(--faint)">기한이 되면 실제 시세로 자동 채점</span></div></div><div class="pad" style="padding-top:6px">'
+    +'<div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">유명 투자자·방송이 말한 전망을 모아 두고, 확인할 수 있는 주장은 <b>언제 무엇이 되면 맞은 건지</b> 미리 정해 기한이 되면 S&P500·코스피·VIX 실제 값으로 채점해요. 매일 아침 갱신.</div>'+cards+'</div></div>'; }
 window.renderHomeEvents=renderHomeEvents;
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); };
