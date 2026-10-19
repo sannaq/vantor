@@ -480,19 +480,37 @@ function _idxTrend(x){ var t=(typeof FLOWMETA!=='undefined'&&FLOWMETA&&FLOWMETA.
   var arr=t.map(function(p){return p[1];}); if(x._real&&x.v){ if(t[t.length-1][0]===_bbToday())arr[arr.length-1]=x.v; else arr.push(x.v); } return arr; }
 function _fmtJo(m){ m=+m||0; return m>=1e6?(m/1e6).toFixed(1)+'조':(m/100).toFixed(0)+'억'; }   // 백만원 → 조/억
 function _fmtEok(k){ k=+k||0; return (k/1e5).toFixed(2)+'억주'; }                               // 천주 → 억주
-/* 맨 위 '지수' 한 줄 — 모든 화면 공통 (10/19 사용자 결정: 핵심 8개, 홈·코인 포함) */
-var IB_KEYS=['KOSPI','KOSDAQ','나스닥','S&P500','USD/KRW'];
+/* 맨 위 '지수' 한 줄 — 모든 화면 공통 (10/19 사용자 결정)
+   · 핵심 8개, 홈·코인 포함 · 공포탐욕은 맨 끝
+   · 나스닥100·S&P = 실제 지수(ETF 가격 X, QQQ·SPY 가 따라가는 지수·선물과 같은 기준). 미국장 중엔 지수 전일 종가 × QQQ·SPY 실시간 등락률, 장 닫히면 선물
+   · 한국 낮(평일 08~16시)엔 국장 먼저, 그 밖엔 미국 먼저
+   자료: feeds/macro.json (scripts/update_macro.py, news.yml 30분마다) */
+var _MACRO=null;
+function _macroLoad(){ fetch('feeds/macro.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){ _MACRO=j; renderIdxBar(); } }).catch(function(){}); }
+function _usOpen(){ try{ var p={}; new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'numeric',hour12:false}).formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+  if(p.weekday==='Sat'||p.weekday==='Sun')return false; var m=(+p.hour%24)*60+(+p.minute); return m>=570&&m<960; }catch(e){ return false; } }
+function _krDay(){ var d=new Date(Date.now()+9*3600e3), w=d.getUTCDay(), h=d.getUTCHours(); return w>=1&&w<=5&&h>=8&&h<16; }
 function renderIdxBar(){
   var ib=$('#idxbar'); if(!ib)return;
-  function it(nm,v,c,col){ return '<span><span class="ib-nm">'+nm+'</span><span class="ib-v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</span>'+(c==null?'':'<span class="'+cls(c)+'" style="font-weight:700">'+pctTxt(c)+'</span>')+'</span>'; }
-  var mc=(typeof FLOWMETA!=='undefined'&&FLOWMETA&&FLOWMETA.macro)||{}, fn=_FS&&_FS.now, h='';
-  if(fn&&fn.fg!=null)h+=it('공포탐욕',Math.round(fn.fg)+' '+fn.zone,null,_fsColor(fn.fg));
-  if(mc.VIX&&mc.VIX.v)h+=it('VIX',mc.VIX.v.toFixed(2),mc.VIX.c); else if(fn&&fn.vix)h+=it('VIX',fn.vix.toFixed(2),null);
-  h+=IB_KEYS.map(function(k){ var x=IDX.filter(function(y){return y.nm===k;})[0]; if(!x)return '';
-    var ok=x.v&&(x._real||x._us); return it(k==='USD/KRW'?'원달러':k,ok?(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—',ok?x.c:null); }).join('');
-  if(mc.US10Y&&mc.US10Y.v)h+=it('미국10년',mc.US10Y.v.toFixed(2)+'%',mc.US10Y.c);
-  ib.innerHTML='<span class="ib-lb">지수</span>'+h+'<span class="ib-t">마켓 ›</span>';
+  if(!_MACRO&&!renderIdxBar._m){ renderIdxBar._m=1; _macroLoad(); setInterval(_macroLoad,5*60e3); }
   if(!_FS&&!renderIdxBar._fs){ renderIdxBar._fs=1; _fsLoad(function(j){ if(j)renderIdxBar(); }); }
+  function f2(v,d){ return (+v).toLocaleString('en-US',{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d}); }
+  function it(nm,v,c,col,tip){ return '<span'+(tip?' title="'+tip+'"':'')+'><span class="ib-nm">'+nm+'</span><span class="ib-v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</span>'+(c==null?'':'<span class="'+cls(c)+'" style="font-weight:700">'+pctTxt(c)+'</span>')+'</span>'; }
+  function kr(k,nm){ var x=IDX.filter(function(y){return y.nm===k;})[0]; var ok=x&&x.v&&x._real; return it(nm||k,ok?f2(x.v):'—',ok?x.c:null); }
+  var M=_MACRO||{}, I=M.idx||{}, F=M.fut||{}, open=_usOpen();
+  function us(nm,code,etf,fc){ var ix=I[code];
+    if(open){ var e=IDX.filter(function(y){return y.etf===etf;})[0];
+      if(ix&&ix.prev&&e&&e._real&&!e._fb&&e.c!=null) return it(nm,f2(ix.prev*(1+e.c/100)),e.c,null,etf+' 실시간 등락률로 계산');
+      return ix?it(nm,f2(ix.v),ix.c):''; }
+    var fu=F[fc]; if(fu&&fu.v) return it(nm+'<small style="opacity:.75">선물</small>',f2(fu.v),fu.c,null,'미국장 닫힘 — 선물(10분 지연, 30분마다 갱신)');
+    return ix?it(nm,f2(ix.v),ix.c):''; }
+  var K=kr('KOSPI')+kr('KOSDAQ')+kr('USD/KRW','원달러');
+  var U=us('나스닥100','.NDX','QQQ','NQcv1')+us('S&P500','.INX','SPY','EScv1');
+  var fn=_FS&&_FS.now, X='';
+  if(M.VIX&&M.VIX.v)X+=it('VIX',f2(M.VIX.v),M.VIX.c); else if(fn&&fn.vix)X+=it('VIX',f2(fn.vix),null);
+  if(M.US10Y&&M.US10Y.v)X+=it('미국10년',f2(M.US10Y.v)+'%',M.US10Y.c);
+  var G=(fn&&fn.fg!=null)?it('공포탐욕',Math.round(fn.fg)+' '+fn.zone,null,_fsColor(fn.fg),'CNN 공포탐욕 지수 · 하루 1번 갱신'):'';
+  ib.innerHTML='<span class="ib-lb">지수</span>'+(_krDay()?K+U:U+K)+X+G+'<span class="ib-t">마켓 ›</span>';
 }
 function renderIdx(){
   var el=$('#idxstrip'); if(!el)return;

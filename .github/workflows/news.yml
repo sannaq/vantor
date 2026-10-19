@@ -23,11 +23,13 @@ jobs:
           python-version: "3.12"
       - name: 뉴스 모으기
         run: python3 scripts/update_news.py
+      - name: 맨 위 지수 줄 — 미국 지수·선물·VIX·10년물 (feeds/macro.json)
+        run: python3 scripts/update_macro.py || true
       - name: 위클리 캘린더 일정 관련 기사 모으기 (feeds/watch-eval.json)
         run: python3 scripts/watch_eval.py --news-only
       - name: 변경분 올리기
         run: |
-          git add feeds/news-all.json feeds/watch-eval.json feeds/claims-auto.json
+          git add feeds/news-all.json feeds/watch-eval.json feeds/claims-auto.json feeds/macro.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898099+github-actions[bot]@users.noreply.github.com"  # pull --rebase 도 커밋을 만든다
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \

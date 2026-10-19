@@ -6,7 +6,6 @@ GitHub Actions(.github/workflows/flow.yml)가 장중 30분마다 + 저녁에 실
 - h52u/h52d : 52주 신고가·신저가 종목 수 (코스피+코스닥)
 - trend : 지수(코스피·코스닥·코스피200)·환율 최근 20거래일 종가 — 지수 카드 그래프
 - us    : QQQ·SPY 종가·등락률 (워커 /quotes 가 값을 빠뜨릴 때 대체)
-- macro : 미국 10년물 금리·VIX (맨 위 지수 줄)
 - stock-list.json : 검색용 전체 종목 코드·이름 (주 1회)
 - industries.json : 업종별 등락 (추천 화면 섹터 칸)
 - news-main.json  : 주요 뉴스·속보 (브리핑 화면)
@@ -78,16 +77,6 @@ def us_etf():
         d = get_raw(f"https://api.stock.naver.com/stock/{code}/basic")
         out[nm] = {"px": n(d.get("closePrice")), "c": n(d.get("fluctuationsRatio")), "at": d.get("localTradedAt", "")}
     return out
-
-
-def macro():
-    """맨 위 지수 줄용 미국 10년물 금리·VIX (네이버, 키 없음). v=값, d=전일 대비, c=등락률(%)."""
-    b = get_raw("https://m.stock.naver.com/front-api/marketIndex/productDetail?category=bond&reutersCode=US10YT%3DRR").get("result") or {}
-    v = get_raw("https://api.stock.naver.com/index/.VIX/basic")
-    return {
-        "US10Y": {"v": n(b.get("closePrice")), "d": n(b.get("fluctuations")), "c": n(b.get("fluctuationsRatio")), "at": b.get("localTradedAt", "")},
-        "VIX": {"v": n(v.get("closePrice")), "d": n(v.get("compareToPreviousClosePrice")), "c": n(v.get("fluctuationsRatio")), "at": v.get("localTradedAt", "")},
-    }
 
 
 LIST = os.path.join(ROOT, "feeds", "stock-list.json")
@@ -213,10 +202,6 @@ def main():
         new["us"] = us_etf()
     except Exception as e:  # noqa
         print("미국 ETF 실패:", e, file=sys.stderr)
-    try:
-        new["macro"] = macro()
-    except Exception as e:  # noqa
-        print("금리·VIX 실패:", e, file=sys.stderr)
     try:
         stock_list()
     except Exception as e:  # noqa

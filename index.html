@@ -250,7 +250,7 @@
   #idxbar{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;overflow-x:auto;white-space:nowrap;margin:0 0 12px;padding:6px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:11.5px;cursor:pointer;scrollbar-width:none}
   @media(max-width:700px){#idxbar{flex-wrap:nowrap}}
   #idxbar .ib-lb{font-size:10.5px;font-weight:800;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:0 5px}
-  #idxbar::-webkit-scrollbar{display:none}#idxbar .ib-nm{color:var(--sub);margin-right:6px}#idxbar .ib-v{font-weight:800;font-variant-numeric:tabular-nums;margin-right:5px}#idxbar .ib-t{margin-left:auto;color:var(--faint);font-size:11px}
+  #idxbar::-webkit-scrollbar{display:none}#idxbar .ib-nm{color:var(--sub);margin-right:6px}#idxbar .ib-nm small{font-size:9.5px;margin-left:2px}#idxbar .ib-v{font-weight:800;font-variant-numeric:tabular-nums;margin-right:5px}#idxbar .ib-t{margin-left:auto;color:var(--faint);font-size:11px}
   body.home-glance #brief,body.home-glance .home-top2,body.home-glance #homeEvents,body.home-glance #marketSummary,body.home-glance #idxstrip,body.home-glance #v-home>*{display:none!important}
   .heat{display:flex;flex-wrap:wrap;gap:2px;margin-top:2px}
   .heat .h{min-width:64px}
@@ -903,7 +903,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="score-core.js?v=9"></script>
-<script src="app.js?v=147"></script>
+<script src="app.js?v=148"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;
