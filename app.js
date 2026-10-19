@@ -2744,16 +2744,18 @@ function _huntStatHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }
     +'<div style="overflow-x:auto"><table class="mxt" style="min-width:620px;font-size:12.5px"><tr><th>구분</th><th>제출</th><th>승</th><th>패</th><th>대기</th><th>승률</th><th>평균 이익</th><th>평균 손실</th><th>건당 평균</th><th>누적</th></tr>'
     +row('전체',all,true)+(lg.length&&sh.length?row('롱',grp(lg))+row('숏',grp(sh)):'')+syms.map(function(s){ return row(esc(s),grp(L.filter(function(r){return r.s===s;}))); }).join('')+'</table></div>'; }
 /* 제출 → 디스코드 웹후크 (2026-10-19 사용자 요청). 주소는 공개 저장소에 넣지 않고 화면 설정칸 → 이 기기 localStorage(huntHook, ☁️ 동기화 코드에 포함) */
-function _huntHook(){ try{ return localStorage.getItem('huntHook')||''; }catch(e){ return ''; } }
+/* 기본 웹후크 (2026-10-19 사용자 지정 채널). 화면 칸에 다른 주소를 넣으면 그게 우선 */
+var HUNT_HOOK_DEFAULT='https://discord.com/api/webhooks/1561688500552732702/aWyqJfipyNNmCvN_55DSLWGdkIb89eOAG3YcvjZj3jc0dc2EXkshPN2IM5KaVEnsHqJD';
+function _huntHook(){ try{ return localStorage.getItem('huntHook')||HUNT_HOOK_DEFAULT; }catch(e){ return HUNT_HOOK_DEFAULT; } }
 window._huntHookSet=function(){ var v=(($('#huntHookIn')||{}).value||'').trim(); if(v&&!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+/.test(v)){ if(typeof toast==='function')toast('디스코드 웹후크 주소 형식이 아니에요'); return; }
   try{ if(v)localStorage.setItem('huntHook',v); else localStorage.removeItem('huntHook'); }catch(e){} if(typeof toast==='function')toast(v?'웹후크 저장했어요':'웹후크 지웠어요'); var b=$('#huntHookBox'); if(b)b.outerHTML=_huntHookBox(); _huntSyncSoon(); };
 window._huntHookTest=function(){ _huntSend({content:'✅ VANTOR HUNTPSL 웹후크 연결 시험'},function(ok){ if(typeof toast==='function')toast(ok?'디스코드로 보냈어요':'보내기 실패 — 주소를 확인하세요'); }); };
 function _huntSend(body,cb){ var u=_huntHook(); if(!u){ cb&&cb(false); return; }
   fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){ cb&&cb(r.ok); }).catch(function(){ cb&&cb(false); }); }
-function _huntHookBox(){ var h=_huntHook();
-  return '<details id="huntHookBox" style="margin-top:10px"'+(h?'':' open')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:800">🔔 디스코드 알림 '+(h?'<span style="color:#2ebd85">연결됨</span>':'<span style="color:var(--faint)">꺼짐 — 웹후크 주소를 넣으면 제출할 때마다 보내요</span>')+'</summary>'
-    +'<div style="display:flex;gap:6px;margin-top:6px"><input id="huntHookIn" type="password" value="'+esc(h)+'" placeholder="https://discord.com/api/webhooks/…" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:12.5px">'
-    +'<button class="tf" onclick="_huntHookSet()">저장</button>'+(h?'<button class="tf" onclick="_huntHookTest()">시험</button>':'')+'</div>'
+function _huntHookBox(){ var h=_huntHook(), own=(function(){ try{ return localStorage.getItem('huntHook')||''; }catch(e){ return ''; } })();
+  return '<details id="huntHookBox" style="margin-top:10px"><summary style="cursor:pointer;font-size:12.5px;font-weight:800">🔔 디스코드 알림 '+'<span style="color:#2ebd85">연결됨 — 제출·TP/SL 도달 때 보내요'+(own?' (직접 넣은 주소)':' (기본 채널)')+'</span>'+'</summary>'
+    +'<div style="display:flex;gap:6px;margin-top:6px"><input id="huntHookIn" type="password" value="'+esc(own)+'" placeholder="다른 채널로 보내려면 웹후크 주소 (비우면 기본 채널)" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:12.5px">'
+    +'<button class="tf" onclick="_huntHookSet()">저장</button><button class="tf" onclick="_huntHookTest()">시험</button></div>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:4px">디스코드 채널 설정 → 연동 → 웹후크에서 주소 복사. 이 기기(와 같은 동기화 코드 기기)에만 저장되고 사이트 코드엔 안 들어가요.</div></details>'; }
 function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', pc=function(x){ return x&&r.p0?((x/r.p0-1)*100):null; }, f=function(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; };
   var L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length;
@@ -2762,6 +2764,13 @@ function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', pc=fun
     fields:[{name:'제출가',value:'$'+_huntFmt(r.p0),inline:true},{name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+' ('+f(pc(r.tp))+')':'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+' ('+f(pc(r.sl))+')':'—',inline:true},
       {name:'손익비',value:'1 : '+rr,inline:true},{name:'지금까지 승률',value:L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음',inline:true}],
     footer:{text:'VANTOR · 바이낸스 선물 시세'},timestamp:new Date(r.at).toISOString()}]},function(ok){ if(!ok&&typeof toast==='function')toast('디스코드 전송 실패'); }); }
+/* TP·SL 도달 → 디스코드 (2026-10-19 사용자 결정) — 이 화면을 열어 둔 기기가 감지한 순간 1번 */
+function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length, tp=r.hit==='TP';
+  var mins=Math.round((r.hitAt-r.at)/60000), dur=mins<60?mins+'분':mins<1440?(mins/60).toFixed(1)+'시간':(mins/1440).toFixed(1)+'일';
+  _huntSend({embeds:[{title:(tp?'✅ TP 도달':'❌ SL 도달')+' — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:tp?0x2ebd85:0xf6465d,
+    fields:[{name:'결과',value:ret==null?'—':(ret>=0?'+':'')+ret.toFixed(2)+'%',inline:true},{name:'제출가 → '+r.hit,value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(tp?r.tp:r.sl),inline:true},{name:'걸린 시간',value:dur,inline:true},
+      {name:'누적 승률',value:(L.length?(w/L.length*100).toFixed(1):'0')+'% ('+w+'승 '+(L.length-w)+'패)',inline:true}],
+    footer:{text:'VANTOR HUNTPSL'},timestamp:new Date(r.hitAt).toISOString()}]}); }
 function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML(); }
 window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ if(r.s===sym&&r.at===at){ r.del=1; r.delAt=Date.now(); } }); _huntLogSave(L); _huntLogRender(); _huntSyncSoon(); };
 /* ☁️ 기기 간 동기화 (2026-10-19 사용자 결정) — 동기화 코드가 있으면 HUNTPSL 을 열 때·30초마다 서버 기록을 받아 '합친다'.
@@ -2800,24 +2809,39 @@ function _huntList(){ var el=$('#huntList'); if(!el||!_HUNT.list)return; var q=(
       +(d?'<span style="font-size:11px;color:var(--sub)">'+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+(d.hit?' <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b>':'')+'</span>':'')
       +'<span style="margin-left:auto;font-variant-numeric:tabular-nums">$<span data-hp="'+x.s+'">'+_huntFmt(_HUNT.px[x.s])+'</span></span><span style="width:64px;text-align:right;font-size:12px;font-weight:700;color:'+cCol(x.c)+'">'+(x.c>=0?'+':'')+x.c.toFixed(2)+'%</span></div>'; }).join('')
     :'<div class="muted" style="font-size:12px">찾는 코인이 없어요</div>'; }
-function _huntPick(sym){ _HUNT.sel=sym; var el=$('#huntSel'); if(!el)return; var d=_huntLive()[sym]||{}, px=_HUNT.px[sym];
+/* 입력 방식 (2026-10-19 사용자 결정: 가격·% 둘 다) — _HUNT.mode 'px' 가격 / 'pct' 현재가 대비 %. % 모드는 롱/숏을 골라 방향을 정한다(TP·SL 은 거리만 입력) */
+_HUNT.mode=(function(){ try{ return localStorage.getItem('huntMode')||'px'; }catch(e){ return 'px'; } })(); _HUNT.side='long';
+window._huntMode=function(m){ var px=_HUNT.px[_HUNT.sel], v=_huntVals(); _HUNT.mode=m; try{ localStorage.setItem('huntMode',m); }catch(e){}
+  if(v.tp||v.sl){ _HUNT.keep={tp:v.tp,sl:v.sl}; if(v.tp&&px)_HUNT.side=v.tp<px?'short':'long'; } _huntPick(_HUNT.sel); };
+window._huntSide=function(sd){ _HUNT.side=sd; $$('.hs-side button').forEach(function(b){ b.classList.toggle('on',b.dataset.sd===sd); }); _huntCalc(); };
+function _huntVals(){ var px=_HUNT.px[_HUNT.sel], a=+(($('#huntTp')||{}).value)||0, b=+(($('#huntSl')||{}).value)||0;
+  if(_HUNT.mode!=='pct')return {tp:a||null,sl:b||null};
+  var lg=_HUNT.side!=='short', r=function(p){ return +(+p).toPrecision(8); };
+  return {tp:a&&px?r(px*(1+(lg?1:-1)*Math.abs(a)/100)):null, sl:b&&px?r(px*(1-(lg?1:-1)*Math.abs(b)/100)):null}; }
+function _huntPick(sym){ _HUNT.sel=sym; var el=$('#huntSel'); if(!el)return; var d=_huntLive()[sym]||{}, px=_HUNT.px[sym], pct=_HUNT.mode==='pct', k=_HUNT.keep; _HUNT.keep=null;
+  var tp0=k?k.tp:d.tp, sl0=k?k.sl:d.sl;
+  if(pct&&px){ tp0=tp0?+Math.abs((tp0/px-1)*100).toFixed(2):null; sl0=sl0?+Math.abs((sl0/px-1)*100).toFixed(2):null; if(!k&&d.side)_HUNT.side=d.side; }
   var inp=function(id,v,ph){ return '<input id="'+id+'" type="number" step="any" inputmode="decimal" value="'+(v!=null?v:'')+'" placeholder="'+ph+'" oninput="_huntCalc()" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:15px;font-variant-numeric:tabular-nums">'; };
+  var seg=function(cls,opts,cur,fn){ return '<span class="'+cls+'" style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">'+opts.map(function(o){ var on=o[0]===cur; return '<button data-sd="'+o[0]+'" onclick="'+fn+'(\''+o[0]+'\')" class="'+(on?'on':'')+'" style="border:none;padding:5px 11px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;background:'+(on?'var(--gold)':'transparent')+';color:'+(on?'#1b1606':'var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</span>'; };
   el.innerHTML='<div style="border:1px solid var(--gold);border-radius:12px;padding:12px 14px">'
     +'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><b style="font-size:18px">'+esc(sym)+'</b><span style="font-size:12px;color:var(--faint)">현재가</span><b id="huntPx" style="font-size:24px;font-variant-numeric:tabular-nums">$'+_huntFmt(px)+'</b><span style="margin-left:auto;font-size:11px;color:var(--faint)">3초마다 갱신 · 바이낸스 선물</span></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><label style="font-size:12px;font-weight:800;color:#2ebd85">TP (익절가)'+inp('huntTp',d.tp,'예: '+_huntFmt(px*1.05))+'<span id="huntTpP" style="font-weight:600;color:var(--sub)"></span></label>'
-    +'<label style="font-size:12px;font-weight:800;color:#f6465d">SL (손절가)'+inp('huntSl',d.sl,'예: '+_huntFmt(px*0.97))+'<span id="huntSlP" style="font-weight:600;color:var(--sub)"></span></label></div>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px"><span style="font-size:12px;color:var(--sub)">입력</span>'+seg('hs-mode',[['px','가격'],['pct','%']],_HUNT.mode,'_huntMode')
+      +(pct?'<span style="font-size:12px;color:var(--sub);margin-left:6px">방향</span>'+seg('hs-side',[['long','롱'],['short','숏']],_HUNT.side,'_huntSide'):'')+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px"><label style="font-size:12px;font-weight:800;color:#2ebd85">TP (익절'+(pct?' %':'가')+')'+inp('huntTp',tp0,pct?'예: 4':'예: '+_huntFmt(px*1.05))+'<span id="huntTpP" style="font-weight:600;color:var(--sub)"></span></label>'
+    +'<label style="font-size:12px;font-weight:800;color:#f6465d">SL (손절'+(pct?' %':'가')+')'+inp('huntSl',sl0,pct?'예: 2':'예: '+_huntFmt(px*0.97))+'<span id="huntSlP" style="font-weight:600;color:var(--sub)"></span></label></div>'
     +'<div id="huntRR" style="font-size:12.5px;color:var(--sub);margin-top:8px"></div>'
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="_huntStore()" style="flex:1">제출</button><button class="tf" onclick="_huntDel()">지우기</button></div>'
     +(d.at?'<div style="font-size:11px;color:var(--faint);margin-top:6px">저장 '+new Date(d.at).toLocaleString('ko-KR')+' · 그때 가격 $'+_huntFmt(d.p0)+(d.hit?' · <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b> ('+new Date(d.hitAt).toLocaleString('ko-KR')+')':'')+'</div>':'')+'</div>';
   _huntCalc(); _huntList(); }
-function _huntCalc(){ var px=_HUNT.px[_HUNT.sel], tp=+(($('#huntTp')||{}).value), sl=+(($('#huntSl')||{}).value), f=function(v){ return v?((v/px-1)*100):null; };
-  var a=$('#huntTpP'), b=$('#huntSlP'), r=$('#huntRR'); if(!a||!px)return;
-  a.textContent=tp?' 현재가 대비 '+(f(tp)>=0?'+':'')+f(tp).toFixed(2)+'%':''; b.textContent=sl?' 현재가 대비 '+(f(sl)>=0?'+':'')+f(sl).toFixed(2)+'%':'';
+function _huntCalc(){ var px=_HUNT.px[_HUNT.sel], v=_huntVals(), tp=v.tp, sl=v.sl, f=function(x){ return x?((x/px-1)*100):null; };
+  var a=$('#huntTpP'), b=$('#huntSlP'), r=$('#huntRR'); if(!a||!px)return; var pct=_HUNT.mode==='pct';
+  a.textContent=tp?(pct?' = $'+_huntFmt(tp):' 현재가 대비 '+(f(tp)>=0?'+':'')+f(tp).toFixed(2)+'%'):''; b.textContent=sl?(pct?' = $'+_huntFmt(sl):' 현재가 대비 '+(f(sl)>=0?'+':'')+f(sl).toFixed(2)+'%'):'';
   r.innerHTML=(tp&&sl&&tp!==px&&sl!==px)?'손익비 <b>1 : '+(Math.abs(tp-px)/Math.abs(px-sl)).toFixed(2)+'</b> ('+(tp>px?'롱':'숏')+' 기준)':''; }
-function _huntStore(){ var s=_HUNT.sel; if(!s)return; var tp=+(($('#huntTp')||{}).value)||null, sl=+(($('#huntSl')||{}).value)||null; var db=_huntDB();
-  if(!tp&&!sl){ db[s]={del:1,at:Date.now()}; } else db[s]={tp:tp,sl:sl,p0:_HUNT.px[s],at:Date.now(),side:tp&&tp<_HUNT.px[s]?'short':'long'};
+function _huntStore(){ var s=_HUNT.sel; if(!s)return; var v=_huntVals(), tp=v.tp, sl=v.sl, px=_HUNT.px[s]; var db=_huntDB();
+  if(tp&&sl&&px&&((tp>px)===(sl>px))){ if(typeof toast==='function')toast('TP 와 SL 이 현재가 같은 쪽에 있어요 — 확인해 주세요'); return; }
+  if(!tp&&!sl){ db[s]={del:1,at:Date.now()}; } else db[s]={tp:tp,sl:sl,p0:px,at:Date.now(),side:(tp?tp<px:sl>px)?'short':'long'};
   _huntSave(db);
-  if(db[s]){ var L=_huntLogs(), rec={s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}; L.unshift(rec); _huntLogSave(L); _huntNotify(rec); }
+  if(db[s]&&!db[s].del){ var L=_huntLogs(), rec={s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}; L.unshift(rec); _huntLogSave(L); _huntNotify(rec); }
   if(typeof toast==='function')toast(s+' TP/SL 제출했어요'); _huntPick(s); _huntLogRender(); _huntSyncSoon(); }
 function _huntDel(){ var s=_HUNT.sel, db=_huntDB(); db[s]={del:1,at:Date.now()}; _huntSave(db); _huntPick(s); _huntSyncSoon(); }
 async function _huntTick(){ if(!coinMode||!$('#huntList')){ clearInterval(window._huntT); window._huntT=null; return; }
@@ -2828,8 +2852,8 @@ async function _huntTick(){ if(!coinMode||!$('#huntList')){ clearInterval(window
       var hit=d.tp&&(lg?p>=d.tp:p<=d.tp)?'TP':d.sl&&(lg?p<=d.sl:p>=d.sl)?'SL':null;
       if(hit){ d.hit=hit; d.hitAt=Date.now(); ch=true; if(typeof toast==='function')toast('🎯 '+s+' '+hit+' 도달 — $'+_huntFmt(p)); } });
     if(ch){ Object.keys(db).forEach(function(k){ dbAll[k]=db[k]; }); _huntSave(dbAll); }
-    var L=_huntLogs(), lc=false; L.forEach(function(r){ var p=_HUNT.px[r.s]; if(r.hit||!p)return; var lg=r.side!=='short', h=r.tp&&(lg?p>=r.tp:p<=r.tp)?'TP':r.sl&&(lg?p<=r.sl:p>=r.sl)?'SL':null; if(h){ r.hit=h; r.hitAt=Date.now(); lc=true; } });
-    if(lc)_huntLogSave(L); _huntLogRender(); if(ch||lc)_huntSyncSoon();
+    var L=_huntLogs(), lc=false, newHits=[]; L.forEach(function(r){ var p=_HUNT.px[r.s]; if(r.hit||r.del||!p)return; var lg=r.side!=='short', h=r.tp&&(lg?p>=r.tp:p<=r.tp)?'TP':r.sl&&(lg?p<=r.sl:p>=r.sl)?'SL':null; if(h){ r.hit=h; r.hitAt=Date.now(); r.px1=p; lc=true; newHits.push(r); } });
+    if(lc){ _huntLogSave(L); newHits.forEach(_huntNotifyHit); } _huntLogRender(); if(ch||lc)_huntSyncSoon();
     $$('[data-hp]').forEach(function(e){ var v=_HUNT.px[e.getAttribute('data-hp')]; if(v)e.textContent=_huntFmt(v); });
     var hp=$('#huntPx'); if(hp&&_HUNT.sel)hp.textContent='$'+_huntFmt(_HUNT.px[_HUNT.sel]); _huntCalc(); if(ch)_huntList();
   }catch(e){} }
