@@ -1162,7 +1162,7 @@ window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.
   return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog','huntHook'];
 /* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
 function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
 function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
@@ -2724,6 +2724,25 @@ function _huntStatHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }
   return '<div style="font-weight:800;font-size:13.5px;margin:16px 0 4px">🏆 승률 <span style="font-size:11px;color:var(--faint);font-weight:600">승 = TP 도달 · 패 = SL 도달 · 승률 = 승 ÷ (승+패) · 수익률은 제출 때 가격 기준 %</span></div>'
     +'<div style="overflow-x:auto"><table class="mxt" style="min-width:620px;font-size:12.5px"><tr><th>구분</th><th>제출</th><th>승</th><th>패</th><th>대기</th><th>승률</th><th>평균 이익</th><th>평균 손실</th><th>건당 평균</th><th>누적</th></tr>'
     +row('전체',all,true)+(lg.length&&sh.length?row('롱',grp(lg))+row('숏',grp(sh)):'')+syms.map(function(s){ return row(esc(s),grp(L.filter(function(r){return r.s===s;}))); }).join('')+'</table></div>'; }
+/* 제출 → 디스코드 웹후크 (2026-10-19 사용자 요청). 주소는 공개 저장소에 넣지 않고 화면 설정칸 → 이 기기 localStorage(huntHook, ☁️ 동기화 코드에 포함) */
+function _huntHook(){ try{ return localStorage.getItem('huntHook')||''; }catch(e){ return ''; } }
+window._huntHookSet=function(){ var v=(($('#huntHookIn')||{}).value||'').trim(); if(v&&!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+/.test(v)){ if(typeof toast==='function')toast('디스코드 웹후크 주소 형식이 아니에요'); return; }
+  try{ if(v)localStorage.setItem('huntHook',v); else localStorage.removeItem('huntHook'); }catch(e){} if(typeof toast==='function')toast(v?'웹후크 저장했어요':'웹후크 지웠어요'); var b=$('#huntHookBox'); if(b)b.outerHTML=_huntHookBox(); _huntSyncSoon(); };
+window._huntHookTest=function(){ _huntSend({content:'✅ VANTOR HUNTPSL 웹후크 연결 시험'},function(ok){ if(typeof toast==='function')toast(ok?'디스코드로 보냈어요':'보내기 실패 — 주소를 확인하세요'); }); };
+function _huntSend(body,cb){ var u=_huntHook(); if(!u){ cb&&cb(false); return; }
+  fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){ cb&&cb(r.ok); }).catch(function(){ cb&&cb(false); }); }
+function _huntHookBox(){ var h=_huntHook();
+  return '<details id="huntHookBox" style="margin-top:10px"'+(h?'':' open')+'><summary style="cursor:pointer;font-size:12.5px;font-weight:800">🔔 디스코드 알림 '+(h?'<span style="color:#2ebd85">연결됨</span>':'<span style="color:var(--faint)">꺼짐 — 웹후크 주소를 넣으면 제출할 때마다 보내요</span>')+'</summary>'
+    +'<div style="display:flex;gap:6px;margin-top:6px"><input id="huntHookIn" type="password" value="'+esc(h)+'" placeholder="https://discord.com/api/webhooks/…" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:12.5px">'
+    +'<button class="tf" onclick="_huntHookSet()">저장</button>'+(h?'<button class="tf" onclick="_huntHookTest()">시험</button>':'')+'</div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:4px">디스코드 채널 설정 → 연동 → 웹후크에서 주소 복사. 이 기기(와 같은 동기화 코드 기기)에만 저장되고 사이트 코드엔 안 들어가요.</div></details>'; }
+function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', pc=function(x){ return x&&r.p0?((x/r.p0-1)*100):null; }, f=function(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; };
+  var L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length;
+  var rr=(r.tp&&r.sl)?(Math.abs(r.tp-r.p0)/Math.abs(r.p0-r.sl)).toFixed(2):'—';
+  _huntSend({embeds:[{title:'🎯 HUNTPSL 제출 — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
+    fields:[{name:'제출가',value:'$'+_huntFmt(r.p0),inline:true},{name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+' ('+f(pc(r.tp))+')':'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+' ('+f(pc(r.sl))+')':'—',inline:true},
+      {name:'손익비',value:'1 : '+rr,inline:true},{name:'지금까지 승률',value:L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음',inline:true}],
+    footer:{text:'VANTOR · 바이낸스 선물 시세'},timestamp:new Date(r.at).toISOString()}]},function(ok){ if(!ok&&typeof toast==='function')toast('디스코드 전송 실패'); }); }
 function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML(); }
 window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ if(r.s===sym&&r.at===at){ r.del=1; r.delAt=Date.now(); } }); _huntLogSave(L); _huntLogRender(); _huntSyncSoon(); };
 /* ☁️ 기기 간 동기화 (2026-10-19 사용자 결정) — 동기화 코드가 있으면 HUNTPSL 을 열 때·30초마다 서버 기록을 받아 '합친다'.
@@ -2745,7 +2764,7 @@ function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb()
 function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
 async function renderHunt(el){
   el.innerHTML='<div class="sec-title">🎯 HUNTPSL</div><p class="sec-sub">코인 이름을 누르면 현재가가 나오고 <b>TP(익절)</b>·<b>SL(손절)</b> 가격을 넣어 저장할 수 있어요. 제출하면 아래 기록에 쌓이고 TP·SL 도달을 표시해요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
-    +'<div class="card"><div class="pad"><input id="huntQ" placeholder="코인 검색 (예: BTC, SOL)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px" oninput="_huntList()"><div id="huntSel" style="margin-top:12px"></div><div style="margin-top:14px"><div style="font-weight:800;font-size:13.5px;margin-bottom:4px">📝 제출 기록 <span style="font-size:11px;color:var(--faint);font-weight:600">'+(_syncCode()?'☁️ 동기화 중':'이 기기에만 저장 — 상단 ☁️에서 동기화 코드를 만들면 기기끼리 공유')+' · 3초마다 지금 손익·도달 갱신</span></div><div id="huntLog"></div><div id="huntStat"></div></div><div style="font-weight:800;font-size:13.5px;margin-top:16px">코인 목록</div><div id="huntList" style="margin-top:4px"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div></div>';
+    +'<div class="card"><div class="pad"><input id="huntQ" placeholder="코인 검색 (예: BTC, SOL)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px" oninput="_huntList()">'+_huntHookBox()+'<div id="huntSel" style="margin-top:12px"></div><div style="margin-top:14px"><div style="font-weight:800;font-size:13.5px;margin-bottom:4px">📝 제출 기록 <span style="font-size:11px;color:var(--faint);font-weight:600">'+(_syncCode()?'☁️ 동기화 중':'이 기기에만 저장 — 상단 ☁️에서 동기화 코드를 만들면 기기끼리 공유')+' · 3초마다 지금 손익·도달 갱신</span></div><div id="huntLog"></div><div id="huntStat"></div></div><div style="font-weight:800;font-size:13.5px;margin-top:16px">코인 목록</div><div id="huntList" style="margin-top:4px"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div></div>';
   try{ var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();});
     _HUNT.list=all.filter(function(t){ return /USDT$/.test(t.symbol); }).map(function(t){ return {s:t.symbol.replace(/USDT$/,''),p:+t.lastPrice,c:+t.priceChangePercent,v:+t.quoteVolume}; }).sort(function(a,b){ return b.v-a.v; });
     _HUNT.list.forEach(function(x){ _HUNT.px[x.s]=x.p; });
@@ -2779,7 +2798,7 @@ function _huntCalc(){ var px=_HUNT.px[_HUNT.sel], tp=+(($('#huntTp')||{}).value)
 function _huntStore(){ var s=_HUNT.sel; if(!s)return; var tp=+(($('#huntTp')||{}).value)||null, sl=+(($('#huntSl')||{}).value)||null; var db=_huntDB();
   if(!tp&&!sl){ db[s]={del:1,at:Date.now()}; } else db[s]={tp:tp,sl:sl,p0:_HUNT.px[s],at:Date.now(),side:tp&&tp<_HUNT.px[s]?'short':'long'};
   _huntSave(db);
-  if(db[s]){ var L=_huntLogs(); L.unshift({s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}); _huntLogSave(L); }
+  if(db[s]){ var L=_huntLogs(), rec={s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}; L.unshift(rec); _huntLogSave(L); _huntNotify(rec); }
   if(typeof toast==='function')toast(s+' TP/SL 제출했어요'); _huntPick(s); _huntLogRender(); _huntSyncSoon(); }
 function _huntDel(){ var s=_HUNT.sel, db=_huntDB(); db[s]={del:1,at:Date.now()}; _huntSave(db); _huntPick(s); _huntSyncSoon(); }
 async function _huntTick(){ if(!coinMode||!$('#huntList')){ clearInterval(window._huntT); window._huntT=null; return; }
