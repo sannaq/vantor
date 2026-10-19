@@ -91,19 +91,53 @@ function run(o, sel) {
   const inv = r.filter((s) => s.ret != null);
   return { n: r.length, alloc: mean(r.map((s) => s.alloc)), ret: mean(inv.map((s) => s.ret)), win: mean(inv.map((s) => (s.ret > 0 ? 1 : 0))),
     eff: mean(r.map((s) => s.alloc)) * H / (mean(r.map((s) => (s.ret == null ? H : s.day))) || H), // 자금 회전 기준: 60일로 환산한 배정 돈 수익 (목표가로 일찍 팔면 그 돈을 다시 쓴다)
-    fill1: mean(r.map((s) => (s.f1 ? 1 : 0))), hit: mean(inv.map((s) => (s.hit ? 1 : 0))), stop: mean(inv.map((s) => (s.stopped ? 1 : 0))), day: q(inv.map((s) => s.day), 0.5) };
+    fill1: mean(r.map((s) => (s.f1 ? 1 : 0))), hit: mean(inv.map((s) => (s.hit ? 1 : 0))), hit1: mean(inv.map((s) => (s.hit1 ? 1 : 0))), stop: mean(inv.map((s) => (s.stopped ? 1 : 0))), day: q(inv.map((s) => s.day), 0.5) };
 }
 const A = picks.filter((p) => p.d < half), B = picks.filter((p) => p.d >= half);
 const res = RULES.map((R) => ({ key: R.key, o: R.o, first: run(R.o, A), second: run(R.o, B) }));
 const prev = fs.existsSync(OUT) ? JSON.parse(fs.readFileSync(OUT, 'utf8')) : null;
+const baseKey = (k) => k.split('|').slice(0, 3).join('|');
 const curKey = prev ? prev.rule.key : 'ma60|s2|atr4'; // 처음 = 지금까지 쓰던 규칙(1차 60일선·손절 2ATR)에 목표 1차+4ATR
-const cur = res.find((r) => r.key === curKey) || res.find((r) => r.key === 'ma60|s2|atr4');
-const best = res.slice().sort((a, b) => b.first.eff - a.first.eff)[0];
-const adopt = best.key !== cur.key && best.second.eff >= cur.second.eff + 0.001;
-const chosen = adopt ? best : cur;
+const cur0 = res.find((r) => r.key === baseKey(curKey)) || res.find((r) => r.key === 'ma60|s2|atr4');
+const best0 = res.slice().sort((a, b) => b.first.eff - a.first.eff)[0];
+const adopt = best0.key !== cur0.key && best0.second.eff >= cur0.second.eff + 0.001;
+const base = adopt ? best0 : cur0;
 const P = (x) => x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(2) + '%';
 res.sort((a, b) => b.first.eff - a.first.eff).slice(0, 12).forEach((r) => console.log(r.key.padEnd(18), '앞', P(r.first.eff), '뒤', P(r.second.eff), `| 수익 ${P(r.second.ret)} 승률 ${(r.second.win * 100).toFixed(0)}% 목표 ${(r.second.hit * 100).toFixed(0)}% 손절 ${(r.second.stop * 100).toFixed(0)}% 보유 ${r.second.day}일`));
-console.log(`지금 ${cur.key} (뒤 ${P(cur.second.eff)}) → 1등 ${best.key} (뒤 ${P(best.second.eff)}) → ${adopt ? '변경' : '유지'}`);
+console.log(`기본 규칙: 지금 ${cur0.key} (뒤 ${P(cur0.second.eff)}) → 1등 ${best0.key} (뒤 ${P(best0.second.eff)}) → ${adopt ? '변경' : '유지'}`);
+
+// ②-2 1차 매도 (2026-10-19 사용자 결정: 1차·2차 매도를 백테스트로 고름) — 고른 기본 규칙 위에 '1차 매도에서 절반' 후보를 얹어 앞 절반 1등을 쓴다.
+//   1차 매도는 꼭 둔다(사용자 결정). 나눠 팔지 않을 때보다 얼마나 나은지/못한지는 그대로 기록해 화면에 보여준다.
+const T1 = [];
+for (const t1 of ['atr1.5', 'atr2', 'atr3', 'vp', 'hi20']) for (const be of [false, true]) {
+  const o = { ...base.o, tg1: t1.startsWith('atr') ? 'atr' : t1, be }; if (t1.startsWith('atr')) o.tg1K = +t1.slice(3);
+  T1.push({ key: `${base.key}|${t1}${be ? '|be' : ''}`, o });
+}
+const res1 = T1.map((R) => ({ key: R.key, o: R.o, first: run(R.o, A), second: run(R.o, B) }));
+res1.sort((a, b) => b.first.eff - a.first.eff).forEach((r) => console.log(r.key.padEnd(28), '앞', P(r.first.eff), '뒤', P(r.second.eff), `| 1차 매도 도달 ${(r.second.hit1 * 100).toFixed(0)}% 2차 ${(r.second.hit * 100).toFixed(0)}% 손절 ${(r.second.stop * 100).toFixed(0)}%`));
+const chosen = res1[0];
+console.log(`1차 매도: ${chosen.key} — 나눠 팔지 않을 때 대비 뒤 절반 ${P(chosen.second.eff - base.second.eff)}`);
+
+// ②-3 시장 심리 보정 (2026-10-19 사용자 결정: 매수·매도 가격에 반영) — CNN 공포탐욕(feeds/fear-daily.json, 그날 이전 마지막 값)
+//   공포(25 미만)·탐욕(75 이상) 구간의 추천만 따로 모아, 보정 후보를 앞 절반에서 고르고 뒤 절반에서도 0.2%p 이상 나을 때만 쓴다. 표본이 적으면(절반마다 80건 미만) 안 쓴다.
+let FG = []; try { FG = JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/fear-daily.json'), 'utf8')).fg.map(([d, v]) => [d.replace(/-/g, ''), v]); } catch { /* 없으면 심리 보정 없음 */ }
+const fgAt = (d) => { let lo = 0, hi = FG.length - 1, r = null; while (lo <= hi) { const m = (lo + hi) >> 1; if (FG[m][0] < d) { r = FG[m][1]; lo = m + 1; } else hi = m - 1; } return r; };
+const zoneOf = (v) => v == null ? null : v < 25 ? 'fear' : v >= 75 ? 'greed' : null;
+const ADJ = { fear: [['그대로', {}], ['1차 바로 매수', { b1: 'now' }], ['1차 1ATR 더 아래', { b1Off: 1 }], ['2차 매도 +2ATR', { tgK: 2 }], ['1차 바로 + 2차 매도 +2ATR', { b1: 'now', tgK: 2 }]],
+  greed: [['그대로', {}], ['2차 매도 −2ATR', { tgK: -2 }], ['1차 매도 1ATR 앞당김', { tg1K: -1 }], ['1차 1ATR 더 아래', { b1Off: 1 }], ['손절 1ATR 좁게', { stopAtr: -1 }]] };
+const applyAdj = V.adjust; // score-core.js 공용 (사이트·채점과 같은 계산)
+const regime = {};
+for (const z of ['fear', 'greed']) {
+  const ZA = A.filter((p) => zoneOf(fgAt(p.d)) === z), ZB = B.filter((p) => zoneOf(fgAt(p.d)) === z);
+  const rr = ADJ[z].map(([nm, a]) => { const o = applyAdj(chosen.o, a); return { nm, a, o, first: run(o, ZA), second: run(o, ZB) }; });
+  const none = rr[0], top = rr.slice().sort((x, y) => (y.first.eff || -9) - (x.first.eff || -9))[0];
+  const ok = ZA.length >= 80 && ZB.length >= 80 && top !== none && top.second.eff >= none.second.eff + 0.002;
+  regime[z] = { nA: ZA.length, nB: ZB.length, use: ok ? top.nm : '그대로', o: ok ? top.a : {}, why: ok ? `뒤 절반 ${P(none.second.eff)} → ${P(top.second.eff)}` : (ZA.length < 80 || ZB.length < 80 ? `표본 부족(앞 ${ZA.length}·뒤 ${ZB.length}건)` : `나아지지 않음(1등 ${top.nm} 뒤 절반 ${P(top.second.eff)} vs 그대로 ${P(none.second.eff)})`),
+    cands: rr.map((x) => ({ nm: x.nm, first: x.first.eff == null ? null : +x.first.eff.toFixed(4), second: x.second.eff == null ? null : +x.second.eff.toFixed(4), ret: x.second.ret == null ? null : +x.second.ret.toFixed(4), win: x.second.win == null ? null : +x.second.win.toFixed(3) })) };
+  console.log(`심리 ${z}: 앞 ${ZA.length}·뒤 ${ZB.length}건 → ${regime[z].use} (${regime[z].why})`);
+  rr.forEach((x) => console.log('   ', x.nm.padEnd(18), '앞', P(x.first.eff), '뒤', P(x.second.eff)));
+}
+const cur = cur0;
 
 // ④ 고른 규칙으로 변동성 구간별 예상 + 경로 분위
 const rows = [];
@@ -137,9 +171,11 @@ console.log('경로 폭 보정 ×' + widen);
 console.log('경로 검사(뒤 절반, 보정 후):', calib.filter((c) => [5, 20, 60].includes(c.d)).map((c) => `${c.d}일 25~75% ${(c.in50 * 100).toFixed(0)}% · 10~90% ${(c.in80 * 100).toFixed(0)}%`).join(' | '));
 const r4 = (x) => x == null ? null : +x.toFixed(4);
 const hist = (prev && prev.history) || [];
-if (!prev || adopt) hist.push({ d: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), key: chosen.key, why: !prev ? '처음 기록' : `${cur.key} → ${best.key}: 뒤 절반 60일 환산 수익 ${P(cur.second.eff)} → ${P(best.second.eff)}` });
+if (!prev || adopt || prev.rule.key !== chosen.key) hist.push({ d: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10), key: chosen.key, why: !prev ? '처음 기록' : adopt ? `${cur.key} → ${best0.key}: 뒤 절반 60일 환산 수익 ${P(cur.second.eff)} → ${P(best0.second.eff)}` : `1차 매도 추가 ${chosen.key}` });
 const out = { v: 1, market: US ? 'US' : 'KR', updated: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 16).replace('T', ' '), horizon: H, period: [ds[0], ds[ds.length - 1]], nPicks: picks.length,
   rule: { key: chosen.key, o: chosen.o, first: chosen.first, second: chosen.second }, changed: adopt, prevKey: adopt ? cur.key : null,
+  split: { base: base.key, baseFirst: base.first.eff, baseSecond: base.second.eff, cands: res1.map((r) => ({ key: r.key, first: +r.first.eff.toFixed(4), second: +r.second.eff.toFixed(4), hit1: +r.second.hit1.toFixed(3), hit: +r.second.hit.toFixed(3), stop: +r.second.stop.toFixed(3), win: +r.second.win.toFixed(3), ret: +r.second.ret.toFixed(4) })) },
+  regime, fgCut: [25, 75],
   calib, widen, realAcc, vcut: vcut.map(r4), days: DS, qs: QS, model: model.map((m) => ({ ...m, fill1: r4(m.fill1), hit: r4(m.hit), stop: r4(m.stop), ret: r4(m.ret), win: r4(m.win), alloc: r4(m.alloc) })),
   candidates: res.slice(0, 12).map((r) => ({ key: r.key, first: r4(r.first.eff), second: r4(r.second.eff), alloc: r4(r.second.alloc), ret: r4(r.second.ret), win: r4(r.second.win), hit: r4(r.second.hit), stop: r4(r.second.stop), day: r.second.day })),
   history: hist.slice(-24) };

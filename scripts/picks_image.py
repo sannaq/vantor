@@ -97,8 +97,11 @@ def brow(x, i, weak=False):
         L, ex = x["lv"], x.get("ex") or {}
         M = (lambda v: "—" if v is None else f"${v:,.2f}") if US else (lambda v: "—" if v is None else f"{v:,.0f}")
         exs = f' · <b style="color:{col(ex.get("ret"))}">예상 {ex["ret"] * 100:+.1f}%</b>' if ex.get("ret") is not None else ""
-        lvl = (f'<div class="b3"><span style="color:{UP}">1차 {M(L["b1"])}</span> · 2차 {M(L["b2"])} · <span style="color:{DN}">손절 {M(L["st"])}</span>'
-               + (f' · <span style="color:#4a9eff">목표 {M(L["tg"])}</span>' if L.get("tg") is not None else "") + exs + "</div>")
+        # 1차·2차 매수 / 1차·2차 매도 (2026-10-19 사용자 결정)
+        sell = (f' · <span style="color:#4a9eff">매도 1차 {M(L["tg1"])} · 2차 {M(L["tg"])}</span>' if L.get("tg1") is not None and L.get("tg") is not None
+                else (f' · <span style="color:#4a9eff">목표 {M(L["tg"])}</span>' if L.get("tg") is not None else ""))
+        lvl = (f'<div class="b3"><span style="color:{UP}">매수 1차 {M(L["b1"])} · 2차 {M(L["b2"])}</span>' + sell
+               + f' · <span style="color:{DN}">손절 {M(L["st"])}</span>' + exs + "</div>")
     return f"""<div class="br{' tall' if lvl else ''}"><div class="rk">{i}{chg(x, i, weak)}</div><b class="bs" style="color:{DN if weak else UP}">{x["total"]}</b>
  <div class="bn"><div class="b1">{E(x["n"])}{hot}</div><div class="b2">{E(why[0])}</div>{lvl}</div>
  <div class="bp"><div>{px} <span style="color:{col(x.get("day"))}">{sgn(x.get("day"))}</span></div><small>20일 <span style="color:{col(x.get("ret20"))}">{sgn(x.get("ret20"), 1)}</span> · {tv}</small></div></div>"""

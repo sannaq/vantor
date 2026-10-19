@@ -186,6 +186,9 @@ VIX_B = [('15 미만 (안정)', 0, 15), ('15~20', 15, 20), ('20~30 (주의)', 20
 
 def main():
     fg, fg_now = fng()
+    # 매수·매도 규칙 백테스트(scripts/levels_study.mjs)가 날짜별 심리 구간을 쓰도록 전체 일별 값을 따로 저장 (2026-10-19)
+    with open(os.path.join(ROOT, 'feeds', 'fear-daily.json'), 'w', encoding='utf-8') as f:
+        json.dump({'updated': datetime.now(KST).strftime('%Y-%m-%d %H:%M'), 'fg': [[k, round(v, 1)] for k, v in sorted(fg.items())]}, f, separators=(',', ':'))
     fg_s = sorted(fg.items())
     spx = yahoo('%5EGSPC', 'US')
     ks = yahoo('%5EKS11', 'KR')

@@ -150,15 +150,18 @@ const pickable = liquid.filter((x) => !(NO_DOWN && x.f.trend === '하락 추세'
 // 매수·손절·목표가 + 종목별 예상 (2026-10-13 사용자 결정) — 규칙과 예상 모델은 feeds/levels-model*.json (scripts/levels_study.mjs 가 매달 스스로 고름)
 let LVM = null; try { LVM = JSON.parse(fs.readFileSync(OUT('levels-model'), 'utf8')); } catch { /* 모델 없으면 기본 규칙 · 예상 없음 */ }
 const r2 = (v) => v == null ? null : +v.toFixed(4);
-const lvOf = (x) => { const L = V.levels(x.f._cs, { ...((LVM && LVM.rule.o) || {}), ...(US ? { usd: true } : {}) }); if (!L) return {};
+// 시장 심리(CNN 공포탐욕, feeds/fear-study.json)에 따라 백테스트로 고른 보정을 얹는다 (2026-10-19 사용자 결정)
+let FGNOW = null; try { FGNOW = JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/fear-study.json'), 'utf8')).now.fg; } catch { /* 없으면 보정 없음 */ }
+const RULE = V.ruleFor(LVM, FGNOW);
+const lvOf = (x) => { const L = V.levels(x.f._cs, { ...RULE.o, ...(US ? { usd: true } : {}) }); if (!L) return {};
   const e = V.expect(L, LVM, US);
-  return { lv: { b1: L.b1, b2: L.b2, st: L.st, tg: L.tg, rule: LVM ? LVM.rule.key : 'ma60|s2|hold' },
+  return { lv: { b1: L.b1, b2: L.b2, st: L.st, tg1: L.tg1, tg: L.tg, rule: LVM ? LVM.rule.key : 'ma60|s2|hold' },
     ex: e ? { b: e.b, ap: r2(e.ap), ret: r2(e.ret), win: r2(e.win), hit: r2(e.hit), stop: r2(e.stop), fill1: r2(e.fill1), day: e.day, tgPct: r2(e.tgPct), stPct: r2(e.stPct), band: e.band } : null }; };
 const pick = (x) => ({ c: x.c, n: x.n, mk: x.mk, rank: x.rank, total: x.r.total, view: x.r.view, parts: x.r.parts, good: x.r.good, bad: x.r.bad, ref: x.r.ref,
   px: x.f.px, day: x.f.day, ret20: x.f.ret20, per: x.f.per, vol: x.f.vol, hiGap: x.f.hiGap, mom: x.f.mom, tv20: US ? r1(x.f.tv20, 2) : Math.round(x.f.tv20) });
 const dist = { '추천': 0, '중립': 0, '매수 금지': 0 }; pickable.forEach((x) => dist[x.r.view]++);
 const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', spy, cut: bp.cut, date, n: fresh.length, liquidN: pickable.length, minTv: PICK_TV, noDown: NO_DOWN, updated: scores.updated, dist,
-  top: pickable.slice(0, 20).map((x) => ({ ...pick(x), ...lvOf(x) })), lvRule: LVM ? { key: LVM.rule.key, updated: LVM.updated, changed: LVM.changed, ret: LVM.rule.second.ret, win: LVM.rule.second.win, hit: LVM.rule.second.hit, stop: LVM.rule.second.stop, day: LVM.rule.second.day } : null, weak: liquid.slice(-20).reverse().map(pick) }; // 책처럼 양쪽 20종씩 (2026-10-13 사용자 결정)
+  top: pickable.slice(0, 20).map((x) => ({ ...pick(x), ...lvOf(x) })), lvRule: LVM ? { key: LVM.rule.key, zone: RULE.zone, adj: RULE.adj, fg: FGNOW, updated: LVM.updated, changed: LVM.changed, ret: LVM.rule.second.ret, win: LVM.rule.second.win, hit: LVM.rule.second.hit, stop: LVM.rule.second.stop, day: LVM.rule.second.day } : null, weak: liquid.slice(-20).reverse().map(pick) }; // 책처럼 양쪽 20종씩 (2026-10-13 사용자 결정)
 // 직전 거래일 대비 변화 (이미지의 NEW·순위 ▲▼·빠진 종목). 같은 날 다시 돌리면 그 전 거래일 기준을 그대로 물려받는다.
 {
   let old = null;

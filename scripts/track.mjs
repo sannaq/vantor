@@ -68,11 +68,12 @@ async function record() {
   const cs = await pool(buys.map(([c]) => c), (c) => candles(c, 250));
   // 매수·손절·목표가 규칙과 예상 경로는 그날 쓰던 feeds/levels-model*.json 그대로 기록 (나중에 모델이 바뀌어도 그날 예상으로 채점)
   let M = null; try { M = JSON.parse(fs.readFileSync(path.join(ROOT, US ? 'feeds/levels-model-us.json' : 'feeds/levels-model.json'), 'utf8')); } catch { /* 없으면 기본 규칙 */ }
-  const o = { ...((M && M.rule.o) || {}), ...(US ? { usd: true } : {}) };
-  // b = [코드, 점수, 1차, 2차, 손절, 목표, 그날 종가, ATR/종가, 변동성 구간]
+  let FGN = null; try { FGN = JSON.parse(fs.readFileSync(path.join(ROOT, 'feeds/fear-study.json'), 'utf8')).now.fg; } catch { /* 없음 */ }
+  const RU = V.ruleFor(M, FGN), o = { ...RU.o, ...(US ? { usd: true } : {}) }; // 심리 보정 포함 (2026-10-19)
+  // b = [코드, 점수, 1차, 2차, 손절, 2차 매도(목표), 그날 종가, ATR/종가, 변동성 구간, 1차 매도]
   const b = buys.map(([c, it]) => { const L = V.levels(cs.get(c) || [], o); const e = L && M ? V.expect(L, M, US) : null;
-    return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null, L ? L.tg : null, L ? L.px : null, e ? +e.ap.toFixed(5) : null, e ? e.b : null]; });
-  cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: (US ? 'US 모멘텀67·흑자33' : 'v2 안정성40·고점근접30·이익30 · 50억↑·하락추세 제외') + ' · ' + (M ? M.rule.key : 'ma60|s2|hold'),
+    return [c, it[0], L ? L.b1 : null, L ? L.b2 : null, L ? L.st : null, L ? L.tg : null, L ? L.px : null, e ? +e.ap.toFixed(5) : null, e ? e.b : null, L ? L.tg1 : null]; });
+  cur.days[d] = { u: liq.map(([c]) => c), b, t: top || undefined, n: bans.map(([c, it]) => [c, it[0]]), formula: (US ? 'US 모멘텀67·흑자33' : 'v2 안정성40·고점근접30·이익30 · 50억↑·하락추세 제외') + ' · ' + (M ? M.rule.key : 'ma60|s2|hold') + (RU.adj ? ' · 심리 ' + RU.zone + ' ' + RU.adj : ''),
     mz: M ? { days: M.days, vcut: M.vcut, path: M.model.map((m) => m.path), ex: M.model.map((m) => [m.ret, m.hit, m.stop]) } : undefined };
   fs.writeFileSync(file, JSON.stringify(cur));
   console.log(`기록 ${d}: 거래 활발 ${liq.length} · 추천 ${b.length} · 매수 금지 ${bans.length}`);
