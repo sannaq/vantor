@@ -1961,6 +1961,30 @@ function whyMoved(r){
   return parts.join(' ');
 }
 function renderWhy(r){ var el=$('#whyBox'); if(el) el.innerHTML=whyMoved(r)||'등락 데이터를 불러오는 중…'; }
+/* 종목 상세 탭 (10/19 사용자 결정, 네이버 모바일식): 종합 · 수급 · 호가 · 점수 · 뉴스
+   기존 블록을 그대로 두고 탭에 따라 보이기만 바꾼다(차트·실시간 갱신 코드 그대로). 안쪽 옛 탭 줄(.stabs)은 숨기고 그 버튼을 눌러 기존 동작을 재사용 */
+var _stkTab='sum', _SDU=null;
+function _stkTabs(r){ var el=$('#stockPanel'); if(!el)return; var sg=el.querySelector('.sgrid'); if(!sg||sg.children.length<2)return;
+  var L=sg.children[0], R=sg.children[1], rc=R.children, inner=L.querySelector('.stabs'); if(inner)inner.style.display='none';
+  var bar=document.createElement('div'); bar.className='stktabs';
+  var T=[['sum','종합'],['flow','수급'],['book','호가'],['score','점수'],['news','뉴스']];
+  bar.innerHTML=T.map(function(t){ return '<button data-k="'+t[0]+'">'+t[1]+'</button>'; }).join('');
+  var mg=$('#metGrid'); mg.parentNode.insertBefore(bar,mg);
+  function show(k){ _stkTab=k; $$('.stktabs button').forEach(function(b){ b.classList.toggle('on',b.dataset.k===k); });
+    var sum=k==='sum', inn={sum:'chart',flow:'flow',book:'book',score:'score'}[k];
+    var vis=function(x,on){ if(x)x.style.display=on?'':'none'; };
+    vis(mg,sum); vis($('#vscore'),sum); vis(L,!!inn);
+    vis(rc[0],k==='score'); vis(rc[1],sum); vis(rc[2],k==='news'); vis(rc[3],sum);
+    sg.classList.toggle('one',!inn||k==='flow'||k==='book');
+    if(inn&&inner){ var b=inner.querySelector('button[data-t="'+inn+'"]'); if(b)b.click(); }
+    if(sum)setTimeout(function(){ drawStockChart($('#sChart'),SEL||r); },0); }
+  bar.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ show(b.dataset.k); }; });
+  show(_stkTab);
+  // 미장: 실적 발표 D-day (feeds/stock-detail-us.json, 추천 후보만 있음)
+  if(r.ccy==='USD'){ var put=function(j){ var e=j&&j.items&&j.items[r.c]&&j.items[r.c].earn; if(!e||!e[0])return; var d=new Date(e[0].slice(0,4)+'-'+e[0].slice(4,6)+'-'+e[0].slice(6,8)+'T00:00:00'), dd=Math.round((d-new Date(new Date().toDateString()))/864e5); if(dd<0||dd>45)return;
+      var h=el.querySelector('#stkPx'); if(h&&!el.querySelector('.earnDday')){ var s2=document.createElement('div'); s2.className='earnDday'; s2.innerHTML='📅 실적 발표 <b>'+(+e[0].slice(4,6))+'/'+(+e[0].slice(6,8))+(e[1]?' '+esc(e[1]):'')+'</b> · <b>'+(dd===0?'오늘':'D-'+dd)+'</b>'+(e[2]?' · EPS 예상 '+esc(e[2]):''); h.parentNode.insertBefore(s2,h.nextSibling); } };
+    if(_SDU)put(_SDU); else _loadJ('feeds/stock-detail-us.json').then(function(j){ _SDU=j||{}; if(SEL&&SEL.c===r.c)put(_SDU); }); }
+}
 function openStock(code,opt){
   var r=scoredOf(code,opt); /* opt={n,mk}: 목록에 없는 미장 종목(추천 화면)의 이름·거래소 */ SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
   var el=$('#stockPanel'); if(!el)return;
@@ -2050,6 +2074,7 @@ function openStock(code,opt){
   renderVScore(r); // 종합 평점 카드 (score-core.js)
   enrichStock(r); // 실데이터 보강(비동기) — 실패해도 위 데모 화면 유지
   startDetailLive(r); // 열어둔 동안 15초마다 가격·매수매도세·투자자 자동 갱신
+  _stkTabs(r);
   var _is=$('#idxstrip'); if(_is)_is.style.display='none'; var _db=$('#demoban'); if(_db)_db.style.display='none'; // 상세 땐 시장 지수 스트립 숨김 → 상세가 네비 바로 아래
   window.scrollTo(0,0);
 }
@@ -2094,8 +2119,12 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
     if(nw&&nw.KR){ T.push(tile('news','📰','뉴스 <small>'+E(String(nw.updated||'').slice(11))+'</small>',nw.KR.slice(0,4).map(function(n){ return '<div class="gl-n">'+E(n.title)+'</div>'; }).join(''))); }
     T.push('<div class="gl-t" data-gv="watch" id="gl-watch"></div>');
     T.push(tile('ai','🤖','차트 분석 도우미','<div class="gl-s" style="white-space:normal">종목·코인을 입력하거나 차트 사진을 올리면 지지·저항·추세를 읽어 줘요</div>'));
-    if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('learn','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>',' data-gl="fear"')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
+    if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('macro','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
     T.push(tile('learn','📚','스터디','<div class="gl-s" style="white-space:normal">차트·지표·수급 기초부터 차근차근</div>'));
+    // 홈 순서 (10/19 사용자 결정, 네이버·토스식): ① 시장·심리·추천 ② 지금 움직임(레이더·포착·수급·스마트머니) ③ 브리핑·일정·뉴스·관심 ④ 성과·AI·스터디
+    var GL_ORDER=['gl-mkt','😱','🧭','🇺🇸','gl-radar','gl-stock','💰','gl-smart','📝','📅','📰','gl-watch','📊','🤖','📚'];
+    var _gk=function(h){ for(var i=0;i<GL_ORDER.length;i++){ if(h.indexOf(GL_ORDER[i].indexOf('gl-')===0?'id="'+GL_ORDER[i]+'"':'<div class="gl-h">'+GL_ORDER[i])>=0)return i; } return 99; };
+    T=T.map(function(h,i){ return [h,_gk(h),i]; }).sort(function(a,b){ return a[1]-b[1]||a[2]-b[2]; }).map(function(x){ return x[0]; });
     el.innerHTML='<style>#glance .gl-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:1100px){#glance .gl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#glance .gl-g{grid-template-columns:1fr}}'
       +'#glance .gl-t{border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card,transparent);min-width:0}#glance .gl-t:hover{border-color:var(--gold)}'
       +'#glance .gl-h{font-weight:800;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:4px}#glance .gl-h small{font-weight:600;color:var(--faint);font-size:11px}#glance .gl-h span{margin-left:auto;color:var(--faint)}'

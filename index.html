@@ -302,7 +302,11 @@
   .sec-sub{color:var(--sub);font-size:13.5px;margin:0 0 18px}
   .pad{padding:16px 18px 18px;overflow-x:auto}
   /* STOCK 상세 */
-  .sgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+  .sgrid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}.sgrid.one{grid-template-columns:1fr}
+  .stktabs{display:flex;gap:4px;margin:12px 0 4px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+  .stktabs button{flex:0 0 auto;padding:9px 16px;border:none;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--faint);cursor:pointer;border-bottom:2.5px solid transparent;margin-bottom:-1px}
+  .stktabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
+  .earnDday{display:inline-block;margin-top:6px;font-size:12.5px;padding:4px 10px;border-radius:8px;border:1px solid var(--gold);color:var(--sub)}
   @media(max-width:980px){.sgrid{grid-template-columns:1fr}}
   .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:16px}
   @media(max-width:900px){.metrics{grid-template-columns:repeat(3,1fr)}}
@@ -929,7 +933,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <nav id="tabbar"></nav>
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=9"></script>
-<script src="app.js?v=149"></script>
+<script src="app.js?v=150"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;
