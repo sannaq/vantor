@@ -2656,6 +2656,7 @@ window.loadSectors=loadSectors;
 /* ===== 코인 모드 상단 메뉴(홈·RADAR·섹터·뉴스·관심·기초) ===== */
 var _stockMenuHTML=null;
 var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')">홈</a>'
+  +'<a class="cmenu-a" data-cs="huntpsl" onclick="coinNav(\'huntpsl\')">HUNTPSL</a>' // 2026-10-19 사용자 요청: 홈 바로 아래 메뉴 하나 (내용은 사용자 확인 뒤 채움)
   +'<a class="cmenu-a" data-cs="ai" onclick="coinNav(\'ai\')">🤖 분석</a>'
   +'<a class="cmenu-a" data-cs="radar" onclick="coinNav(\'radar\')">RADAR</a>'
   +'<a class="cmenu-a" data-cs="sector" onclick="coinNav(\'sector\')">섹터</a>'
@@ -2681,6 +2682,7 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
     return; }
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
   if(sec==='ai'){ sect.innerHTML='<div class="sec-title">🤖 차트 분석 도우미</div><p class="sec-sub">코인·종목을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p><div id="aiAskCoin"></div>'; if(typeof mountHomeAsk==='function')mountHomeAsk('#aiAskCoin','coin'); return; }
+  if(sec==='huntpsl'){ sect.innerHTML='<div class="sec-title">HUNTPSL</div><div class="card"><div class="pad" style="color:var(--faint);font-size:13px">준비 중이에요.</div></div>'; return; }
   if(sec==='bt'){ if(typeof renderBacktestReplay==='function')renderBacktestReplay(sect); return; }
   if(sec==='flow'){ if(typeof renderFlowMarkers==='function')renderFlowMarkers(sect); return; }
   if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
