@@ -480,6 +480,20 @@ function _idxTrend(x){ var t=(typeof FLOWMETA!=='undefined'&&FLOWMETA&&FLOWMETA.
   var arr=t.map(function(p){return p[1];}); if(x._real&&x.v){ if(t[t.length-1][0]===_bbToday())arr[arr.length-1]=x.v; else arr.push(x.v); } return arr; }
 function _fmtJo(m){ m=+m||0; return m>=1e6?(m/1e6).toFixed(1)+'조':(m/100).toFixed(0)+'억'; }   // 백만원 → 조/억
 function _fmtEok(k){ k=+k||0; return (k/1e5).toFixed(2)+'억주'; }                               // 천주 → 억주
+/* 맨 위 '지수' 한 줄 — 모든 화면 공통 (10/19 사용자 결정: 핵심 8개, 홈·코인 포함) */
+var IB_KEYS=['KOSPI','KOSDAQ','나스닥','S&P500','USD/KRW'];
+function renderIdxBar(){
+  var ib=$('#idxbar'); if(!ib)return;
+  function it(nm,v,c,col){ return '<span><span class="ib-nm">'+nm+'</span><span class="ib-v"'+(col?' style="color:'+col+'"':'')+'>'+v+'</span>'+(c==null?'':'<span class="'+cls(c)+'" style="font-weight:700">'+pctTxt(c)+'</span>')+'</span>'; }
+  var mc=(typeof FLOWMETA!=='undefined'&&FLOWMETA&&FLOWMETA.macro)||{}, fn=_FS&&_FS.now, h='';
+  if(fn&&fn.fg!=null)h+=it('공포탐욕',Math.round(fn.fg)+' '+fn.zone,null,_fsColor(fn.fg));
+  if(mc.VIX&&mc.VIX.v)h+=it('VIX',mc.VIX.v.toFixed(2),mc.VIX.c); else if(fn&&fn.vix)h+=it('VIX',fn.vix.toFixed(2),null);
+  h+=IB_KEYS.map(function(k){ var x=IDX.filter(function(y){return y.nm===k;})[0]; if(!x)return '';
+    var ok=x.v&&(x._real||x._us); return it(k==='USD/KRW'?'원달러':k,ok?(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{maximumFractionDigits:2}):'—',ok?x.c:null); }).join('');
+  if(mc.US10Y&&mc.US10Y.v)h+=it('미국10년',mc.US10Y.v.toFixed(2)+'%',mc.US10Y.c);
+  ib.innerHTML='<span class="ib-lb">지수</span>'+h+'<span class="ib-t">마켓 ›</span>';
+  if(!_FS&&!renderIdxBar._fs){ renderIdxBar._fs=1; _fsLoad(function(j){ if(j)renderIdxBar(); }); }
+}
 function renderIdx(){
   var el=$('#idxstrip'); if(!el)return;
   el.innerHTML=IDX.map(function(x){ var pc=cls(x.c), col=x.c>0?'var(--up)':x.c<0?'var(--down)':'var(--flat)';
@@ -493,8 +507,7 @@ function renderIdx(){
       +'<div class="foot">'+foot+'</div></div>';
   }).join('');
   if(typeof _glLive==='function')setTimeout(_glLive,0);
-  var ib=$('#idxbar'); if(ib){ var lv=IDX.filter(function(x){ return x.v&&(x._real||x._us); });
-    ib.innerHTML=(lv.length?lv:IDX).map(function(x){ return '<span><span class="ib-nm">'+x.nm+'</span><span class="ib-v">'+((!x._real&&!x._us)?'—':(x._us?'$':'')+(x.v||0).toLocaleString('en-US',{maximumFractionDigits:2}))+'</span><span class="'+cls(x.c)+'" style="font-weight:700">'+pctTxt(x.c)+'</span></span>'; }).join('')+'<span class="ib-t">마켓 ›</span>'; }
+  renderIdxBar();
   // footer ticker
   var ft=$('#footTicker'); if(ft)ft.innerHTML=IDX.slice(0,2).filter(function(x){return x.v;}).map(function(x){return x.nm+' <span class="'+cls(x.c)+'">'+x.v.toLocaleString()+' '+arw(x.c)+pctTxt(x.c).replace('+','')+'</span>';}).join('');
 }
