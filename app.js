@@ -2236,8 +2236,8 @@ function _renderSubtabs(v){ var el=$('#subtabs'); if(!el)return; var g=NAV_GROUP
   if(!g||coinMode){ el.classList.remove('on'); el.innerHTML=''; return; }
   el.innerHTML=g.map(function(x){ return '<button class="'+(x[0]===v?'on':'')+'" onclick="showView(\''+x[0]+'\')">'+x[1]+'</button>'; }).join(''); el.classList.add('on'); }
 var TABBAR=[['home','홈'],['market','시장'],['reco','추천'],['macro','지표'],['watch','관심']];
-var CTAB=[['home','홈','🏠'],['huntpsl','HUNTPSL','🎯'],['radar','RADAR','📡'],['watch','관심','⭐']];
-var CMORE=[['home','홈','🏠'],['huntpsl','HUNTPSL','🎯'],['ai','분석','🤖'],['radar','RADAR','📡'],['sector','섹터','🧭'],['news','뉴스','📰'],['watch','관심','⭐'],['learn','기초','📚'],['bt','백테스트','📼'],['flow','흐름','💥'],['liq','청산맵','🔥']];
+var CTAB=[['home','홈','🏠'],['huntpsl','Hoon TP/SL','🎯'],['radar','RADAR','📡'],['watch','관심','⭐']];
+var CMORE=[['home','홈','🏠'],['huntpsl','Hoon TP/SL','🎯'],['ai','분석','🤖'],['radar','RADAR','📡'],['sector','섹터','🧭'],['news','뉴스','📰'],['watch','관심','⭐'],['learn','기초','📚'],['bt','백테스트','📼'],['flow','흐름','💥'],['liq','청산맵','🔥']];
 var _ctabCur='home';
 function _menuSvg(v){ var a=document.querySelector('#menu a[data-v="'+v+'"] svg'); return a?a.outerHTML:''; }
 var _MORE_SVG='<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>';
@@ -2680,7 +2680,7 @@ window.loadSectors=loadSectors;
 /* ===== 코인 모드 상단 메뉴(홈·RADAR·섹터·뉴스·관심·기초) ===== */
 var _stockMenuHTML=null;
 var _COIN_MENU='<a class="cmenu-a on" data-cs="home" onclick="coinNav(\'home\')">홈</a>'
-  +'<a class="cmenu-a" data-cs="huntpsl" onclick="coinNav(\'huntpsl\')">HUNTPSL</a>' // 2026-10-19 사용자 요청: 홈 바로 아래 메뉴 하나 (내용은 사용자 확인 뒤 채움)
+  +'<a class="cmenu-a" data-cs="huntpsl" onclick="coinNav(\'huntpsl\')">Hoon TP/SL</a>' // 2026-10-19 사용자 요청: 홈 바로 아래 메뉴 하나 (내용은 사용자 확인 뒤 채움)
   +'<a class="cmenu-a" data-cs="ai" onclick="coinNav(\'ai\')">🤖 분석</a>'
   +'<a class="cmenu-a" data-cs="radar" onclick="coinNav(\'radar\')">RADAR</a>'
   +'<a class="cmenu-a" data-cs="sector" onclick="coinNav(\'sector\')">섹터</a>'
@@ -2731,7 +2731,7 @@ var HUNT_RESET_AT=1792407008923;
 function _huntResetAt(){ var v=0; try{ v=+localStorage.getItem('huntResetAt')||0; }catch(e){} return Math.max(HUNT_RESET_AT,v); }
 function _huntLogs(){ var t=_huntResetAt(); try{ return JSON.parse(localStorage.getItem('huntLog')||'[]').filter(function(r){ return r&&r.at>=t; }); }catch(e){ return []; } }
 function _huntLogSave(a){ var t=_huntResetAt(); try{ localStorage.setItem('huntLog',JSON.stringify(a.filter(function(r){ return r&&r.at>=t; }).slice(0,200))); }catch(e){} }
-window._huntResetAll=function(){ if(!confirm('HUNTPSL 제출 기록·TP/SL·승률을 모두 지울까요? (동기화된 기기도 같이 지워져요)'))return; var t=Date.now(); try{ localStorage.setItem('huntResetAt',String(t)); localStorage.setItem('huntLog','[]'); localStorage.setItem('huntTpSl','{}'); }catch(e){} if(typeof toast==='function')toast('기록을 모두 지웠어요'); _huntLogRender(); if(_HUNT.sel)_huntPick(_HUNT.sel); _huntList(); _huntSyncSoon(); };
+window._huntResetAll=function(){ if(!confirm('Hoon TP/SL 제출 기록·TP/SL·승률을 모두 지울까요? (동기화된 기기도 같이 지워져요)'))return; var t=Date.now(); try{ localStorage.setItem('huntResetAt',String(t)); localStorage.setItem('huntLog','[]'); localStorage.setItem('huntTpSl','{}'); }catch(e){} if(typeof toast==='function')toast('기록을 모두 지웠어요'); _huntLogRender(); if(_HUNT.sel)_huntPick(_HUNT.sel); _huntList(); _huntSyncSoon(); };
 function _huntLogHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }); if(!L.length)return '<div class="muted" style="font-size:12px;padding:6px 0">아직 제출한 기록이 없어요</div>';
   var T=function(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   return '<div style="overflow-x:auto"><table class="mxt" style="min-width:560px;font-size:12.5px"><tr><th>제출 시각</th><th>코인</th><th>제출 때 가격</th><th>TP</th><th>SL</th><th>손익비</th><th>지금</th><th>상태</th><th></th></tr>'
@@ -2760,7 +2760,7 @@ var HUNT_HOOK_DEFAULT='https://discord.com/api/webhooks/1561688500552732702/aWyq
 function _huntHook(){ try{ return localStorage.getItem('huntHook')||HUNT_HOOK_DEFAULT; }catch(e){ return HUNT_HOOK_DEFAULT; } }
 window._huntHookSet=function(){ var v=(($('#huntHookIn')||{}).value||'').trim(); if(v&&!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+/.test(v)){ if(typeof toast==='function')toast('디스코드 웹후크 주소 형식이 아니에요'); return; }
   try{ if(v)localStorage.setItem('huntHook',v); else localStorage.removeItem('huntHook'); }catch(e){} if(typeof toast==='function')toast(v?'웹후크 저장했어요':'웹후크 지웠어요'); var b=$('#huntHookBox'); if(b)b.outerHTML=_huntHookBox(); _huntSyncSoon(); };
-window._huntHookTest=function(){ _huntSend({content:'✅ VANTOR HUNTPSL 웹후크 연결 시험'},function(ok){ if(typeof toast==='function')toast(ok?'디스코드로 보냈어요':'보내기 실패 — 주소를 확인하세요'); }); };
+window._huntHookTest=function(){ _huntSend({content:'✅ VANTOR Hoon TP/SL 웹후크 연결 시험'},function(ok){ if(typeof toast==='function')toast(ok?'디스코드로 보냈어요':'보내기 실패 — 주소를 확인하세요'); }); };
 function _huntSend(body,cb){ var u=_huntHook(); if(!u){ cb&&cb(false); return; }
   fetch(u,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){ cb&&cb(r.ok); }).catch(function(){ cb&&cb(false); }); }
 function _huntHookBox(){ var h=_huntHook(), own=(function(){ try{ return localStorage.getItem('huntHook')||''; }catch(e){ return ''; } })();
@@ -2771,7 +2771,7 @@ function _huntHookBox(){ var h=_huntHook(), own=(function(){ try{ return localSt
 function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', pc=function(x){ return x&&r.p0?((x/r.p0-1)*100):null; }, f=function(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; };
   var L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length;
   var rr=(r.tp&&r.sl)?(Math.abs(r.tp-r.p0)/Math.abs(r.p0-r.sl)).toFixed(2):'—';
-  _huntSend({embeds:[{title:'🎯 HUNTPSL 제출 — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
+  _huntSend({embeds:[{title:'🎯 Hoon TP/SL 제출 — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
     fields:[{name:'제출가',value:'$'+_huntFmt(r.p0),inline:true},{name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+' ('+f(pc(r.tp))+')':'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+' ('+f(pc(r.sl))+')':'—',inline:true},
       {name:'손익비',value:'1 : '+rr,inline:true},{name:'지금까지 승률',value:L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음',inline:true}],
     footer:{text:'VANTOR · 바이낸스 선물 시세'},timestamp:new Date(r.at).toISOString()}]},function(ok){ if(!ok&&typeof toast==='function')toast('디스코드 전송 실패'); }); }
@@ -2781,7 +2781,7 @@ function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), L=_hunt
   _huntSend({embeds:[{title:(tp?'✅ TP 도달':'❌ SL 도달')+' — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:tp?0x2ebd85:0xf6465d,
     fields:[{name:'결과',value:ret==null?'—':(ret>=0?'+':'')+ret.toFixed(2)+'%',inline:true},{name:'제출가 → '+r.hit,value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(tp?r.tp:r.sl),inline:true},{name:'걸린 시간',value:dur,inline:true},
       {name:'누적 승률',value:(L.length?(w/L.length*100).toFixed(1):'0')+'% ('+w+'승 '+(L.length-w)+'패)',inline:true}],
-    footer:{text:'VANTOR HUNTPSL'},timestamp:new Date(r.hitAt).toISOString()}]}); }
+    footer:{text:'VANTOR Hoon TP/SL'},timestamp:new Date(r.hitAt).toISOString()}]}); }
 function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML()+(_huntLogs().length?'<div style="text-align:right;margin-top:6px"><span onclick="_huntResetAll()" style="cursor:pointer;font-size:11.5px;color:var(--faint)">🗑 기록 전체 삭제</span></div>':''); }
 window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ if(r.s===sym&&r.at===at){ r.del=1; r.delAt=Date.now(); } }); _huntLogSave(L); _huntLogRender(); _huntSyncSoon(); };
 /* ☁️ 기기 간 동기화 (2026-10-19 사용자 결정) — 동기화 코드가 있으면 HUNTPSL 을 열 때·30초마다 서버 기록을 받아 '합친다'.
@@ -2803,7 +2803,7 @@ function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb()
   syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); } syncPush(); cb&&cb(); }); }
 function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
 async function renderHunt(el){
-  el.innerHTML='<div class="sec-title">🎯 HUNTPSL</div><p class="sec-sub">코인 이름을 누르면 현재가가 나오고 <b>TP(익절)</b>·<b>SL(손절)</b> 가격을 넣어 저장할 수 있어요. 제출하면 아래 기록에 쌓이고 TP·SL 도달을 표시해요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
+  el.innerHTML='<div class="sec-title">🎯 Hoon TP/SL</div><p class="sec-sub">코인 이름을 누르면 현재가가 나오고 <b>TP(익절)</b>·<b>SL(손절)</b> 가격을 넣어 저장할 수 있어요. 제출하면 아래 기록에 쌓이고 TP·SL 도달을 표시해요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
     +'<div class="card"><div class="pad"><input id="huntQ" placeholder="코인 검색 (예: BTC, SOL)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px" oninput="_huntList()">'+_huntHookBox()+'<div id="huntSel" style="margin-top:12px"></div><div style="margin-top:14px"><div style="font-weight:800;font-size:13.5px;margin-bottom:4px">📝 제출 기록 <span style="font-size:11px;color:var(--faint);font-weight:600">'+(_syncCode()?'☁️ 동기화 중':'이 기기에만 저장 — 상단 ☁️에서 동기화 코드를 만들면 기기끼리 공유')+' · 3초마다 지금 손익·도달 갱신</span></div><div id="huntLog"></div><div id="huntStat"></div></div><div style="font-weight:800;font-size:13.5px;margin-top:16px">코인 목록</div><div id="huntList" style="margin-top:4px"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div></div>';
   try{ var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();});
     _HUNT.list=all.filter(function(t){ return /USDT$/.test(t.symbol); }).map(function(t){ return {s:t.symbol.replace(/USDT$/,''),p:+t.lastPrice,c:+t.priceChangePercent,v:+t.quoteVolume}; }).sort(function(a,b){ return b.v-a.v; });
