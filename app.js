@@ -1961,29 +1961,49 @@ function whyMoved(r){
   return parts.join(' ');
 }
 function renderWhy(r){ var el=$('#whyBox'); if(el) el.innerHTML=whyMoved(r)||'등락 데이터를 불러오는 중…'; }
-/* 종목 상세 탭 (10/19 사용자 결정, 네이버 모바일식): 종합 · 수급 · 호가 · 점수 · 뉴스
+/* 종목 상세 '재무' 탭 — feeds/fin/<kr|us>-<조각>.json (score_all 매일, 전 종목). 국장 억원·미장 백만 달러 */
+function _finShard(c){ var h=0; String(c).split('').forEach(function(ch){ h=(Math.imul(h,31)+ch.charCodeAt(0))>>>0; }); return (h%16).toString(16); }
+function _renderFin(r,el){ var US=r.ccy==='USD';
+  el.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:16px 0">재무 불러오는 중…</div>';
+  _loadJ('feeds/fin/'+(US?'us':'kr')+'-'+_finShard(r.c)+'.json').then(function(j){ if(!SEL||SEL.c!==r.c)return; var d=j&&j.items&&j.items[r.c];
+    if(!d){ el.innerHTML='<div style="color:var(--faint);font-size:12.5px;padding:16px 0">이 종목은 재무 자료가 아직 없어요. 매일 채점('+(US?'미장 아침 7시':'국장 16:40')+') 때 채워져요. ETF·리츠·신규 상장은 없을 수 있어요.</div>'; return; }
+    var ti=d.ti||{}, TL=[['marketValue','시가총액'],['per','PER'],['cnsPer','추정 PER'],['pbr','PBR'],['eps','EPS'],['bps','BPS'],['dividendYieldRatio','배당수익률'],['dividend','주당배당금'],['foreignRate','외국인 소진율']];
+    var h='<div class="metrics" style="margin-top:12px">'+TL.filter(function(t){return ti[t[0]];}).map(function(t){ return '<div class="met"><div class="k">'+t[1]+'</div><div class="v" style="font-size:16px">'+esc(ti[t[0]])+'</div></div>'; }).join('')+'</div>';
+    var U=US?'백만 달러':'억원', RW=[['rev','매출'],['op',US?'영업이익(EBIT)':'영업이익'],['ni','순이익'],['opm','영업이익률','%'],['roe','ROE','%'],['debt','부채비율','%']];
+    var tbl=function(t,ttl,q){ if(!t||!t.k)return ''; var ks=t.k.map(function(k){ var e=/E$/.test(k), x=k.replace(/E$/,'').replace(/\./g,''); return (q?x.slice(2,4)+'.'+x.slice(4,6):x.slice(0,4))+(e?'<small style="color:var(--gold)"> 예상</small>':''); });
+      var fmt=function(v,pc){ return v==null?'<span style="color:var(--faint)">—</span>':'<span class="'+(v<0?'down':'')+'">'+(+v).toLocaleString('ko-KR',{maximumFractionDigits:pc?1:0})+(pc?'%':'')+'</span>'; };
+      var gr=function(a){ var v=a.filter(function(x){return x!=null;}); if(v.length<2)return ''; var x0=v[v.length-2],x1=v[v.length-1]; if(!x0||x0<=0)return ''; var g=(x1/x0-1)*100; return ' <small class="'+(g>=0?'up':'down')+'">'+(g>=0?'+':'')+g.toFixed(0)+'%</small>'; };
+      return '<div class="card" style="margin-top:12px"><div class="ch"><h2>'+ttl+' <span style="font-size:11.5px;color:var(--faint);font-weight:600">'+U+'</span></h2></div><div class="pad" style="overflow-x:auto"><table class="mxt" style="min-width:420px"><tr><th></th>'+ks.map(function(k){return '<th>'+k+'</th>';}).join('')+'</tr>'
+        +RW.filter(function(w){ return t[w[0]]&&t[w[0]].some(function(v){return v!=null;}); }).map(function(w){ return '<tr><td style="font-weight:700">'+w[1]+(w[2]?'':gr(t[w[0]]))+'</td>'+t[w[0]].map(function(v){return '<td>'+fmt(v,!!w[2])+'</td>';}).join('')+'</tr>'; }).join('')+'</table></div></div>'; };
+    el.innerHTML=h+tbl(d.y,'📅 연간 실적')+tbl(d.q,'🗓 분기 실적',true)+'<div style="font-size:11px;color:var(--faint);margin:8px 0">자료: 네이버 증권 · '+(j.date?String(j.date).slice(4,6)+'/'+String(j.date).slice(6,8)+' 기준':'')+' · 이름 옆 %는 직전 기간 대비 변화 · "예상"은 증권사 추정치</div>';
+  }); }
+/* 종목 상세 탭 (10/19 사용자 결정, 네이버 모바일식): 종합 · 수급 · 호가 · 재무 · 점수 · 뉴스
    기존 블록을 그대로 두고 탭에 따라 보이기만 바꾼다(차트·실시간 갱신 코드 그대로). 안쪽 옛 탭 줄(.stabs)은 숨기고 그 버튼을 눌러 기존 동작을 재사용 */
-var _stkTab='sum', _SDU=null;
+var _stkTab='sum';
 function _stkTabs(r){ var el=$('#stockPanel'); if(!el)return; var sg=el.querySelector('.sgrid'); if(!sg||sg.children.length<2)return;
   var L=sg.children[0], R=sg.children[1], rc=R.children, inner=L.querySelector('.stabs'); if(inner)inner.style.display='none';
   var bar=document.createElement('div'); bar.className='stktabs';
-  var T=[['sum','종합'],['flow','수급'],['book','호가'],['score','점수'],['news','뉴스']];
+  var T=[['sum','종합'],['flow','수급'],['book','호가'],['fin','재무'],['score','점수'],['news','뉴스']];
   bar.innerHTML=T.map(function(t){ return '<button data-k="'+t[0]+'">'+t[1]+'</button>'; }).join('');
   var mg=$('#metGrid'); mg.parentNode.insertBefore(bar,mg);
   function show(k){ _stkTab=k; $$('.stktabs button').forEach(function(b){ b.classList.toggle('on',b.dataset.k===k); });
     var sum=k==='sum', inn={sum:'chart',flow:'flow',book:'book',score:'score'}[k];
     var vis=function(x,on){ if(x)x.style.display=on?'':'none'; };
     vis(mg,sum); vis($('#vscore'),sum); vis(L,!!inn);
+    var fp=el.querySelector('#stkFin'); if(k==='fin'){ if(!fp){ fp=document.createElement('div'); fp.id='stkFin'; sg.parentNode.insertBefore(fp,sg); } fp.style.display=''; _renderFin(r,fp); } else if(fp)fp.style.display='none';
     vis(rc[0],k==='score'); vis(rc[1],sum); vis(rc[2],k==='news'); vis(rc[3],sum);
-    sg.classList.toggle('one',!inn||k==='flow'||k==='book');
+    sg.classList.toggle('one',!inn||k==='flow'||k==='book'); sg.style.display=k==='fin'?'none':'';
     if(inn&&inner){ var b=inner.querySelector('button[data-t="'+inn+'"]'); if(b)b.click(); }
     if(sum)setTimeout(function(){ drawStockChart($('#sChart'),SEL||r); },0); }
   bar.querySelectorAll('button').forEach(function(b){ b.onclick=function(){ show(b.dataset.k); }; });
   show(_stkTab);
-  // 미장: 실적 발표 D-day (feeds/stock-detail-us.json, 추천 후보만 있음)
-  if(r.ccy==='USD'){ var put=function(j){ var e=j&&j.items&&j.items[r.c]&&j.items[r.c].earn; if(!e||!e[0])return; var d=new Date(e[0].slice(0,4)+'-'+e[0].slice(4,6)+'-'+e[0].slice(6,8)+'T00:00:00'), dd=Math.round((d-new Date(new Date().toDateString()))/864e5); if(dd<0||dd>45)return;
-      var h=el.querySelector('#stkPx'); if(h&&!el.querySelector('.earnDday')){ var s2=document.createElement('div'); s2.className='earnDday'; s2.innerHTML='📅 실적 발표 <b>'+(+e[0].slice(4,6))+'/'+(+e[0].slice(6,8))+(e[1]?' '+esc(e[1]):'')+'</b> · <b>'+(dd===0?'오늘':'D-'+dd)+'</b>'+(e[2]?' · EPS 예상 '+esc(e[2]):''); h.parentNode.insertBefore(s2,h.nextSibling); } };
-    if(_SDU)put(_SDU); else _loadJ('feeds/stock-detail-us.json').then(function(j){ _SDU=j||{}; if(SEL&&SEL.c===r.c)put(_SDU); }); }
+  // 실적 발표 D-day — 전 종목 (feeds/earn.json = 네이버 IR 일정 · earn-us.json = 나스닥 실적 달력 6주, 10/19 사용자 결정)
+  var US=r.ccy==='USD', ek=US?'feeds/earn-us.json':'feeds/earn.json';
+  _loadJ(ek).then(function(j){ var e=j&&j.items&&j.items[r.c]; if(!e||!e[0]||!SEL||SEL.c!==r.c)return;
+    var d=new Date(e[0].slice(0,4)+'-'+e[0].slice(4,6)+'-'+e[0].slice(6,8)+'T00:00:00'), dd=Math.round((d-new Date(new Date().toDateString()))/864e5); if(dd<0||dd>60)return;
+    var h=el.querySelector('#stkPx'); if(!h||el.querySelector('.earnDday'))return; var s2=document.createElement('div'); s2.className='earnDday';
+    s2.innerHTML='📅 '+(US?'실적 발표':esc(e[1]||'실적 발표'))+' <b>'+(+e[0].slice(4,6))+'/'+(+e[0].slice(6,8))+(US&&e[1]?' '+esc(e[1]):'')+'</b> · <b>'+(dd===0?'오늘':'D-'+dd)+'</b>'+(US&&e[2]?' · EPS 예상 '+esc(e[2]):'')+(US?' <span style="color:var(--faint)">(미국 날짜)</span>':'');
+    h.parentNode.insertBefore(s2,h.nextSibling); });
 }
 function openStock(code,opt){
   var r=scoredOf(code,opt); /* opt={n,mk}: 목록에 없는 미장 종목(추천 화면)의 이름·거래소 */ SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);

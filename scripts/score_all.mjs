@@ -66,6 +66,8 @@ async function universe() {
   return out;
 }
 
+const TI_KEYS = ['marketValue', 'per', 'cnsPer', 'eps', 'pbr', 'bps', 'dividendYieldRatio', 'dividend', 'foreignRate']; // 종목 상세 '재무' 탭 핵심 지표 (원문 문자열 그대로)
+const pickTi = (ti) => { const o = {}; for (const k of TI_KEYS) if (ti[k] != null && ti[k] !== 'N/A') o[k] = ti[k]; return o; };
 async function oneUS(s) {
   const ymd = (x) => x.toISOString().slice(0, 10).replace(/-/g, ''), end = new Date(), st = new Date(end - 420 * 864e5);
   const [rows, b] = await Promise.all([
@@ -75,7 +77,7 @@ async function oneUS(s) {
   const candles = (Array.isArray(rows) ? rows : []).map((x) => [x.localDate, +x.openPrice, +x.highPrice, +x.lowPrice, +x.closePrice, +x.accumulatedTradingVolume]).slice(-270);
   const ti = {}; for (const x of (b && b.stockItemTotalInfos) || []) ti[x.code] = x.value;
   const f = features({ candles, per: n(ti.per), h52: n(ti.highPriceOf52Weeks), l52: n(ti.lowPriceOf52Weeks) });
-  if (f) { f._ind = s.ind || ti.industryGroupKor || null; f._cs = candles; } // _cs: 추천 목록 매수·목표가 계산용 (저장 안 함)
+  if (f) { f._ind = s.ind || ti.industryGroupKor || null; f._cs = candles; f._ti = pickTi(ti); } // _cs: 추천 목록 매수·목표가 계산용 (저장 안 함)
   return f;
 }
 async function one(s) {
@@ -92,6 +94,9 @@ async function one(s) {
   if (f) {
     f._cs = candles; // 추천 목록 매수·목표가 계산용 (저장 안 함)
     f._ind = info && info.industryCode != null ? String(info.industryCode) : null;
+    f._ti = pickTi(ti);
+    const ir = info && info.irScheduleInfo; // 실적 발표(IR) 일정 — 회사가 공시한 것만 있다
+    if (ir && ir.irScheduleDate) f._ir = [ir.irScheduleDate.replace(/-/g, ''), ir.title || ''];
     // 거래대금 대비 외국인·기관 순매수 금액 비율(%) — 순매수 수량 × 그날 종가 ÷ (거래량 × 종가)
     const tr = (Array.isArray(trend) ? trend : []).map((x) => ({ f: n(x.foreignerPureBuyQuant) || 0, i: n(x.organPureBuyQuant) || 0, v: n(x.accumulatedTradingVolume) || 0, c: n(x.closePrice) || 0 }));
     const ratio = (k, d) => { const a = tr.slice(0, d), tv = a.reduce((s2, x) => s2 + x.v * x.c, 0); return tv ? +(a.reduce((s2, x) => s2 + x[k] * x.c, 0) / tv * 100).toFixed(1) : null; };
@@ -172,10 +177,10 @@ const picks = { v: 2, market: US ? 'US' : 'KR', currency: US ? 'USD' : 'KRW', sp
   }
 }
 
-// 미장 실적 발표 예정일 (나스닥 실적 달력, 앞으로 3주) — 못 받으면 빈 채로 둔다
+// 미장 실적 발표 예정일 (나스닥 실적 달력, 앞으로 6주) — 못 받으면 빈 채로 둔다
 const EARN = {};
 if (US) {
-  for (let k = 0; k < 22; k++) {
+  for (let k = 0; k < 46; k++) { // 앞으로 6주+ (종목 상세 실적 D-day, 2026-10-19 '모든 미국 종목')
     const t = new Date(Date.now() + k * 864e5), wd = t.getUTCDay(); if (wd === 0 || wd === 6) continue;
     const ds = t.toISOString().slice(0, 10);
     try {
@@ -238,6 +243,28 @@ await Promise.all(Array.from({ length: CONC }, async () => {
     } catch { /* 뉴스는 없어도 된다 */ }
   }
 }));
+// 종목 상세 '재무' 탭 + 실적 D-day — 전 종목 (2026-10-19 사용자 결정). 사이트가 탭을 열 때만 받도록 16조각으로 나눠 쓴다
+// feeds/fin/<kr|us>-<0~f>.json = { date, items: { 코드: { ti: 핵심지표, y: 연간, q: 분기 } } } · feeds/earn(-us).json = { 코드: [YYYYMMDD, 설명] }
+const finShard = (c) => { let h = 0; for (const ch of String(c)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return (h % 16).toString(16); };
+const FIN = {}; let fi2 = 0;
+const finRows = US ? [['매출액', 'rev'], ['EBIT', 'op'], ['당기순이익', 'ni']] : [['매출액', 'rev'], ['영업이익', 'op'], ['당기순이익', 'ni'], ['영업이익률', 'opm'], ['ROE', 'roe'], ['부채비율', 'debt']];
+const finTable = (j) => { const t = j && (j.financeInfo || j); if (!t || !t.trTitleList) return null;
+  const ks = t.trTitleList.map((x) => [x.key, x.isConsensus === 'Y']), o = { k: ks.map(([k, e]) => k + (e ? 'E' : '')) };
+  for (const [nm, key] of finRows) { const r = (t.rowList || []).find((z) => z.title === nm); o[key] = ks.map(([k]) => (r && r.columns && r.columns[k] ? n(r.columns[k].value) : null)); }
+  return o; };
+await Promise.all(Array.from({ length: CONC }, async () => {
+  while (fi2 < fresh.length) {
+    const x = fresh[fi2++], base = US ? `${UAPI}/stock/${x.rc}` : `${API}/stock/${x.c}`;
+    const [a, q] = await Promise.all([get(`${base}/finance/annual`).catch(() => null), get(`${base}/finance/quarter`).catch(() => null)]);
+    const o = { ti: x.f._ti || {} }, y = finTable(a), qq = finTable(q); if (y) o.y = y; if (qq) o.q = qq;
+    (FIN[finShard(x.c)] ||= {})[x.c] = o;
+  }
+}));
+fs.mkdirSync(path.join(ROOT, 'feeds/fin'), { recursive: true });
+for (let i = 0; i < 16; i++) { const h = i.toString(16); fs.writeFileSync(path.join(ROOT, `feeds/fin/${US ? 'us' : 'kr'}-${h}.json`), JSON.stringify({ date, items: FIN[h] || {} })); }
+const EARNOUT = {}; if (US) { for (const x of fresh) if (EARN[x.c]) EARNOUT[x.c] = EARN[x.c]; } else { for (const x of fresh) if (x.f._ir) EARNOUT[x.c] = x.f._ir; }
+fs.writeFileSync(OUT('earn'), JSON.stringify({ date, items: EARNOUT }));
+console.log('재무 탭', Object.values(FIN).reduce((s2, m) => s2 + Object.keys(m).length, 0), '종목 · 실적 일정', Object.keys(EARNOUT).length, '종목');
 fs.writeFileSync(OUT('stock-news'), JSON.stringify({ date, updated: scores.updated, items: news }));
 fs.writeFileSync(OUT('stock-detail'), JSON.stringify({ date, updated: scores.updated, items: detail }));
 console.log('종목 뉴스', Object.keys(news).length, '종목 · 재무', Object.values(detail).filter((d) => d.fin).length, '종목');
