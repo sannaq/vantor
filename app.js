@@ -1162,7 +1162,7 @@ window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.
   return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog','huntHook'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog','huntHook','huntResetAt'];
 /* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
 function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
 function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
@@ -2721,12 +2721,17 @@ window.toggleCoinFav=function(sym,ev){ if(ev){ev.stopPropagation();} var f=_coin
   document.querySelectorAll('.cfav[data-sym="'+sym+'"]').forEach(function(el){ el.classList.toggle('on',on); el.textContent=on?'★':'☆'; }); };
 /* HUNTPSL (2026-10-19 사용자 요청) — 코인 이름 누르면 현재가, TP(익절)/SL(손절) 가격 입력·저장. 이 기기 localStorage(huntTpSl)에 저장, 3초마다 시세 갱신, 닿으면 표시 */
 var _HUNT={sel:null,list:null,px:{},hitShown:{}};
-function _huntDB(){ try{ return JSON.parse(localStorage.getItem('huntTpSl')||'{}'); }catch(e){ return {}; } }
+function _huntDB(){ var t=(typeof _huntResetAt==='function')?_huntResetAt():0, d={}; try{ d=JSON.parse(localStorage.getItem('huntTpSl')||'{}'); }catch(e){} Object.keys(d).forEach(function(k){ if(!d[k]||(d[k].at||0)<t)delete d[k]; }); return d; }
 function _huntLive(){ var d=_huntDB(), o={}; Object.keys(d).forEach(function(k){ if(!d[k].del)o[k]=d[k]; }); return o; }
 function _huntSave(d){ try{ localStorage.setItem('huntTpSl',JSON.stringify(d)); }catch(e){} }
 /* 제출 기록 (2026-10-19 사용자 요청: 입력해서 제출하면 기록, 입력칸 아래에 표시) — localStorage huntLog, 최근 200건 */
-function _huntLogs(){ try{ return JSON.parse(localStorage.getItem('huntLog')||'[]'); }catch(e){ return []; } }
-function _huntLogSave(a){ try{ localStorage.setItem('huntLog',JSON.stringify(a.slice(0,200))); }catch(e){} }
+/* 기록 초기화 기준 시각 (2026-10-19 사용자: "이제까지 기록 삭제, 실전으로") — 이 시각 전 제출·TP/SL 은 모든 기기에서 버린다.
+   화면의 [기록 전체 삭제] 는 huntResetAt(동기화 키)을 지금으로 올려 같은 효과 */
+var HUNT_RESET_AT=1792407008923;
+function _huntResetAt(){ var v=0; try{ v=+localStorage.getItem('huntResetAt')||0; }catch(e){} return Math.max(HUNT_RESET_AT,v); }
+function _huntLogs(){ var t=_huntResetAt(); try{ return JSON.parse(localStorage.getItem('huntLog')||'[]').filter(function(r){ return r&&r.at>=t; }); }catch(e){ return []; } }
+function _huntLogSave(a){ var t=_huntResetAt(); try{ localStorage.setItem('huntLog',JSON.stringify(a.filter(function(r){ return r&&r.at>=t; }).slice(0,200))); }catch(e){} }
+window._huntResetAll=function(){ if(!confirm('HUNTPSL 제출 기록·TP/SL·승률을 모두 지울까요? (동기화된 기기도 같이 지워져요)'))return; var t=Date.now(); try{ localStorage.setItem('huntResetAt',String(t)); localStorage.setItem('huntLog','[]'); localStorage.setItem('huntTpSl','{}'); }catch(e){} if(typeof toast==='function')toast('기록을 모두 지웠어요'); _huntLogRender(); if(_HUNT.sel)_huntPick(_HUNT.sel); _huntList(); _huntSyncSoon(); };
 function _huntLogHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }); if(!L.length)return '<div class="muted" style="font-size:12px;padding:6px 0">아직 제출한 기록이 없어요</div>';
   var T=function(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
   return '<div style="overflow-x:auto"><table class="mxt" style="min-width:560px;font-size:12.5px"><tr><th>제출 시각</th><th>코인</th><th>제출 때 가격</th><th>TP</th><th>SL</th><th>손익비</th><th>지금</th><th>상태</th><th></th></tr>'
@@ -2777,11 +2782,12 @@ function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), L=_hunt
     fields:[{name:'결과',value:ret==null?'—':(ret>=0?'+':'')+ret.toFixed(2)+'%',inline:true},{name:'제출가 → '+r.hit,value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(tp?r.tp:r.sl),inline:true},{name:'걸린 시간',value:dur,inline:true},
       {name:'누적 승률',value:(L.length?(w/L.length*100).toFixed(1):'0')+'% ('+w+'승 '+(L.length-w)+'패)',inline:true}],
     footer:{text:'VANTOR HUNTPSL'},timestamp:new Date(r.hitAt).toISOString()}]}); }
-function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML(); }
+function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML()+(_huntLogs().length?'<div style="text-align:right;margin-top:6px"><span onclick="_huntResetAll()" style="cursor:pointer;font-size:11.5px;color:var(--faint)">🗑 기록 전체 삭제</span></div>':''); }
 window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ if(r.s===sym&&r.at===at){ r.del=1; r.delAt=Date.now(); } }); _huntLogSave(L); _huntLogRender(); _huntSyncSoon(); };
 /* ☁️ 기기 간 동기화 (2026-10-19 사용자 결정) — 동기화 코드가 있으면 HUNTPSL 을 열 때·30초마다 서버 기록을 받아 '합친다'.
    기존 동기화는 통째 덮어쓰기라 PC·폰 기록이 서로 지워질 수 있어서, 이 두 값만 합치기: 기록 = (코인+제출 시각) 기준 합집합·지운 표시 우선·도달 정보 보존, 코인별 TP/SL = 더 최근 것 */
 function _huntMerge(remote){ if(!remote||!remote.data)return false; var ch=false;
+  var rr=+remote.data.huntResetAt||0; if(rr>_huntResetAt()){ try{ localStorage.setItem('huntResetAt',String(rr)); }catch(e){} ch=true; }
   try{ var R=JSON.parse(remote.data.huntLog||'[]'), L=_huntLogs(), key=function(r){ return r.s+'|'+r.at; }, m={};
     L.forEach(function(r){ m[key(r)]=r; });
     R.forEach(function(r){ var k=key(r), a=m[k]; if(!a){ m[k]=r; ch=true; return; }
