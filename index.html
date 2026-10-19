@@ -273,6 +273,22 @@
     .ld-legend{display:none}
   }
   .fsl-m{display:none}
+  /* 폰 2차 정리 (2026-10-19 사용자 '전체') */
+  @media(max-width:700px){
+    /* 종목 상세 지표: 3칸·작게 */
+    .metrics{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin-top:10px}
+    .met{padding:8px 9px}.met .k{font-size:11px}.met .v{font-size:14px}.met .s{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    /* 코인 RADAR: 번호·상태·거래대금 칸 숨겨 가격·등락이 보이게 */
+    #coinRadar th:nth-child(1),#coinRadar td:nth-child(1),#coinRadar th:nth-child(3),#coinRadar td:nth-child(3),#coinRadar th:nth-child(6),#coinRadar td:nth-child(6){display:none}
+    /* 코인 상세: 선 표시·그림 도구는 접기 */
+    #coinHost .clegend,#coinHost .drawbar{display:none!important}
+    #coinHost .mob-tools-open .clegend,#coinHost .mob-tools-open .drawbar{display:flex!important}
+    .mob-tools-btn{display:inline-flex!important}
+    /* 홈 타일: 줄 간격 줄이기 */
+    #glance .gl-r{line-height:1.6}
+    .stktabs button{padding:8px 12px;font-size:13.5px}
+  }
+  .mob-tools-btn{display:none}
   /* 메뉴 묶음 하위 탭 · 폰 하단 탭바 (10/19) */
   #subtabs{display:none;gap:6px;margin:0 0 12px;overflow-x:auto;scrollbar-width:none}#subtabs.on{display:flex}
   #subtabs button{flex:0 0 auto;padding:7px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--sub);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
@@ -957,7 +973,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <nav id="tabbar"></nav>
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=10"></script>
-<script src="app.js?v=159"></script>
+<script src="app.js?v=160"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;
