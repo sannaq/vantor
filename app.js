@@ -2672,6 +2672,7 @@ function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
 function _ensureCoinSection(){ var s=$('#coinSection'); if(!s){ var host=$('#coinHost'); if(!host)return null; s=document.createElement('div'); s.id='coinSection'; s.style.display='none'; host.parentNode.insertBefore(s,host); } return s; }
 window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect=_ensureCoinSection(); if(!sect)return;
   if(sec==='liq'){ if(typeof openLiqMap==='function')openLiqMap(_coinCur||'BTC'); return; }
+  if(window._huntT){ clearInterval(window._huntT); window._huntT=null; }
   if(typeof stopLiq==='function')stopLiq(); if(typeof stopFlow==='function')stopFlow(); if(typeof stopCoinLive==='function')stopCoinLive(); // 다른 섹션으로 가면 엔진 정리
   $$('#menu .cmenu-a').forEach(function(a){ a.classList.toggle('on',a.dataset.cs===sec); });
   if(host){host.style.display='none';host.innerHTML='';}
@@ -2682,7 +2683,7 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
     return; }
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
   if(sec==='ai'){ sect.innerHTML='<div class="sec-title">🤖 차트 분석 도우미</div><p class="sec-sub">코인·종목을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p><div id="aiAskCoin"></div>'; if(typeof mountHomeAsk==='function')mountHomeAsk('#aiAskCoin','coin'); return; }
-  if(sec==='huntpsl'){ sect.innerHTML='<div class="sec-title">HUNTPSL</div><div class="card"><div class="pad" style="color:var(--faint);font-size:13px">준비 중이에요.</div></div>'; return; }
+  if(sec==='huntpsl'){ renderHunt(sect); return; }
   if(sec==='bt'){ if(typeof renderBacktestReplay==='function')renderBacktestReplay(sect); return; }
   if(sec==='flow'){ if(typeof renderFlowMarkers==='function')renderFlowMarkers(sect); return; }
   if(sec==='news')renderCoinNews(sect); else if(sec==='watch')renderCoinWatch(sect); else if(sec==='learn')renderCoinLearn(sect);
@@ -2693,6 +2694,75 @@ function _coinFavSet(a){ try{localStorage.setItem('coinFav',JSON.stringify(a));}
 window.isCoinFav=function(sym){ return _coinFav().indexOf(sym)>=0; };
 window.toggleCoinFav=function(sym,ev){ if(ev){ev.stopPropagation();} var f=_coinFav(), i=f.indexOf(sym); if(i>=0)f.splice(i,1); else f.push(sym); _coinFavSet(f); var on=f.indexOf(sym)>=0;
   document.querySelectorAll('.cfav[data-sym="'+sym+'"]').forEach(function(el){ el.classList.toggle('on',on); el.textContent=on?'★':'☆'; }); };
+/* HUNTPSL (2026-10-19 사용자 요청) — 코인 이름 누르면 현재가, TP(익절)/SL(손절) 가격 입력·저장. 이 기기 localStorage(huntTpSl)에 저장, 3초마다 시세 갱신, 닿으면 표시 */
+var _HUNT={sel:null,list:null,px:{},hitShown:{}};
+function _huntDB(){ try{ return JSON.parse(localStorage.getItem('huntTpSl')||'{}'); }catch(e){ return {}; } }
+function _huntSave(d){ try{ localStorage.setItem('huntTpSl',JSON.stringify(d)); }catch(e){} }
+/* 제출 기록 (2026-10-19 사용자 요청: 입력해서 제출하면 기록, 입력칸 아래에 표시) — localStorage huntLog, 최근 200건 */
+function _huntLogs(){ try{ return JSON.parse(localStorage.getItem('huntLog')||'[]'); }catch(e){ return []; } }
+function _huntLogSave(a){ try{ localStorage.setItem('huntLog',JSON.stringify(a.slice(0,200))); }catch(e){} }
+function _huntLogHTML(){ var L=_huntLogs(); if(!L.length)return '<div class="muted" style="font-size:12px;padding:6px 0">아직 제출한 기록이 없어요</div>';
+  var T=function(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
+  return '<div style="overflow-x:auto"><table class="mxt" style="min-width:560px;font-size:12.5px"><tr><th>제출 시각</th><th>코인</th><th>제출 때 가격</th><th>TP</th><th>SL</th><th>손익비</th><th>지금</th><th>상태</th><th></th></tr>'
+    +L.map(function(r,i){ var px=_HUNT.px[r.s], lg=r.side!=='short', pnl=px&&r.p0?((lg?px/r.p0-1:r.p0/px-1)*100):null, rr=(r.tp&&r.sl&&r.p0)?(Math.abs(r.tp-r.p0)/Math.abs(r.p0-r.sl)).toFixed(2):'—';
+      var st=r.hit?'<b style="color:'+(r.hit==='TP'?'#2ebd85':'#f6465d')+'">'+r.hit+' 도달</b> <small style="color:var(--faint)">'+T(r.hitAt)+'</small>':'<span style="color:var(--sub)">대기</span>';
+      return '<tr><td>'+T(r.at)+'</td><td><b style="cursor:pointer" onclick="_huntPick(\''+r.s+'\')">'+esc(r.s)+'</b> <small style="color:var(--faint)">'+(lg?'롱':'숏')+'</small></td><td>$'+_huntFmt(r.p0)+'</td><td style="color:#2ebd85">'+(r.tp?_huntFmt(r.tp):'—')+'</td><td style="color:#f6465d">'+(r.sl?_huntFmt(r.sl):'—')+'</td><td>1 : '+rr+'</td>'
+        +'<td>'+(pnl==null?'—':'<span style="color:'+cCol(pnl)+';font-weight:700">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'%</span>')+'</td><td>'+st+'</td><td><span style="cursor:pointer;color:var(--faint)" title="이 기록 지우기" onclick="_huntLogDel('+i+')">✕</span></td></tr>'; }).join('')+'</table></div>'; }
+function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); }
+window._huntLogDel=function(i){ var L=_huntLogs(); L.splice(i,1); _huntLogSave(L); _huntLogRender(); };
+function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
+async function renderHunt(el){
+  el.innerHTML='<div class="sec-title">🎯 HUNTPSL</div><p class="sec-sub">코인 이름을 누르면 현재가가 나오고 <b>TP(익절)</b>·<b>SL(손절)</b> 가격을 넣어 저장할 수 있어요. 제출하면 아래 기록에 쌓이고 TP·SL 도달을 표시해요. 저장은 이 기기에만 돼요.</p>'
+    +'<div class="card"><div class="pad"><input id="huntQ" placeholder="코인 검색 (예: BTC, SOL)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px" oninput="_huntList()"><div id="huntSel" style="margin-top:12px"></div><div style="margin-top:14px"><div style="font-weight:800;font-size:13.5px;margin-bottom:4px">📝 제출 기록 <span style="font-size:11px;color:var(--faint);font-weight:600">이 기기에 저장 · 3초마다 지금 손익·도달 갱신</span></div><div id="huntLog"></div></div><div style="font-weight:800;font-size:13.5px;margin-top:16px">코인 목록</div><div id="huntList" style="margin-top:4px"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div></div>';
+  try{ var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();});
+    _HUNT.list=all.filter(function(t){ return /USDT$/.test(t.symbol); }).map(function(t){ return {s:t.symbol.replace(/USDT$/,''),p:+t.lastPrice,c:+t.priceChangePercent,v:+t.quoteVolume}; }).sort(function(a,b){ return b.v-a.v; });
+    _HUNT.list.forEach(function(x){ _HUNT.px[x.s]=x.p; });
+  }catch(e){ _HUNT.list=[]; }
+  _huntList(); _huntLogRender(); if(_HUNT.sel)_huntPick(_HUNT.sel);
+  if(window._huntT)clearInterval(window._huntT);
+  window._huntT=setInterval(_huntTick,3000); }
+function _huntList(){ var el=$('#huntList'); if(!el||!_HUNT.list)return; var q=(($('#huntQ')||{}).value||'').trim().toUpperCase(), db=_huntDB(), fav=_coinFav();
+  var arr=_HUNT.list.filter(function(x){ return !q||x.s.indexOf(q)>=0; });
+  if(!q){ var top=arr.filter(function(x){ return db[x.s]||fav.indexOf(x.s)>=0; }); arr=top.concat(arr.filter(function(x){ return top.indexOf(x)<0; }).slice(0,40)); } else arr=arr.slice(0,40);
+  el.innerHTML=arr.length?arr.map(function(x){ var d=db[x.s];
+    return '<div class="rowbtn" onclick="_huntPick(\''+x.s+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line2);cursor:pointer'+(_HUNT.sel===x.s?';background:var(--panel2)':'')+'"><b style="min-width:70px">'+esc(x.s)+'</b>'
+      +(d?'<span style="font-size:11px;color:var(--sub)">'+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+(d.hit?' <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b>':'')+'</span>':'')
+      +'<span style="margin-left:auto;font-variant-numeric:tabular-nums">$<span data-hp="'+x.s+'">'+_huntFmt(_HUNT.px[x.s])+'</span></span><span style="width:64px;text-align:right;font-size:12px;font-weight:700;color:'+cCol(x.c)+'">'+(x.c>=0?'+':'')+x.c.toFixed(2)+'%</span></div>'; }).join('')
+    :'<div class="muted" style="font-size:12px">찾는 코인이 없어요</div>'; }
+function _huntPick(sym){ _HUNT.sel=sym; var el=$('#huntSel'); if(!el)return; var d=_huntDB()[sym]||{}, px=_HUNT.px[sym];
+  var inp=function(id,v,ph){ return '<input id="'+id+'" type="number" step="any" inputmode="decimal" value="'+(v!=null?v:'')+'" placeholder="'+ph+'" oninput="_huntCalc()" style="width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:15px;font-variant-numeric:tabular-nums">'; };
+  el.innerHTML='<div style="border:1px solid var(--gold);border-radius:12px;padding:12px 14px">'
+    +'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><b style="font-size:18px">'+esc(sym)+'</b><span style="font-size:12px;color:var(--faint)">현재가</span><b id="huntPx" style="font-size:24px;font-variant-numeric:tabular-nums">$'+_huntFmt(px)+'</b><span style="margin-left:auto;font-size:11px;color:var(--faint)">3초마다 갱신 · 바이낸스 선물</span></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px"><label style="font-size:12px;font-weight:800;color:#2ebd85">TP (익절가)'+inp('huntTp',d.tp,'예: '+_huntFmt(px*1.05))+'<span id="huntTpP" style="font-weight:600;color:var(--sub)"></span></label>'
+    +'<label style="font-size:12px;font-weight:800;color:#f6465d">SL (손절가)'+inp('huntSl',d.sl,'예: '+_huntFmt(px*0.97))+'<span id="huntSlP" style="font-weight:600;color:var(--sub)"></span></label></div>'
+    +'<div id="huntRR" style="font-size:12.5px;color:var(--sub);margin-top:8px"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="_huntStore()" style="flex:1">제출</button><button class="tf" onclick="_huntDel()">지우기</button></div>'
+    +(d.at?'<div style="font-size:11px;color:var(--faint);margin-top:6px">저장 '+new Date(d.at).toLocaleString('ko-KR')+' · 그때 가격 $'+_huntFmt(d.p0)+(d.hit?' · <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b> ('+new Date(d.hitAt).toLocaleString('ko-KR')+')':'')+'</div>':'')+'</div>';
+  _huntCalc(); _huntList(); }
+function _huntCalc(){ var px=_HUNT.px[_HUNT.sel], tp=+(($('#huntTp')||{}).value), sl=+(($('#huntSl')||{}).value), f=function(v){ return v?((v/px-1)*100):null; };
+  var a=$('#huntTpP'), b=$('#huntSlP'), r=$('#huntRR'); if(!a||!px)return;
+  a.textContent=tp?' 현재가 대비 '+(f(tp)>=0?'+':'')+f(tp).toFixed(2)+'%':''; b.textContent=sl?' 현재가 대비 '+(f(sl)>=0?'+':'')+f(sl).toFixed(2)+'%':'';
+  r.innerHTML=(tp&&sl&&tp!==px&&sl!==px)?'손익비 <b>1 : '+(Math.abs(tp-px)/Math.abs(px-sl)).toFixed(2)+'</b> ('+(tp>px?'롱':'숏')+' 기준)':''; }
+function _huntStore(){ var s=_HUNT.sel; if(!s)return; var tp=+(($('#huntTp')||{}).value)||null, sl=+(($('#huntSl')||{}).value)||null; var db=_huntDB();
+  if(!tp&&!sl){ delete db[s]; } else db[s]={tp:tp,sl:sl,p0:_HUNT.px[s],at:Date.now(),side:tp&&tp<_HUNT.px[s]?'short':'long'};
+  _huntSave(db);
+  if(db[s]){ var L=_huntLogs(); L.unshift({s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}); _huntLogSave(L); }
+  if(typeof toast==='function')toast(s+' TP/SL 제출했어요'); _huntPick(s); _huntLogRender(); }
+function _huntDel(){ var s=_HUNT.sel, db=_huntDB(); delete db[s]; _huntSave(db); _huntPick(s); }
+async function _huntTick(){ if(!coinMode||!$('#huntList')){ clearInterval(window._huntT); window._huntT=null; return; }
+  var db=_huntDB(), syms=Object.keys(db); if(_HUNT.sel&&syms.indexOf(_HUNT.sel)<0)syms.push(_HUNT.sel); _huntLogs().forEach(function(r){ if(syms.indexOf(r.s)<0)syms.push(r.s); }); if(!syms.length)return;
+  try{ var arr=await fetch('https://fapi.binance.com/fapi/v1/ticker/price').then(function(r){return r.json();}); var mp={}; arr.forEach(function(t){ mp[t.symbol]=+t.price; });
+    var ch=false; Object.keys(mp).forEach(function(k){ if(/USDT$/.test(k))_HUNT.px[k.replace(/USDT$/,'')]=mp[k]; });
+    syms.forEach(function(s){ var d=db[s], p=_HUNT.px[s]; if(!d||d.hit||!p)return; var lg=d.side!=='short';
+      var hit=d.tp&&(lg?p>=d.tp:p<=d.tp)?'TP':d.sl&&(lg?p<=d.sl:p>=d.sl)?'SL':null;
+      if(hit){ d.hit=hit; d.hitAt=Date.now(); ch=true; if(typeof toast==='function')toast('🎯 '+s+' '+hit+' 도달 — $'+_huntFmt(p)); } });
+    if(ch)_huntSave(db);
+    var L=_huntLogs(), lc=false; L.forEach(function(r){ var p=_HUNT.px[r.s]; if(r.hit||!p)return; var lg=r.side!=='short', h=r.tp&&(lg?p>=r.tp:p<=r.tp)?'TP':r.sl&&(lg?p<=r.sl:p>=r.sl)?'SL':null; if(h){ r.hit=h; r.hitAt=Date.now(); lc=true; } });
+    if(lc)_huntLogSave(L); _huntLogRender();
+    $$('[data-hp]').forEach(function(e){ var v=_HUNT.px[e.getAttribute('data-hp')]; if(v)e.textContent=_huntFmt(v); });
+    var hp=$('#huntPx'); if(hp&&_HUNT.sel)hp.textContent='$'+_huntFmt(_HUNT.px[_HUNT.sel]); _huntCalc(); if(ch)_huntList();
+  }catch(e){} }
+window._huntList=_huntList; window._huntPick=_huntPick; window._huntCalc=_huntCalc; window._huntStore=_huntStore; window._huntDel=_huntDel;
 async function renderCoinWatch(el){ var f=_coinFav();
   var h='<div class="sec-title">⭐ 관심 코인</div><p class="sec-sub">코인 옆 <b>☆</b>를 눌러 추가한 종목을 실시간으로 봅니다.</p>';
   if(!f.length){ el.innerHTML=h+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px;padding:18px">아직 관심 코인이 없어요. <b>RADAR</b>나 <b>홈</b>에서 코인 옆의 <b>☆</b>를 눌러 추가하세요.</div></div>'; return; }
