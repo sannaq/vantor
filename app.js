@@ -2732,27 +2732,51 @@ function _huntResetAt(){ var v=0; try{ v=+localStorage.getItem('huntResetAt')||0
 function _huntLogs(){ var t=_huntResetAt(); try{ return JSON.parse(localStorage.getItem('huntLog')||'[]').filter(function(r){ return r&&r.at>=t; }); }catch(e){ return []; } }
 function _huntLogSave(a){ var t=_huntResetAt(); try{ localStorage.setItem('huntLog',JSON.stringify(a.filter(function(r){ return r&&r.at>=t; }).slice(0,200))); }catch(e){} }
 window._huntResetAll=function(){ if(!confirm('Hoon TP/SL 제출 기록·TP/SL·승률을 모두 지울까요? (동기화된 기기도 같이 지워져요)'))return; var t=Date.now(); try{ localStorage.setItem('huntResetAt',String(t)); localStorage.setItem('huntLog','[]'); localStorage.setItem('huntTpSl','{}'); }catch(e){} if(typeof toast==='function')toast('기록을 모두 지웠어요'); _huntLogRender(); if(_HUNT.sel)_huntPick(_HUNT.sel); _huntList(); _huntSyncSoon(); };
-function _huntLogHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }); if(!L.length)return '<div class="muted" style="font-size:12px;padding:6px 0">아직 제출한 기록이 없어요</div>';
+/* 포지션 계산 (2026-10-21 사용자 결정) — 레버리지·비중·지정가 진입·물타기·중간 청산.
+   기록 r: lev(레버리지, 없으면 1) · w(처음 비중 % — 계좌 대비 증거금) · e(지정 진입가) · st('wait' = 지정가 대기) · f([{p,w,at}] 체결 목록, 물타기마다 추가)
+           p0(평단 = 체결가를 비중으로 가중평균) · hit('TP'|'SL'|'CL' 중간 청산) · ck('익절'|'약손절') · px1(청산가) · cxl(대기 주문 취소) · u(마지막 수정 시각, 동기화 때 최신 판정)
+   수익률 3가지: 가격% (방향 반영) → 레버리지 수익률 = 가격% × 레버리지 → 계좌% = 레버리지 수익률 × 총 비중 / 100 */
+function _huntLev(r){ return +r.lev>0?+r.lev:1; }
+function _huntWt(r){ if(r.f&&r.f.length){ var t=0; for(var i=0;i<r.f.length;i++){ if(!(+r.f[i].w>0))return null; t+=+r.f[i].w; } return t; } return +r.w>0?+r.w:null; }
+function _huntAvg(f){ if(!f||!f.length)return null; var ok=f.every(function(x){ return +x.w>0; }), sw=0, sp=0; f.forEach(function(x){ var w=ok?+x.w:1; sw+=w; sp+=w*x.p; }); return sw?sp/sw:null; }
+function _huntPct(r,x){ if(!x||!r.p0)return null; return (r.side!=='short'?x/r.p0-1:r.p0/x-1)*100; }
+function _huntExit(r){ return r.hit==='TP'?r.tp:r.hit==='SL'?r.sl:r.hit==='CL'?r.px1:null; }
+function _huntRet(r){ return r.hit?_huntPct(r,_huntExit(r)):null; }
+function _huntROE(v,r){ return v==null?null:v*_huntLev(r); }
+function _huntAcct(v,r){ var w=_huntWt(r); return v==null||w==null?null:v*_huntLev(r)*w/100; }
+/* 승률·평균에 쓰는 값 = 계좌% (비중을 안 넣은 기록은 레버리지 수익률) */
+function _huntScore(r){ var v=_huntRet(r); if(v==null)return null; var a=_huntAcct(v,r); return a!=null?a:_huntROE(v,r); }
+/* 물타기로 평단이 SL 너머로 가면 SL 도달도 이익일 수 있어 TP 외에는 결과 부호로 판정 */
+function _huntWin(r){ if(r.hit==='TP')return true; var v=_huntRet(r); return v!=null&&v>0; }
+function _huntDone(r){ return !!r.hit&&!r.cxl; }
+function _huntOpen(r){ return !r.del&&!r.cxl&&!r.hit; }
+function _huntP3(v,r,big){ var P=function(x,lab){ return x==null?'':'<span style="color:'+cCol(x)+(big?';font-weight:700':'')+'">'+(x>=0?'+':'')+x.toFixed(2)+'%</span>'+(lab?'<small style="color:var(--faint)"> '+lab+'</small>':''); };
+  if(v==null)return '—'; var roe=_huntROE(v,r), ac=_huntAcct(v,r), lv=_huntLev(r);
+  return P(lv>1?roe:v,lv>1?lv+'x':'')+(ac!=null?'<br>'+P(ac,'계좌'):'')+(lv>1?'<br><small style="color:var(--faint)">가격 '+(v>=0?'+':'')+v.toFixed(2)+'%</small>':''); }
+function _huntLogHTML(){ var L=_huntLogs().filter(function(r){ return !r.del&&!r.cxl; }); if(!L.length)return '<div class="muted" style="font-size:12px;padding:6px 0">아직 제출한 기록이 없어요</div>';
   var T=function(t){ var d=new Date(t); return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); };
-  return '<div style="overflow-x:auto"><table class="mxt" style="min-width:560px;font-size:12.5px"><tr><th>제출 시각</th><th>코인</th><th>제출 때 가격</th><th>TP</th><th>SL</th><th>손익비</th><th>지금</th><th>상태</th><th></th></tr>'
-    +L.map(function(r,i){ var px=_HUNT.px[r.s], lg=r.side!=='short', pnl=px&&r.p0?((lg?px/r.p0-1:r.p0/px-1)*100):null, rr=(r.tp&&r.sl&&r.p0)?(Math.abs(r.tp-r.p0)/Math.abs(r.p0-r.sl)).toFixed(2):'—';
-      var st=r.hit?'<b style="color:'+(r.hit==='TP'?'#2ebd85':'#f6465d')+'">'+r.hit+' 도달</b> <small style="color:var(--faint)">'+T(r.hitAt)+'</small>':'<span style="color:var(--sub)">대기</span>';
-      return '<tr><td>'+T(r.at)+'</td><td><b style="cursor:pointer" onclick="_huntPick(\''+r.s+'\')">'+esc(r.s)+'</b> <small style="color:var(--faint)">'+(lg?'롱':'숏')+'</small></td><td>$'+_huntFmt(r.p0)+'</td><td style="color:#2ebd85">'+(r.tp?_huntFmt(r.tp):'—')+'</td><td style="color:#f6465d">'+(r.sl?_huntFmt(r.sl):'—')+'</td><td>1 : '+rr+'</td>'
-        +'<td>'+(pnl==null?'—':'<span style="color:'+cCol(pnl)+';font-weight:700">'+(pnl>=0?'+':'')+pnl.toFixed(2)+'%</span>')+'</td><td>'+st+'</td><td><span style="cursor:pointer;color:var(--faint)" title="이 기록 지우기" onclick="_huntLogDel(\''+r.s+'\','+r.at+')">✕</span></td></tr>'; }).join('')+'</table></div>'; }
-/* 승률 표 (2026-10-19 사용자 요청: 승률 기록용 — 제출 기록 아래, 퍼센트로) — 결과가 난 기록(TP·SL 도달)만으로 계산, 대기는 따로 셈 */
-function _huntRet(r){ if(!r.hit||!r.p0)return null; var x=r.hit==='TP'?r.tp:r.sl, lg=r.side!=='short'; return x?(lg?x/r.p0-1:r.p0/x-1)*100:null; }
-function _huntStatHTML(){ var L=_huntLogs().filter(function(r){ return !r.del; }); if(!L.length)return '';
-  var grp=function(arr){ var d=arr.filter(function(r){return r.hit;}), w=d.filter(function(r){return r.hit==='TP';}).length, rs=d.map(_huntRet).filter(function(v){return v!=null;});
-    var sum=rs.reduce(function(a,b){return a+b;},0), aw=d.filter(function(r){return r.hit==='TP';}).map(_huntRet).filter(function(v){return v!=null;}), al=d.filter(function(r){return r.hit==='SL';}).map(_huntRet).filter(function(v){return v!=null;});
-    var avg=function(a){ return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null; };
-    return {n:arr.length, done:d.length, w:w, l:d.length-w, wait:arr.length-d.length, wr:d.length?w/d.length*100:null, avg:rs.length?sum/rs.length:null, sum:sum, aw:avg(aw), al:avg(al)}; };
+  return '<div style="overflow-x:auto"><table class="mxt" style="min-width:560px;font-size:12.5px"><tr><th>제출 시각</th><th>코인</th><th>진입(평단)</th><th>TP / SL</th><th>손익비</th><th>지금·결과</th><th>상태</th><th></th></tr>'
+    +L.map(function(r){ var px=_HUNT.px[r.s], lg=r.side!=='short', base=r.p0||r.e, rr=(r.tp&&r.sl&&base&&(lg?r.sl<base:r.sl>base))?(Math.abs(r.tp-base)/Math.abs(base-r.sl)).toFixed(2):'—';
+      var v=r.hit?_huntRet(r):(r.st==='wait'?null:_huntPct(r,px)), wt=_huntWt(r), nf=(r.f||[]).length;
+      var st=r.st==='wait'?'<span style="color:var(--gold)">진입 대기</span><br><small style="color:var(--faint)">$'+_huntFmt(r.e)+'</small>'
+        :r.hit?'<b style="color:'+(_huntWin(r)?'#2ebd85':'#f6465d')+'">'+(r.hit==='CL'?(r.ck||'청산'):r.hit+' 도달')+'</b><br><small style="color:var(--faint)">'+T(r.hitAt)+'</small>':'<span style="color:var(--sub)">진행 중</span>';
+      return '<tr><td>'+T(r.at)+'</td><td><b style="cursor:pointer" onclick="_huntPick(\''+r.s+'\')">'+esc(r.s)+'</b><br><small style="color:var(--faint)">'+(lg?'롱':'숏')+' '+_huntLev(r)+'x'+(wt!=null?' · '+(+wt.toFixed(2))+'%':'')+'</small></td>'
+        +'<td>'+(r.p0?'$'+_huntFmt(r.p0)+(nf>1?'<br><small style="color:var(--gold)">물타기 '+(nf-1)+'회</small>':''):'—')+'</td>'
+        +'<td><span style="color:#2ebd85">'+(r.tp?_huntFmt(r.tp):'—')+'</span><br><span style="color:#f6465d">'+(r.sl?_huntFmt(r.sl):'—')+'</span></td><td>1 : '+rr+'</td>'
+        +'<td>'+_huntP3(v,r,1)+'</td><td>'+st+'</td><td><span style="cursor:pointer;color:var(--faint)" title="이 기록 지우기" onclick="_huntLogDel(\''+r.s+'\','+r.at+')">✕</span></td></tr>'; }).join('')+'</table></div>'; }
+/* 승률 표 (2026-10-19 사용자 요청, 10/21 계좌% 기준) — 승 = TP 도달 또는 이익 청산, 패 = SL 도달 또는 손실 청산. 대기·진행은 따로 셈 */
+function _huntStatHTML(){ var L=_huntLogs().filter(function(r){ return !r.del&&!r.cxl; }); if(!L.length)return '';
+  var avg=function(a){ return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null; };
+  var grp=function(arr){ var d=arr.filter(_huntDone), W=d.filter(_huntWin), Lo=d.filter(function(r){ return !_huntWin(r); });
+    var sc=function(a){ return a.map(_huntScore).filter(function(v){return v!=null;}); }, rs=sc(d);
+    return {n:arr.length, done:d.length, w:W.length, l:Lo.length, wait:arr.length-d.length, wr:d.length?W.length/d.length*100:null, avg:avg(rs), sum:rs.reduce(function(a,b){return a+b;},0), aw:avg(sc(W)), al:avg(sc(Lo))}; };
   var P=function(v,b){ return v==null?'<span style="color:var(--faint)">—</span>':'<'+(b?'b':'span')+' style="color:'+cCol(v)+'">'+(v>=0?'+':'')+v.toFixed(2)+'%</'+(b?'b':'span')+'>'; };
   var row=function(nm,g,bold){ return '<tr'+(bold?' style="font-weight:800;background:var(--panel2)"':'')+'><td>'+nm+'</td><td>'+g.n+'</td><td style="color:#2ebd85">'+g.w+'</td><td style="color:#f6465d">'+g.l+'</td><td style="color:var(--faint)">'+g.wait+'</td>'
     +'<td><b style="font-size:14px">'+(g.wr==null?'—':g.wr.toFixed(1)+'%')+'</b></td><td>'+P(g.aw)+'</td><td>'+P(g.al)+'</td><td>'+P(g.avg)+'</td><td>'+P(g.done?g.sum:null,1)+'</td></tr>'; };
   var all=grp(L), syms=[]; L.forEach(function(r){ if(syms.indexOf(r.s)<0)syms.push(r.s); });
   var lg=L.filter(function(r){return r.side!=='short';}), sh=L.filter(function(r){return r.side==='short';});
-  return '<div style="font-weight:800;font-size:13.5px;margin:16px 0 4px">🏆 승률 <span style="font-size:11px;color:var(--faint);font-weight:600">승 = TP 도달 · 패 = SL 도달 · 승률 = 승 ÷ (승+패) · 수익률은 제출 때 가격 기준 %</span></div>'
-    +'<div style="overflow-x:auto"><table class="mxt" style="min-width:620px;font-size:12.5px"><tr><th>구분</th><th>제출</th><th>승</th><th>패</th><th>대기</th><th>승률</th><th>평균 이익</th><th>평균 손실</th><th>건당 평균</th><th>누적</th></tr>'
+  return '<div style="font-weight:800;font-size:13.5px;margin:16px 0 4px">🏆 승률 <span style="font-size:11px;color:var(--faint);font-weight:600">승 = TP 도달·이익으로 끝남 · 패 = 손실로 끝남(SL·약손절) · 수익률은 <b>계좌 %</b> (가격% × 레버리지 × 비중, 비중 없는 기록은 레버리지 수익률)</span></div>'
+    +'<div style="overflow-x:auto"><table class="mxt" style="min-width:620px;font-size:12.5px"><tr><th>구분</th><th>제출</th><th>승</th><th>패</th><th>대기·진행</th><th>승률</th><th>평균 이익</th><th>평균 손실</th><th>건당 평균</th><th>누적</th></tr>'
     +row('전체',all,true)+(lg.length&&sh.length?row('롱',grp(lg))+row('숏',grp(sh)):'')+syms.map(function(s){ return row(esc(s),grp(L.filter(function(r){return r.s===s;}))); }).join('')+'</table></div>'; }
 /* 제출 → 디스코드 웹후크 (2026-10-19 사용자 요청). 주소는 공개 저장소에 넣지 않고 화면 설정칸 → 이 기기 localStorage(huntHook, ☁️ 동기화 코드에 포함) */
 /* 기본 웹후크 (2026-10-19 사용자 지정 채널). 화면 칸에 다른 주소를 넣으면 그게 우선 */
@@ -2768,19 +2792,33 @@ function _huntHookBox(){ var h=_huntHook(), own=(function(){ try{ return localSt
     +'<div style="display:flex;gap:6px;margin-top:6px"><input id="huntHookIn" type="password" value="'+esc(own)+'" placeholder="다른 채널로 보내려면 웹후크 주소 (비우면 기본 채널)" style="flex:1;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:12.5px">'
     +'<button class="tf" onclick="_huntHookSet()">저장</button><button class="tf" onclick="_huntHookTest()">시험</button></div>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:4px">디스코드 채널 설정 → 연동 → 웹후크에서 주소 복사. 이 기기(와 같은 동기화 코드 기기)에만 저장되고 사이트 코드엔 안 들어가요.</div></details>'; }
-function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', pc=function(x){ return x&&r.p0?((x/r.p0-1)*100):null; }, f=function(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; };
-  var L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length;
-  var rr=(r.tp&&r.sl)?(Math.abs(r.tp-r.p0)/Math.abs(r.p0-r.sl)).toFixed(2):'—';
-  _huntSend({embeds:[{title:'🎯 Hoon TP/SL 제출 — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
-    fields:[{name:'제출가',value:'$'+_huntFmt(r.p0),inline:true},{name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+' ('+f(pc(r.tp))+')':'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+' ('+f(pc(r.sl))+')':'—',inline:true},
-      {name:'손익비',value:'1 : '+rr,inline:true},{name:'지금까지 승률',value:L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음',inline:true}],
+function _huntWR(){ var L=_huntLogs().filter(function(x){ return !x.del&&_huntDone(x); }), w=L.filter(_huntWin).length; return L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음'; }
+function _huntF(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; }
+function _huntPosTxt(r){ var wt=_huntWt(r); return _huntLev(r)+'x'+(wt!=null?' · 비중 '+(+wt.toFixed(2))+'%':''); }
+/* 이 결과가 계좌에 주는 영향 한 줄: 가격% → 레버리지 → 계좌 */
+function _huntImpact(v,r){ if(v==null)return '—'; var a=_huntAcct(v,r); return _huntF(v)+(_huntLev(r)>1?' → '+_huntF(_huntROE(v,r))+' ('+_huntLev(r)+'x)':'')+(a!=null?' → 계좌 '+_huntF(a):''); }
+function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', base=r.p0||r.e, wait=r.st==='wait', tmp={side:r.side,p0:base,lev:r.lev,w:r.w};
+  var rr=(r.tp&&r.sl&&base)?(Math.abs(r.tp-base)/Math.abs(base-r.sl)).toFixed(2):'—';
+  _huntSend({embeds:[{title:'🎯 Hoon TP/SL '+(wait?'지정가 대기':'진입')+' — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
+    fields:[{name:wait?'진입 지정가 (대기)':'진입가',value:'$'+_huntFmt(base),inline:true},{name:'레버리지·비중',value:_huntPosTxt(r),inline:true},{name:'손익비',value:'1 : '+rr,inline:true},
+      {name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+'\n'+_huntImpact(_huntPct(tmp,r.tp),tmp):'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+'\n'+_huntImpact(_huntPct(tmp,r.sl),tmp):'—',inline:true},
+      {name:'지금까지 승률',value:_huntWR(),inline:true}],
     footer:{text:'VANTOR · 바이낸스 선물 시세'},timestamp:new Date(r.at).toISOString()}]},function(ok){ if(!ok&&typeof toast==='function')toast('디스코드 전송 실패'); }); }
-/* TP·SL 도달 → 디스코드 (2026-10-19 사용자 결정) — 이 화면을 열어 둔 기기가 감지한 순간 1번 */
-function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), L=_huntLogs().filter(function(x){ return !x.del&&x.hit; }), w=L.filter(function(x){ return x.hit==='TP'; }).length, tp=r.hit==='TP';
-  var mins=Math.round((r.hitAt-r.at)/60000), dur=mins<60?mins+'분':mins<1440?(mins/60).toFixed(1)+'시간':(mins/1440).toFixed(1)+'일';
-  _huntSend({embeds:[{title:(tp?'✅ TP 도달':'❌ SL 도달')+' — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:tp?0x2ebd85:0xf6465d,
-    fields:[{name:'결과',value:ret==null?'—':(ret>=0?'+':'')+ret.toFixed(2)+'%',inline:true},{name:'제출가 → '+r.hit,value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(tp?r.tp:r.sl),inline:true},{name:'걸린 시간',value:dur,inline:true},
-      {name:'누적 승률',value:(L.length?(w/L.length*100).toFixed(1):'0')+'% ('+w+'승 '+(L.length-w)+'패)',inline:true}],
+/* 지정가 체결 · 물타기 → 디스코드 (2026-10-21) */
+function _huntNotifyFill(r){ if(!_huntHook())return; _huntSend({embeds:[{title:'📥 진입 체결 — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:0xe0b552,
+    fields:[{name:'진입가',value:'$'+_huntFmt(r.p0),inline:true},{name:'레버리지·비중',value:_huntPosTxt(r),inline:true},{name:'TP / SL',value:(r.tp?'$'+_huntFmt(r.tp):'—')+' / '+(r.sl?'$'+_huntFmt(r.sl):'—'),inline:true}],
+    footer:{text:'VANTOR Hoon TP/SL'},timestamp:new Date().toISOString()}]}); }
+function _huntNotifyAdd(r,add,old){ if(!_huntHook())return; _huntSend({embeds:[{title:'➕ 물타기 — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:0xe0b552,
+    fields:[{name:'추가',value:'$'+_huntFmt(add.p)+(+add.w>0?' · 비중 +'+add.w+'%':''),inline:true},{name:'평단',value:'$'+_huntFmt(old)+' → $'+_huntFmt(r.p0),inline:true},{name:'레버리지·총 비중',value:_huntPosTxt(r),inline:true},
+      {name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+'\n'+_huntImpact(_huntPct(r,r.tp),r):'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+'\n'+_huntImpact(_huntPct(r,r.sl),r):'—',inline:true}],
+    footer:{text:'VANTOR Hoon TP/SL'},timestamp:new Date(add.at).toISOString()}]}); }
+/* TP·SL 도달·중간 청산 → 디스코드 (2026-10-19 사용자 결정, 10/21 청산 추가) — 이 화면을 열어 둔 기기가 감지한 순간 1번 */
+function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), win=_huntWin(r), t0=r.openAt||r.at;
+  var mins=Math.round((r.hitAt-t0)/60000), dur=mins<60?mins+'분':mins<1440?(mins/60).toFixed(1)+'시간':(mins/1440).toFixed(1)+'일';
+  var ttl=r.hit==='CL'?((win?'💰 ':'✂️ ')+(r.ck||'청산')+(win?' (이익)':' (손실)')):(r.hit==='TP'?'✅ TP 도달':'❌ SL 도달');
+  _huntSend({embeds:[{title:ttl+' — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:win?0x2ebd85:0xf6465d,
+    fields:[{name:'결과',value:_huntImpact(ret,r),inline:false},{name:'평단 → 청산',value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(_huntExit(r)),inline:true},{name:'레버리지·비중',value:_huntPosTxt(r),inline:true},{name:'걸린 시간',value:dur,inline:true},
+      {name:'누적 승률',value:_huntWR(),inline:true}],
     footer:{text:'VANTOR Hoon TP/SL'},timestamp:new Date(r.hitAt).toISOString()}]}); }
 function _huntLogRender(){ var e=$('#huntLog'); if(e)e.innerHTML=_huntLogHTML(); var st=$('#huntStat'); if(st)st.innerHTML=_huntStatHTML()+(_huntLogs().length?'<div style="text-align:right;margin-top:6px"><span onclick="_huntResetAll()" style="cursor:pointer;font-size:11.5px;color:var(--faint)">🗑 기록 전체 삭제</span></div>':''); }
 window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ if(r.s===sym&&r.at===at){ r.del=1; r.delAt=Date.now(); } }); _huntLogSave(L); _huntLogRender(); _huntSyncSoon(); };
@@ -2788,10 +2826,12 @@ window._huntLogDel=function(sym,at){ var L=_huntLogs(); L.forEach(function(r){ i
    기존 동기화는 통째 덮어쓰기라 PC·폰 기록이 서로 지워질 수 있어서, 이 두 값만 합치기: 기록 = (코인+제출 시각) 기준 합집합·지운 표시 우선·도달 정보 보존, 코인별 TP/SL = 더 최근 것 */
 function _huntMerge(remote){ if(!remote||!remote.data)return false; var ch=false;
   var rr=+remote.data.huntResetAt||0; if(rr>_huntResetAt()){ try{ localStorage.setItem('huntResetAt',String(rr)); }catch(e){} ch=true; }
-  try{ var R=JSON.parse(remote.data.huntLog||'[]'), L=_huntLogs(), key=function(r){ return r.s+'|'+r.at; }, m={};
+  /* 기록 = (코인+제출 시각) 합집합. 같은 기록이면 마지막 수정(u)이 더 늦은 쪽(물타기·체결·청산 반영본), 지운 표시·결과는 어느 쪽에 있든 살린다 */
+  try{ var R=JSON.parse(remote.data.huntLog||'[]'), L=_huntLogs(), key=function(r){ return r.s+'|'+r.at; }, m={}, U=function(r){ return r.u||r.hitAt||r.at||0; };
     L.forEach(function(r){ m[key(r)]=r; });
     R.forEach(function(r){ var k=key(r), a=m[k]; if(!a){ m[k]=r; ch=true; return; }
-      if(r.del&&!a.del){ a.del=1; a.delAt=r.delAt; ch=true; } if(r.hit&&!a.hit){ a.hit=r.hit; a.hitAt=r.hitAt; ch=true; } });
+      if(U(r)>U(a)){ var keep=a; a=m[k]=JSON.parse(JSON.stringify(r)); ch=true; if(keep.del&&!a.del){ a.del=1; a.delAt=keep.delAt; } if(keep.hit&&!a.hit){ a.hit=keep.hit; a.hitAt=keep.hitAt; a.px1=keep.px1; a.ck=keep.ck; } if(keep.cxl)a.cxl=1; }
+      if(r.del&&!a.del){ a.del=1; a.delAt=r.delAt; ch=true; } if(r.hit&&!a.hit){ a.hit=r.hit; a.hitAt=r.hitAt; a.px1=r.px1; a.ck=r.ck; ch=true; } if(r.cxl&&!a.cxl){ a.cxl=1; ch=true; } });
     var out=Object.keys(m).map(function(k){ return m[k]; }).sort(function(x,y){ return y.at-x.at; }); _huntLogSave(out); }catch(e){}
   try{ var RT=JSON.parse(remote.data.huntTpSl||'{}'), T=_huntDB();
     Object.keys(RT).forEach(function(k){ var r=RT[k], a=T[k]; if(!a||(r.at||0)>(a.at||0)||(r.hit&&!a.hit&&r.at===a.at)){ T[k]=r; ch=true; } });
@@ -2803,7 +2843,7 @@ function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb()
   syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); } syncPush(); cb&&cb(); }); }
 function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
 async function renderHunt(el){
-  el.innerHTML='<div class="sec-title">🎯 Hoon TP/SL</div><p class="sec-sub">코인 이름을 누르면 현재가가 나오고 롱/숏을 고르고 <b>TP(익절)</b>·<b>SL(손절)</b>을 가격이나 %로 넣어 저장할 수 있어요. 제출하면 아래 기록에 쌓이고 TP·SL 도달을 표시해요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
+  el.innerHTML='<div class="sec-title">🎯 Hoon TP/SL</div><p class="sec-sub">코인을 누르고 롱/숏·<b>진입가</b>(비우면 현재가)·<b>레버리지</b>·<b>비중</b>·<b>TP</b>·<b>SL</b>을 넣어 제출하세요. 진행 중 포지션은 <b>익절·약손절·물타기</b> 버튼으로 관리하고, 수익률은 가격%·레버리지 수익률·계좌%로 보여줘요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
     +'<div class="card"><div class="pad"><input id="huntQ" placeholder="코인 검색 (예: BTC, SOL)" autocomplete="off" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px" oninput="_huntList()">'+_huntHookBox()+'<div id="huntSel" style="margin-top:12px"></div><div style="margin-top:14px"><div style="font-weight:800;font-size:13.5px;margin-bottom:4px">📝 제출 기록 <span style="font-size:11px;color:var(--faint);font-weight:600">'+(_syncCode()?'☁️ 동기화 중':'이 기기에만 저장 — 상단 ☁️에서 동기화 코드를 만들면 기기끼리 공유')+' · 3초마다 지금 손익·도달 갱신</span></div><div id="huntLog"></div><div id="huntStat"></div></div><div style="font-weight:800;font-size:13.5px;margin-top:16px">코인 목록</div><div id="huntList" style="margin-top:4px"><div class="muted" style="font-size:12px">불러오는 중…</div></div></div></div>';
   try{ var all=await fetch('https://fapi.binance.com/fapi/v1/ticker/24hr').then(function(r){return r.json();});
     _HUNT.list=all.filter(function(t){ return /USDT$/.test(t.symbol); }).map(function(t){ return {s:t.symbol.replace(/USDT$/,''),p:+t.lastPrice,c:+t.priceChangePercent,v:+t.quoteVolume}; }).sort(function(a,b){ return b.v-a.v; });
@@ -2813,72 +2853,137 @@ async function renderHunt(el){
   if(window._huntT)clearInterval(window._huntT);
   window._huntT=setInterval(_huntTick,3000);
   _huntSync(); if(window._huntS)clearInterval(window._huntS); window._huntS=setInterval(function(){ if(!$('#huntList')){ clearInterval(window._huntS); window._huntS=null; return; } _huntSync(); },30000); }
-function _huntList(){ var el=$('#huntList'); if(!el||!_HUNT.list)return; var q=(($('#huntQ')||{}).value||'').trim().toUpperCase(), db=_huntLive(), fav=_coinFav();
+/* 코인 목록 옆 표시 = 그 코인의 진행 중 기록(가장 최근) */
+function _huntActive(sym){ return _huntLogs().filter(function(r){ return r.s===sym&&_huntOpen(r); }); }
+function _huntList(){ var el=$('#huntList'); if(!el||!_HUNT.list)return; var q=(($('#huntQ')||{}).value||'').trim().toUpperCase(), fav=_coinFav(), act={};
+  _huntLogs().forEach(function(r){ if(_huntOpen(r)&&!act[r.s])act[r.s]=r; });
   var arr=_HUNT.list.filter(function(x){ return !q||x.s.indexOf(q)>=0; });
-  if(!q){ var top=arr.filter(function(x){ return db[x.s]||fav.indexOf(x.s)>=0; }); arr=top.concat(arr.filter(function(x){ return top.indexOf(x)<0; }).slice(0,40)); } else arr=arr.slice(0,40);
-  el.innerHTML=arr.length?arr.map(function(x){ var d=db[x.s];
+  if(!q){ var top=arr.filter(function(x){ return act[x.s]||fav.indexOf(x.s)>=0; }); arr=top.concat(arr.filter(function(x){ return top.indexOf(x)<0; }).slice(0,40)); } else arr=arr.slice(0,40);
+  el.innerHTML=arr.length?arr.map(function(x){ var d=act[x.s];
     return '<div class="rowbtn" onclick="_huntPick(\''+x.s+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line2);cursor:pointer'+(_HUNT.sel===x.s?';background:var(--panel2)':'')+'"><b style="min-width:70px">'+esc(x.s)+'</b>'
-      +(d?'<span style="font-size:11px;color:var(--sub)">'+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+(d.hit?' <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b>':'')+'</span>':'')
+      +(d?'<span style="font-size:11px;color:var(--sub)">'+(d.st==='wait'?'<b style="color:var(--gold)">대기</b> ':'')+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+'</span>':'')
       +'<span style="margin-left:auto;font-variant-numeric:tabular-nums">$<span data-hp="'+x.s+'">'+_huntFmt(_HUNT.px[x.s])+'</span></span><span style="width:64px;text-align:right;font-size:12px;font-weight:700;color:'+cCol(x.c)+'">'+(x.c>=0?'+':'')+x.c.toFixed(2)+'%</span></div>'; }).join('')
     :'<div class="muted" style="font-size:12px">찾는 코인이 없어요</div>'; }
-/* 입력 (2026-10-20 사용자: 코인 진입 화면처럼 한 화면에서) — 방향 [롱|숏] + TP·SL 마다 가격 칸과 % 칸을 나란히. 한쪽을 고치면 다른 쪽이 따라 바뀐다.
-   _HUNT.src.tp/sl = 마지막으로 고친 칸('px'|'pct'). % 로 넣었으면 현재가가 움직일 때 가격을 다시 계산한다. % 는 이익·손실 방향 기준 거리(+ = 맞는 쪽). */
+/* 입력 (2026-10-20 사용자: 코인 진입 화면처럼 한 화면에서, 10/21 레버리지·비중·진입가 추가) — 방향 [롱|숏] + 진입가 + 레버리지·비중 + TP·SL 가격/% 칸.
+   % 와 손익비의 기준 = 진입가 칸(비우면 현재가). _HUNT.src.tp/sl = 마지막으로 고친 칸('px'|'pct'). % 는 이익·손실 방향 기준 거리(+ = 맞는 쪽, 가격 기준 — 레버리지 전). */
 _HUNT.side='long'; _HUNT.src={tp:'px',sl:'px'};
+(function(){ try{ _HUNT.lev=+localStorage.getItem('huntLev')||10; _HUNT.w=localStorage.getItem('huntW')||''; }catch(e){ _HUNT.lev=10; _HUNT.w=''; } })();
 var _huntR=function(p){ return +(+p).toPrecision(6); };
 function _huntSgn(k){ var lg=_HUNT.side!=='short'; return k==='tp'?(lg?1:-1):(lg?-1:1); }
 function _huntPctOf(k,p,px){ return p&&px?+((p/px-1)*100*_huntSgn(k)).toFixed(2):null; }
 function _huntPxOf(k,c,px){ return c!==''&&c!=null&&isFinite(+c)&&px?_huntR(px*(1+_huntSgn(k)*(+c)/100)):null; }
+function _huntEntryIn(){ return +(($('#huntE')||{}).value)||0; }
+function _huntBase(){ return _huntEntryIn()||_HUNT.px[_HUNT.sel]; }
 window._huntSide=function(sd){ _HUNT.side=sd; $$('.hs-side button').forEach(function(b){ var on=b.dataset.sd===sd; b.classList.toggle('on',on); b.style.background=on?(sd==='long'?'#2ebd85':'#f6465d'):'transparent'; b.style.color=on?'#fff':'var(--sub)'; });
   ['tp','sl'].forEach(function(k){ _huntSync1(k); }); _huntCalc(); };
 /* k 의 짝 칸을 맞춘다 — src 가 px 면 % 를, pct 면 가격을 다시 쓴다 */
-function _huntSync1(k){ var px=_HUNT.px[_HUNT.sel], P=$('#hunt'+(k==='tp'?'Tp':'Sl')), C=$('#hunt'+(k==='tp'?'Tp':'Sl')+'C'); if(!P||!C||!px)return;
+function _huntSync1(k){ var px=_huntBase(), P=$('#hunt'+(k==='tp'?'Tp':'Sl')), C=$('#hunt'+(k==='tp'?'Tp':'Sl')+'C'); if(!P||!C||!px)return;
   if(_HUNT.src[k]==='pct'){ var v=_huntPxOf(k,C.value,px); if(document.activeElement!==P)P.value=v==null?'':v; }
   else { var c=_huntPctOf(k,+P.value,px); if(document.activeElement!==C)C.value=c==null?'':c; } }
 window._huntIn=function(k,src){ _HUNT.src[k]=src;
-  if(k==='tp'&&src==='px'){ var px=_HUNT.px[_HUNT.sel], v=+(($('#huntTp')||{}).value)||0; if(v&&px&&v!==px){ var sd=v>px?'long':'short'; if(sd!==_HUNT.side){ _HUNT.side=sd; window._huntSide(sd); return; } } }
+  if(k==='tp'&&src==='px'){ var px=_huntBase(), v=+(($('#huntTp')||{}).value)||0; if(v&&px&&v!==px){ var sd=v>px?'long':'short'; if(sd!==_HUNT.side){ _HUNT.side=sd; window._huntSide(sd); return; } } }
   _huntSync1(k); _huntCalc(); };
+window._huntEIn=function(){ ['tp','sl'].forEach(function(k){ _huntSync1(k); }); _huntCalc(); };
+window._huntENow=function(){ var e=$('#huntE'); if(e){ e.value=''; window._huntEIn(); } };
+window._huntLevSet=function(v,fromIn){ v=+v; if(!(v>=1))return; _HUNT.lev=Math.min(125,Math.round(v)); try{ localStorage.setItem('huntLev',_HUNT.lev); }catch(e){} var i=$('#huntLev'); if(i&&!fromIn)i.value=_HUNT.lev;
+  $$('.hs-lev button').forEach(function(b){ b.classList.toggle('on',+b.dataset.v===_HUNT.lev); }); _huntCalc(); };
+window._huntWSet=function(v,fromIn){ _HUNT.w=(v===''||!isFinite(+v))?'':String(+v); try{ localStorage.setItem('huntW',_HUNT.w); }catch(e){} var i=$('#huntW'); if(i&&!fromIn)i.value=_HUNT.w;
+  $$('.hs-w button').forEach(function(b){ b.classList.toggle('on',b.dataset.v===_HUNT.w); }); _huntCalc(); };
 function _huntVals(){ var a=+(($('#huntTp')||{}).value)||0, b=+(($('#huntSl')||{}).value)||0; return {tp:a||null,sl:b||null}; }
 function _huntPick(sym){ _HUNT.sel=sym; var el=$('#huntSel'); if(!el)return; var d=_huntLive()[sym]||{}, px=_HUNT.px[sym];
-  if(d.side)_HUNT.side=d.side; _HUNT.src={tp:'px',sl:'px'}; var lg=_HUNT.side!=='short';
+  if(d.side)_HUNT.side=d.side; _HUNT.src={tp:'px',sl:'px'};
   var box='padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--ink);font:inherit;font-size:15px;font-variant-numeric:tabular-nums;width:100%;min-width:0';
-  var pair=function(k,lab,col,v){ var id=k==='tp'?'huntTp':'huntSl';
-    return '<div style="margin-top:8px"><div style="font-size:12px;font-weight:800;color:'+col+';margin-bottom:3px">'+lab+'</div><div style="display:grid;grid-template-columns:1fr 92px;gap:6px">'
+  var lab=function(t,col,extra){ return '<div style="font-size:12px;font-weight:800;color:'+(col||'var(--sub)')+';margin-bottom:3px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 6px"><span style="white-space:nowrap">'+t+'</span>'+(extra||'')+'</div>'; };
+  var pair=function(k,t,col,v){ var id=k==='tp'?'huntTp':'huntSl';
+    return '<div style="margin-top:8px">'+lab(t,col)+'<div style="display:grid;grid-template-columns:1fr 92px;gap:6px">'
       +'<div style="position:relative"><input id="'+id+'" type="number" step="any" inputmode="decimal" value="'+(v||'')+'" placeholder="가격" oninput="_huntIn(\''+k+'\',\'px\')" style="'+box+';padding-left:20px"><span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">$</span></div>'
       +'<div style="position:relative"><input id="'+id+'C" type="number" step="any" inputmode="decimal" value="'+(v?_huntPctOf(k,v,px):'')+'" placeholder="%" oninput="_huntIn(\''+k+'\',\'pct\')" style="'+box+';padding-right:22px;text-align:right"><span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">%</span></div></div></div>'; };
   var sideBtn=function(sd,t){ var on=sd===_HUNT.side; return '<button data-sd="'+sd+'" class="'+(on?'on':'')+'" onclick="_huntSide(\''+sd+'\')" style="flex:1;border:none;padding:8px 0;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:'+(on?(sd==='long'?'#2ebd85':'#f6465d'):'transparent')+';color:'+(on?'#fff':'var(--sub)')+'">'+t+'</button>'; };
+  var chip=function(cls,fn,v,t,on){ return '<button class="tf'+(on?' on':'')+'" data-v="'+v+'" onclick="'+fn+'(\''+v+'\')" style="padding:4px 8px;font-size:12px">'+t+'</button>'; };
+  var levs=[1,3,5,10,20,25,50].map(function(v){ return chip('',"_huntLevSet",v,v+'x',v===_HUNT.lev); }).join('');
+  var ws=['5','10','20','30','50'].map(function(v){ return chip('',"_huntWSet",v,v+'%',v===_HUNT.w); }).join('');
   el.innerHTML='<div style="border:1px solid var(--gold);border-radius:12px;padding:12px 14px">'
     +'<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><b style="font-size:18px">'+esc(sym)+'</b><span style="font-size:12px;color:var(--faint)">현재가</span><b id="huntPx" style="font-size:24px;font-variant-numeric:tabular-nums">$'+_huntFmt(px)+'</b><span style="margin-left:auto;font-size:11px;color:var(--faint)">3초마다 갱신 · 바이낸스 선물</span></div>'
     +'<div class="hs-side" style="display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">'+sideBtn('long','롱')+sideBtn('short','숏')+'</div>'
+    +'<div style="margin-top:8px">'+lab('진입가','var(--sub)','<span style="font-weight:600;color:var(--faint)">비우면 현재가로 바로 진입 · 넣으면 그 가격에 닿을 때 체결</span>')
+      +'<div style="display:grid;grid-template-columns:1fr auto;gap:6px"><div style="position:relative"><input id="huntE" type="number" step="any" inputmode="decimal" placeholder="현재가" oninput="_huntEIn()" style="'+box+';padding-left:20px"><span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">$</span></div><button class="tf" onclick="_huntENow()">현재가</button></div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">'
+      +'<div>'+lab('레버리지')+'<div style="position:relative"><input id="huntLev" type="number" min="1" max="125" step="1" inputmode="numeric" value="'+_HUNT.lev+'" oninput="_huntLevSet(this.value,1)" style="'+box+';padding-right:22px;text-align:right"><span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">x</span></div></div>'
+      +'<div>'+lab('비중','var(--sub)','<span style="font-weight:600;color:var(--faint)">계좌 대비 증거금</span>')+'<div style="position:relative"><input id="huntW" type="number" min="0" max="100" step="any" inputmode="decimal" value="'+esc(_HUNT.w)+'" placeholder="예: 10" oninput="_huntWSet(this.value,1)" style="'+box+';padding-right:22px;text-align:right"><span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">%</span></div></div></div>'
+    +'<div class="hs-lev" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+levs+'</div><div class="hs-w" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">'+ws+'</div>'
     +pair('tp','TP (익절)','#2ebd85',d.tp)+pair('sl','SL (손절)','#f6465d',d.sl)
-    +'<div id="huntRR" style="font-size:12.5px;color:var(--sub);margin-top:8px"></div>'
+    +'<div id="huntRR" style="font-size:12.5px;color:var(--sub);margin-top:8px;line-height:1.6"></div>'
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="tf" onclick="_huntStore()" style="flex:1">제출</button><button class="tf" onclick="_huntDel()">지우기</button></div>'
-    +(d.at?'<div style="font-size:11px;color:var(--faint);margin-top:6px">저장 '+new Date(d.at).toLocaleString('ko-KR')+' · 그때 가격 $'+_huntFmt(d.p0)+(d.hit?' · <b style="color:'+(d.hit==='TP'?'#2ebd85':'#f6465d')+'">'+d.hit+' 도달</b> ('+new Date(d.hitAt).toLocaleString('ko-KR')+')':'')+'</div>':'')+'</div>';
-  _huntCalc(); _huntList(); }
-function _huntCalc(){ var px=_HUNT.px[_HUNT.sel], r=$('#huntRR'); if(!r||!px)return; ['tp','sl'].forEach(function(k){ if(_HUNT.src[k]==='pct')_huntSync1(k); });
+    +'<div id="huntPos"></div></div>';
+  _huntCalc(); _huntPosRender(); _huntList(); }
+function _huntCalc(){ var px=_huntBase(), r=$('#huntRR'); if(!r||!px)return; ['tp','sl'].forEach(function(k){ if(_HUNT.src[k]==='pct')_huntSync1(k); });
   var v=_huntVals(), tp=v.tp, sl=v.sl, lg=_HUNT.side!=='short', bad=(tp&&(lg?tp<=px:tp>=px))||(sl&&(lg?sl>=px:sl<=px));
-  r.innerHTML=bad?'<span style="color:#f6465d">'+(lg?'롱은 TP 가 현재가보다 위, SL 이 아래여야 해요':'숏은 TP 가 현재가보다 아래, SL 이 위여야 해요')+'</span>'
-    :(tp&&sl)?'손익비 <b>1 : '+(Math.abs(tp-px)/Math.abs(px-sl)).toFixed(2)+'</b> ('+(lg?'롱':'숏')+')':''; }
-function _huntStore(){ var s=_HUNT.sel; if(!s)return; var v=_huntVals(), tp=v.tp, sl=v.sl, px=_HUNT.px[s]; var db=_huntDB();
-  var lg0=_HUNT.side!=='short'; if(px&&((tp&&(lg0?tp<=px:tp>=px))||(sl&&(lg0?sl>=px:sl<=px)))){ if(typeof toast==='function')toast((lg0?'롱':'숏')+' 방향과 TP/SL 위치가 맞지 않아요 — 확인해 주세요'); return; }
-  if(!tp&&!sl){ db[s]={del:1,at:Date.now()}; } else db[s]={tp:tp,sl:sl,p0:px,at:Date.now(),side:_HUNT.side==='short'?'short':'long'};
-  _huntSave(db);
-  if(db[s]&&!db[s].del){ var L=_huntLogs(), rec={s:s,tp:tp,sl:sl,p0:db[s].p0,at:db[s].at,side:db[s].side}; L.unshift(rec); _huntLogSave(L); _huntNotify(rec); }
-  if(typeof toast==='function')toast(s+' TP/SL 제출했어요'); _huntPick(s); _huntLogRender(); _huntSyncSoon(); }
+  if(bad){ r.innerHTML='<span style="color:#f6465d">'+(lg?'롱은 TP 가 진입가보다 위, SL 이 아래여야 해요':'숏은 TP 가 진입가보다 아래, SL 이 위여야 해요')+'</span>'; return; }
+  var tmp={side:_HUNT.side,p0:px,lev:_HUNT.lev,w:+_HUNT.w||null}, h=[];
+  if(tp&&sl)h.push('손익비 <b>1 : '+(Math.abs(tp-px)/Math.abs(px-sl)).toFixed(2)+'</b> ('+(lg?'롱':'숏')+' '+_HUNT.lev+'x'+(tmp.w?' · 비중 '+tmp.w+'%':'')+')');
+  if(tp)h.push('<span style="color:#2ebd85">TP 도달</span> '+_huntImpact(_huntPct(tmp,tp),tmp));
+  if(sl)h.push('<span style="color:#f6465d">SL 도달</span> '+_huntImpact(_huntPct(tmp,sl),tmp));
+  if(sl&&_HUNT.lev>1){ var liqF=Math.max(0.0005,1/_HUNT.lev-0.005), sd=Math.abs(px-sl)/px; if(sd>=liqF)h.push('<span style="color:#f6465d">⚠️ '+_HUNT.lev+'x 에선 SL 전에 청산돼요 (청산까지 약 '+(liqF*100).toFixed(2)+'%) — 레버리지를 낮추세요</span>'); }
+  r.innerHTML=h.join('<br>'); }
+function _huntStore(){ var s=_HUNT.sel; if(!s)return; var v=_huntVals(), tp=v.tp, sl=v.sl, px=_HUNT.px[s], e=_huntEntryIn(), base=e||px; var db=_huntDB();
+  var lg0=_HUNT.side!=='short'; if(base&&((tp&&(lg0?tp<=base:tp>=base))||(sl&&(lg0?sl>=base:sl<=base)))){ if(typeof toast==='function')toast((lg0?'롱':'숏')+' 방향과 TP/SL 위치가 맞지 않아요 — 확인해 주세요'); return; }
+  if(!tp&&!sl){ if(typeof toast==='function')toast('TP 나 SL 을 넣어 주세요'); return; }
+  if(!px){ if(typeof toast==='function')toast('현재가를 아직 못 받았어요 — 잠시 뒤 다시'); return; }
+  var now=Date.now(), w=+_HUNT.w>0?+_HUNT.w:null, side=lg0?'long':'short';
+  db[s]={tp:tp,sl:sl,p0:base,at:now,side:side,lev:_HUNT.lev,w:w}; _huntSave(db);
+  var rec={s:s,tp:tp,sl:sl,at:now,u:now,side:side,lev:_HUNT.lev,w:w};
+  if(e&&Math.abs(e-px)/px>0.0002){ rec.e=e; rec.st='wait'; rec.tr=e<px?'down':'up'; rec.p00=px; }
+  else { rec.f=[{p:px,w:w,at:now}]; rec.p0=px; rec.openAt=now; }
+  var L=_huntLogs(); L.unshift(rec); _huntLogSave(L); _huntNotify(rec);
+  if(typeof toast==='function')toast(s+(rec.st==='wait'?' 지정가 대기 등록했어요':' 진입 제출했어요')); _huntPick(s); _huntLogRender(); _huntSyncSoon(); }
 function _huntDel(){ var s=_HUNT.sel, db=_huntDB(); db[s]={del:1,at:Date.now()}; _huntSave(db); _huntPick(s); _huntSyncSoon(); }
+/* 진행 중 포지션 (2026-10-21) — 선택한 코인의 대기·진행 기록마다 [익절]·[약손절]·[물타기]·[주문 취소] */
+function _huntPosRender(){ var el=$('#huntPos'); if(!el||!_HUNT.sel)return; var A=_huntActive(_HUNT.sel), px=_HUNT.px[_HUNT.sel]; if(!A.length){ el.innerHTML=''; return; }
+  var box='padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;width:100%;min-width:0';
+  el.innerHTML='<div style="font-weight:800;font-size:13px;margin-top:14px">📌 진행 중 ('+A.length+')</div>'+A.map(function(r){ var id=r.at, lg=r.side!=='short', wait=r.st==='wait', v=wait?null:_huntPct(r,px), open=_HUNT.addOpen===id;
+    return '<div style="border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:6px">'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:12.5px"><b style="color:'+(lg?'#2ebd85':'#f6465d')+'">'+(lg?'롱':'숏')+' '+_huntPosTxt(r)+'</b>'
+        +(wait?'<span style="color:var(--gold)">진입 대기 $'+_huntFmt(r.e)+'</span>':'<span>평단 <b>$'+_huntFmt(r.p0)+'</b>'+((r.f||[]).length>1?' <small style="color:var(--gold)">물타기 '+(r.f.length-1)+'회</small>':'')+'</span>')
+        +'<span style="color:var(--faint)">TP '+(r.tp?_huntFmt(r.tp):'—')+' · SL '+(r.sl?_huntFmt(r.sl):'—')+'</span>'
+        +(wait?'':'<span style="margin-left:auto" data-hpos="'+id+'">'+_huntImpact(v,r)+'</span>')+'</div>'
+      +'<div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap">'+(wait?'<button class="tf" onclick="_huntCancel('+id+')" style="flex:1">주문 취소</button>'
+        :'<button class="tf" onclick="_huntClose('+id+',\'익절\')" style="flex:1;color:#2ebd85">익절</button><button class="tf" onclick="_huntClose('+id+',\'약손절\')" style="flex:1;color:#f6465d">약손절</button><button class="tf" onclick="_huntAddOpen('+id+')" style="flex:1">물타기</button>')+'</div>'
+      +(open&&!wait?'<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-top:7px"><div style="position:relative"><input id="huntAddP" type="number" step="any" inputmode="decimal" value="'+_huntR(px)+'" placeholder="가격" style="'+box+';padding-left:18px"><span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--faint)">$</span></div>'
+        +'<div style="position:relative"><input id="huntAddW" type="number" step="any" inputmode="decimal" value="'+(r.w||'')+'" placeholder="추가 비중" style="'+box+';padding-right:20px;text-align:right"><span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--faint)">%</span></div>'
+        +'<button class="tf" onclick="_huntAdd('+id+')">추가</button></div><div style="font-size:11px;color:var(--faint);margin-top:3px">가격은 지금 시세로 채워져 있어요. 다른 가격에 탔으면 고쳐 넣으세요. TP/SL 가격은 그대로, 평단·%만 다시 계산해요.</div>':'')
+      +'</div>'; }).join(''); }
+function _huntFind(at){ var L=_huntLogs(), r=null; L.forEach(function(x){ if(x.s===_HUNT.sel&&x.at===at)r=x; }); return {L:L,r:r}; }
+window._huntAddOpen=function(at){ _HUNT.addOpen=_HUNT.addOpen===at?null:at; _huntPosRender(); };
+window._huntClose=function(at,kind){ var o=_huntFind(at), r=o.r, px=_HUNT.px[_HUNT.sel]; if(!r||!_huntOpen(r)||r.st==='wait'||!px)return;
+  var v=_huntPct(r,px); if(!confirm(kind+' — 지금 가격 $'+_huntFmt(px)+' 로 청산할까요?\n결과 '+_huntImpact(v,r).replace(/<[^>]+>/g,'')))return;
+  var now=Date.now(); r.hit='CL'; r.ck=kind; r.px1=px; r.hitAt=now; r.u=now; _huntLogSave(o.L); _huntNotifyHit(r);
+  if(typeof toast==='function')toast(r.s+' '+kind+' 청산 — '+(_huntWin(r)?'승':'패')+'으로 기록했어요'); _huntPosRender(); _huntLogRender(); _huntList(); _huntSyncSoon(); };
+window._huntCancel=function(at){ var o=_huntFind(at), r=o.r; if(!r||r.st!=='wait')return; if(!confirm('진입 대기 주문을 취소할까요? (승률에 안 들어가요)'))return;
+  r.cxl=1; r.u=Date.now(); _huntLogSave(o.L); if(typeof toast==='function')toast('대기 주문을 취소했어요'); _huntPosRender(); _huntLogRender(); _huntList(); _huntSyncSoon(); };
+window._huntAdd=function(at){ var o=_huntFind(at), r=o.r; if(!r||!_huntOpen(r)||r.st==='wait')return; var p=+(($('#huntAddP')||{}).value)||0, w=+(($('#huntAddW')||{}).value)||0;
+  if(!p){ if(typeof toast==='function')toast('물탄 가격을 넣어 주세요'); return; }
+  if(!r.f||!r.f.length)r.f=[{p:r.p0,w:r.w||null,at:r.openAt||r.at}];
+  if(_huntWt(r)!=null&&!(w>0)){ if(typeof toast==='function')toast('추가 비중(%)을 넣어 주세요'); return; }
+  var now=Date.now(), add={p:p,w:w>0?w:null,at:now}, old=r.p0; r.f.push(add); r.p0=_huntR(_huntAvg(r.f)); r.u=now;
+  _huntLogSave(o.L); _huntNotifyAdd(r,add,old); _HUNT.addOpen=null;
+  if(typeof toast==='function')toast('평단 $'+_huntFmt(old)+' → $'+_huntFmt(r.p0)); _huntPosRender(); _huntLogRender(); _huntSyncSoon(); };
 async function _huntTick(){ if(!coinMode||!$('#huntList')){ clearInterval(window._huntT); window._huntT=null; return; }
-  var dbAll=_huntDB(), db=_huntLive(), syms=Object.keys(db); if(_HUNT.sel&&syms.indexOf(_HUNT.sel)<0)syms.push(_HUNT.sel); _huntLogs().forEach(function(r){ if(syms.indexOf(r.s)<0)syms.push(r.s); }); if(!syms.length)return;
-  try{ var arr=await fetch('https://fapi.binance.com/fapi/v1/ticker/price').then(function(r){return r.json();}); var mp={}; arr.forEach(function(t){ mp[t.symbol]=+t.price; });
-    var ch=false; Object.keys(mp).forEach(function(k){ if(/USDT$/.test(k))_HUNT.px[k.replace(/USDT$/,'')]=mp[k]; });
-    syms.forEach(function(s){ var d=db[s], p=_HUNT.px[s]; if(!d||d.hit||!p)return; var lg=d.side!=='short';
-      var hit=d.tp&&(lg?p>=d.tp:p<=d.tp)?'TP':d.sl&&(lg?p<=d.sl:p>=d.sl)?'SL':null;
-      if(hit){ d.hit=hit; d.hitAt=Date.now(); ch=true; if(typeof toast==='function')toast('🎯 '+s+' '+hit+' 도달 — $'+_huntFmt(p)); } });
-    if(ch){ Object.keys(db).forEach(function(k){ dbAll[k]=db[k]; }); _huntSave(dbAll); }
-    var L=_huntLogs(), lc=false, newHits=[]; L.forEach(function(r){ var p=_HUNT.px[r.s]; if(r.hit||r.del||!p)return; var lg=r.side!=='short', h=r.tp&&(lg?p>=r.tp:p<=r.tp)?'TP':r.sl&&(lg?p<=r.sl:p>=r.sl)?'SL':null; if(h){ r.hit=h; r.hitAt=Date.now(); r.px1=p; lc=true; newHits.push(r); } });
-    if(lc){ _huntLogSave(L); newHits.forEach(_huntNotifyHit); } _huntLogRender(); if(ch||lc)_huntSyncSoon();
+  var syms=[]; if(_HUNT.sel)syms.push(_HUNT.sel); _huntLogs().forEach(function(r){ if(syms.indexOf(r.s)<0)syms.push(r.s); }); if(!syms.length)return;
+  try{ var arr=await fetch('https://fapi.binance.com/fapi/v1/ticker/price').then(function(r){return r.json();});
+    Object.keys(arr).forEach(function(i){ var t=arr[i]; if(/USDT$/.test(t.symbol))_HUNT.px[t.symbol.replace(/USDT$/,'')]=+t.price; });
+    /* 기록마다: 지정가 대기 → 진입가에 닿으면 체결 / 진행 중 → TP·SL 닿으면 결과 (판정 시세 = 바이낸스 선물) */
+    var L=_huntLogs(), lc=false, fills=[], hits=[], now=Date.now();
+    L.forEach(function(r){ var p=_HUNT.px[r.s]; if(!_huntOpen(r)||!p)return; var lg=r.side!=='short';
+      if(r.st==='wait'){ var tr=r.tr||(lg?'down':'up'); if(tr==='down'?p<=r.e:p>=r.e){ delete r.st; r.f=[{p:r.e,w:r.w||null,at:now}]; r.p0=r.e; r.openAt=now; r.u=now; lc=true; fills.push(r); } return; }
+      var h=r.tp&&(lg?p>=r.tp:p<=r.tp)?'TP':r.sl&&(lg?p<=r.sl:p>=r.sl)?'SL':null; if(h){ r.hit=h; r.hitAt=now; r.px1=p; r.u=now; lc=true; hits.push(r); } });
+    if(lc){ _huntLogSave(L); fills.forEach(function(r){ _huntNotifyFill(r); if(typeof toast==='function')toast('📥 '+r.s+' 진입 체결 — $'+_huntFmt(r.p0)); });
+      hits.forEach(function(r){ _huntNotifyHit(r); if(typeof toast==='function')toast('🎯 '+r.s+' '+r.hit+' 도달 — $'+_huntFmt(r.px1)); }); _huntSyncSoon(); _huntList(); _huntPosRender(); }
+    _huntLogRender();
     $$('[data-hp]').forEach(function(e){ var v=_HUNT.px[e.getAttribute('data-hp')]; if(v)e.textContent=_huntFmt(v); });
-    var hp=$('#huntPx'); if(hp&&_HUNT.sel)hp.textContent='$'+_huntFmt(_HUNT.px[_HUNT.sel]); _huntCalc(); if(ch)_huntList();
+    $$('[data-hpos]').forEach(function(e){ var o=_huntFind(+e.getAttribute('data-hpos')); if(o.r&&o.r.p0)e.innerHTML=_huntImpact(_huntPct(o.r,_HUNT.px[o.r.s]),o.r); });
+    var hp=$('#huntPx'); if(hp&&_HUNT.sel)hp.textContent='$'+_huntFmt(_HUNT.px[_HUNT.sel]); _huntCalc();
   }catch(e){} }
-window._huntList=_huntList; window._huntPick=_huntPick; window._huntCalc=_huntCalc; window._huntStore=_huntStore; window._huntDel=_huntDel;
+window._huntList=_huntList; window._huntPick=_huntPick; window._huntPosRender=_huntPosRender; window._huntCalc=_huntCalc; window._huntStore=_huntStore; window._huntDel=_huntDel;
 async function renderCoinWatch(el){ var f=_coinFav();
   var h='<div class="sec-title">⭐ 관심 코인</div><p class="sec-sub">코인 옆 <b>☆</b>를 눌러 추가한 종목을 실시간으로 봅니다.</p>';
   if(!f.length){ el.innerHTML=h+'<div class="card"><div class="pad" style="color:var(--faint);font-size:13px;padding:18px">아직 관심 코인이 없어요. <b>RADAR</b>나 <b>홈</b>에서 코인 옆의 <b>☆</b>를 눌러 추가하세요.</div></div>'; return; }
@@ -3361,7 +3466,7 @@ async function openCoin(sym){
   try{
     var res=await Promise.all([
       fetch(F+'ticker/24hr?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
-      fetch(F+'klines?symbol='+s+'&interval='+TF+'&limit='+(TFLIM[TF]||120)).then(function(r){return r.json();}).catch(function(){return [];}),
+      _coinIdxKlines(s,TF,(TFLIM[TF]||120)),
       fetch(F+'premiumIndex?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(F+'openInterest?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(D+'globalLongShortAccountRatio?symbol='+s+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return null;})
@@ -3371,7 +3476,7 @@ async function openCoin(sym){
     if(!tk||!tk.lastPrice){ host.innerHTML='<button class="more" onclick="closeCoin()" style="background:none;border:none;font-family:inherit;cursor:pointer">◀ 코인 목록</button><div style="padding:24px;color:var(--down)">'+esc(sym)+' 데이터를 불러오지 못했어요</div>'; return; }
     var px=+tk.lastPrice, ch=+tk.priceChangePercent, hi=+tk.highPrice, lo=+tk.lowPrice, qv=+tk.quoteVolume;
     var candles=Array.isArray(kl)?kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}):[];
-    var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
+    var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:(kl&&kl._idx&&candles.length)?candles[candles.length-1][4]:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
     var fr=(fund&&fund.lastFundingRate!=null)?(+fund.lastFundingRate*100):null;
     var oiUsd=(oi&&oi.openInterest)?(+oi.openInterest*px):null;
     var la=(ls&&ls[0])?(+ls[0].longAccount*100):null;
@@ -3404,7 +3509,7 @@ async function openCoin(sym){
       +infoBar
       +tfRow+'<div>'+mobTools+legend+drawbar+'</div>'+typebar
       +'<canvas class="schart" id="coinChartCv"></canvas>'
-      +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 Binance '+TFLAB[TF]+'봉 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
+      +'<p id="cChartCap" style="color:var(--faint);font-size:11.5px;margin:8px 2px 0">📊 통합 시세(바이낸스 지수 · 거래소 여러 곳 가중평균) '+TFLAB[TF]+'봉 · 거래량은 바이낸스 선물 · 위 버튼으로 시간봉·선 전환 · 휠·드래그로 확대/축소·이동 · 오른쪽 가격축 세로 드래그, 아래 시간축 가로 드래그로 늘리기/줄이기 · 더블클릭 리셋. 청산 히트맵은 🔥 청산맵에서.</p>'
       +'<div id="cChartTip" style="margin:9px 2px 0;font-size:12.5px;font-weight:600;color:var(--ink);background:color-mix(in srgb,var(--gold) 10%,var(--panel2));border:1px solid color-mix(in srgb,var(--gold) 30%,transparent);border-radius:10px;padding:9px 12px;line-height:1.55;cursor:pointer" title="클릭하면 다음 팁" onclick="_nextChartTip()"></div>'
       +summaryBox
       +alertBox
@@ -3616,7 +3721,7 @@ async function refreshCoinDetail(){ var sym=_coinCur; if(!sym)return; var s=sym+
   var TF=window._coinTF||'1h', TFLIM={'1m':500,'5m':500,'15m':500,'30m':500,'1h':500,'4h':500,'1d':500};
   try{ var res=await Promise.all([
       fetch(F+'ticker/24hr?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
-      fetch(F+'klines?symbol='+s+'&interval='+TF+'&limit='+(TFLIM[TF]||120)).then(function(r){return r.json();}).catch(function(){return [];}),
+      _coinIdxKlines(s,TF,(TFLIM[TF]||120)),
       fetch(F+'premiumIndex?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(F+'openInterest?symbol='+s).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(D+'globalLongShortAccountRatio?symbol='+s+'&period=5m&limit=1').then(function(r){return r.json();}).catch(function(){return null;})
@@ -3628,7 +3733,7 @@ async function refreshCoinDetail(){ var sym=_coinCur; if(!sym)return; var s=sym+
     var pxEl=$('#cDetPx'); if(pxEl)pxEl.innerHTML=_coinPxHtml(px,ch);
     var metEl=$('#cDetMet'); if(metEl)metEl.innerHTML=_coinMetricsHtml(hi,lo,qv,fr,oiUsd,la);
     var candles=Array.isArray(kl)?kl.map(function(k){return [k[0],+k[1],+k[2],+k[3],+k[4],+k[5]];}):[];
-    var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
+    var r={c:sym,n:sym,mk:'COIN',ccy:'USD',px:(kl&&kl._idx&&candles.length)?candles[candles.length-1][4]:px,ch:ch,hi:hi,lo:lo,_candles:candles}; window._coinR=r;
     var cv=$('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r);
     var dot=$('#cLiveDot'); if(dot){dot.style.opacity='.35';setTimeout(function(){if($('#cLiveDot'))$('#cLiveDot').style.opacity='1';},400);}
     if(typeof coinDepth==='function')coinDepth(sym);
@@ -3710,17 +3815,25 @@ function _attachDraw(cv,getR){ if(!cv||cv._drawAttached)return; cv._drawAttached
   window.addEventListener('mouseup',function(){ if(!dg)return; var pv=window._drawPreview; window._drawPreview=null; var r=getR&&getR(); if(pv&&r&&(Math.abs(pv.t2-pv.t1)>1||Math.abs(pv.p2-pv.p1)>0)){ _addDraw(r.c,{type:dg.tool,t1:pv.t1,p1:pv.p1,t2:pv.t2,p2:pv.p2,color:'#e0b552'}); } dg=null; if(r)drawStockChart(cv,r); });
 }
 window._attachDraw=_attachDraw;
+/* 차트 통합 시세 (2026-10-21 사용자: "통합 6개소보다 안 맞는다" → 차트만 통합, TP/SL 판정은 바이낸스 유지)
+   바이낸스 선물 '지수 가격'(indexPriceKlines) = OKX·코인베이스·바이비트·비트겟·쿠코인·MEXC·게이트 등 현물 거래소 가중평균.
+   봉 모양(시가·고가·저가·종가)은 지수, 거래량은 지수에 없어서 바이낸스 선물 것을 같은 시각 봉에 붙인다. 지수가 없으면 선물 봉 그대로(_idx 없음). */
+function _coinIdxKlines(s,tf,lim){ var F='https://fapi.binance.com/fapi/v1/', j=function(u){ return fetch(u).then(function(r){return r.json();}).catch(function(){return null;}); };
+  return Promise.all([j(F+'indexPriceKlines?pair='+s+'&interval='+tf+'&limit='+lim), j(F+'klines?symbol='+s+'&interval='+tf+'&limit='+lim)]).then(function(a){ var ix=a[0], kl=a[1];
+    if(!Array.isArray(kl))kl=[]; if(!Array.isArray(ix)||ix.length<Math.min(20,kl.length||20))return kl;
+    var vol={}; kl.forEach(function(k){ vol[k[0]]=k[5]; }); var out=ix.map(function(k){ return [k[0],k[1],k[2],k[3],k[4],vol[k[0]]!=null?vol[k[0]]:'0']; }); out._idx=1; return out; }); }
 /* ── B. 초단위 실시간 틱 (코인 차트 현재 봉을 kline WS로 라이브) ── */
 var _coinLiveWS=null, _coinLiveRaf=null;
 function stopCoinLive(){ if(_coinLiveWS){ try{_coinLiveWS.onclose=null;_coinLiveWS.close();}catch(e){} _coinLiveWS=null; } if(_coinLiveRaf){ clearTimeout(_coinLiveRaf); _coinLiveRaf=null; } }
 window.stopCoinLive=stopCoinLive;
-function startCoinLive(sym,tf){ stopCoinLive(); if(!sym)return; var s=sym.toLowerCase()+'usdt', itv=tf||'1h';
-  function redraw(){ _coinLiveRaf=null; var r=window._coinR; if(!r)return; if(window._drawTool&&window._drawTool!=='move')return; if(window._chartPanning)return; var cv=document.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r); }
-  try{ _coinLiveWS=new WebSocket('wss://fstream.binance.com/ws/'+s+'@kline_'+itv); }catch(e){ return; }
-  _coinLiveWS.onmessage=function(ev){ var m; try{m=JSON.parse(ev.data);}catch(e){return;} var k=m.k; if(!k)return; var r=window._coinR; if(!r||!r._candles||!r._candles.length)return; var cs=r._candles, last=cs[cs.length-1]; var kt=k.t,o=+k.o,h=+k.h,l=+k.l,c=+k.c,v=+k.v;
-    if(last[0]===kt){ last[1]=o;last[2]=h;last[3]=l;last[4]=c;last[5]=v; } else if(kt>last[0]){ cs.push([kt,o,h,l,c,v]); if(cs.length>600)cs.shift(); }
-    r.px=c; if(!_coinLiveRaf)_coinLiveRaf=setTimeout(redraw,180); };
-  _coinLiveWS.onclose=function(){ var w=_coinLiveWS; if(w){ setTimeout(function(){ if(_coinLiveWS===w&&window._coinR&&window._coinR.c===sym)startCoinLive(sym,tf); },2500); } };
+function startCoinLive(sym,tf){ stopCoinLive(); if(!sym)return; var s=sym.toUpperCase()+'USDT', itv=tf||'1h', tok={}; _coinLiveWS=tok;
+  function redraw(){ var r=window._coinR; if(!r)return; if(window._drawTool&&window._drawTool!=='move')return; if(window._chartPanning)return; var cv=document.querySelector('#coinChartCv'); if(cv&&typeof drawStockChart==='function')drawStockChart(cv,r); }
+  /* 통합 시세는 실시간 소켓이 없어 3초마다 마지막 2봉을 다시 받는다 (2026-10-21) */
+  function tick(){ if(_coinLiveWS!==tok)return; _coinIdxKlines(s,itv,2).then(function(a){ if(_coinLiveWS!==tok)return; var r=window._coinR; if(r&&r.c===sym&&r._candles&&r._candles.length&&Array.isArray(a)&&a.length){ var cs=r._candles;
+      a.forEach(function(k){ var kt=k[0],row=[kt,+k[1],+k[2],+k[3],+k[4],+k[5]], last=cs[cs.length-1]; if(last[0]===kt){ for(var q=1;q<6;q++)last[q]=row[q]; } else if(kt>last[0]){ cs.push(row); if(cs.length>600)cs.shift(); } });
+      r.px=+a[a.length-1][4]; redraw(); }
+    _coinLiveRaf=setTimeout(tick,3000); }); }
+  _coinLiveRaf=setTimeout(tick,1500);
 }
 window.startCoinLive=startCoinLive;
 /* ── C. 차트 종류(캔들/하이킨아시/라인) + 로그 스케일 ── */
