@@ -1,16 +1,16 @@
 {
   "week": "2026년 10월 4주차",
   "range": "10/19~10/23",
-  "updated": "2026-10-23",
+  "updated": "2026-10-24",
   "intro": "이번 주 핵심: **한은 금통위 기준금리 결정** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-10-22", "time": "10:00", "market": "KR", "type": "policy", "imp": 3, "title": "한은 금통위 기준금리 결정", "note": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향.", "src": "kr:mpc:2026-10-22"},
+    {"date": "2026-10-22", "time": "10:00", "market": "KR", "type": "policy", "imp": 3, "title": "한은 금통위 기준금리 결정", "note": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향.", "src": "kr:mpc:2026-10-22", "rx": {"day": "2026-10-22", "mk": "KR", "items": [["코스피", -3.52, "pct"], ["코스닥", -3.62, "pct"], ["원/달러", 0.12, "pct"]]}},
     {"date": "2026-10-22", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 200K · 직전 199K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "200K"}, "rx": {"day": "2026-10-22", "mk": "US", "items": [["S&P500", -1.21, "pct"], ["나스닥", -2.6, "pct"], ["미 10년물", -19, "bp"], ["달러지수", -0.2, "pct"]]}},
-    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 제조업 PMI(속보)", "note": "제조업 체감 경기 속보치. (예상 55.5 · 직전 57.0)", "src": "ff:Flash Manufacturing PMI"},
-    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 서비스업 PMI(속보)", "note": "서비스업 체감 경기 속보치. (예상 58.0 · 직전 58.7)", "src": "ff:Flash Services PMI"},
-    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 46.3 · 직전 46.3)", "src": "ff:Revised UoM Consumer Sentiment"},
-    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Revised UoM Inflation Expectations"}
+    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 제조업 PMI(속보)", "note": "제조업 체감 경기 속보치. (예상 55.5 · 직전 57.0)", "src": "ff:Flash Manufacturing PMI", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
+    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 서비스업 PMI(속보)", "note": "서비스업 체감 경기 속보치. (예상 58.0 · 직전 58.7)", "src": "ff:Flash Services PMI", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
+    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 46.3 · 직전 46.3)", "src": "ff:Revised UoM Consumer Sentiment", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
+    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Revised UoM Inflation Expectations", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}}
   ],
   "keys": [{"t": "한은 금통위 기준금리 결정 (10/22 10:00)", "b": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향."}]
 }
