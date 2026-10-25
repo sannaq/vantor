@@ -1,16 +1,18 @@
 {
-  "week": "2026년 10월 4주차",
-  "range": "10/19~10/23",
-  "updated": "2026-10-24",
-  "intro": "이번 주 핵심: **한은 금통위 기준금리 결정** (★★★ = 매우 중요)",
+  "week": "2026년 10월 5주차",
+  "range": "10/26~10/30",
+  "updated": "2026-10-26",
+  "intro": "이번 주 핵심: **FOMC 금리 결정**, **연준 의장 기자회견**, **GDP 성장률** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-10-22", "time": "10:00", "market": "KR", "type": "policy", "imp": 3, "title": "한은 금통위 기준금리 결정", "note": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향.", "src": "kr:mpc:2026-10-22", "rx": {"day": "2026-10-22", "mk": "KR", "items": [["코스피", -3.52, "pct"], ["코스닥", -3.62, "pct"], ["원/달러", 0.12, "pct"]]}},
-    {"date": "2026-10-22", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 200K · 직전 199K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "200K"}, "rx": {"day": "2026-10-22", "mk": "US", "items": [["S&P500", -1.21, "pct"], ["나스닥", -2.6, "pct"], ["미 10년물", -19, "bp"], ["달러지수", -0.2, "pct"]]}},
-    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 제조업 PMI(속보)", "note": "제조업 체감 경기 속보치. (예상 55.5 · 직전 57.0)", "src": "ff:Flash Manufacturing PMI", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
-    {"date": "2026-10-23", "time": "22:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 서비스업 PMI(속보)", "note": "서비스업 체감 경기 속보치. (예상 58.0 · 직전 58.7)", "src": "ff:Flash Services PMI", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
-    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 46.3 · 직전 46.3)", "src": "ff:Revised UoM Consumer Sentiment", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}},
-    {"date": "2026-10-23", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Revised UoM Inflation Expectations", "rx": {"day": "2026-10-23", "mk": "US", "items": [["S&P500", -0.52, "pct"], ["나스닥", -0.21, "pct"], ["미 10년물", 3, "bp"], ["달러지수", 0.14, "pct"]]}}
+    {"date": "2026-10-27", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 80.5 · 직전 81.9)", "src": "ff:CB Consumer Confidence"},
+    {"date": "2026-10-29", "time": "03:00", "market": "US", "type": "policy", "imp": 3, "title": "FOMC 금리 결정", "note": "금리 결정과 성명 문구. 주 최대 이벤트. (예상 4.00% · 직전 4.00%)", "src": "ff:Federal Funds Rate"},
+    {"date": "2026-10-29", "time": "03:30", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 기자회견", "note": "향후 경로 힌트.", "src": "ff:FOMC Press Conference"},
+    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 전체 성적표. (예상 3.2% · 직전 1.5%)", "src": "ff:Advance GDP q/q", "fc": {"Advance GDP q/q": "3.2%"}},
+    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑. (예상 0.3% · 직전 0.2%)", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}},
+    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "GDP 물가지수", "note": "성장 속 물가 압력. (예상 3.5% · 직전 6.2%)", "src": "ff:Advance GDP Price Index q/q"},
+    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 198K · 직전 194K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "198K"}},
+    {"date": "2026-10-30", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "고용비용지수(ECI)", "note": "임금발 물가 압력. (예상 0.8% · 직전 0.9%)", "src": "ff:Employment Cost Index q/q"}
   ],
-  "keys": [{"t": "한은 금통위 기준금리 결정 (10/22 10:00)", "b": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향."}]
+  "keys": [{"t": "FOMC 금리 결정 (10/29 03:00)", "b": "금리 결정과 성명 문구. 주 최대 이벤트. (예상 4.00% · 직전 4.00%)"}, {"t": "연준 의장 기자회견 (10/29 03:30)", "b": "향후 경로 힌트."}, {"t": "GDP 성장률 (10/29 21:30)", "b": "경기 전체 성적표. (예상 3.2% · 직전 1.5%)"}]
 }

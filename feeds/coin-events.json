@@ -1,8 +1,11 @@
 {
-  "week": "2026년 10월 4주차",
-  "range": "10/19~10/23",
-  "updated": "2026-10-19",
+  "week": "2026년 10월 5주차",
+  "range": "10/26~10/30",
+  "updated": "2026-10-26",
   "events": [
-
+    {"date": "2026-10-29", "time": "03:00", "market": "COIN", "type": "policy", "imp": 3, "title": "FOMC 금리 결정", "note": "금리 결정 — 크립토 변동성 최대 구간.", "src": "ff:Federal Funds Rate"},
+    {"date": "2026-10-29", "time": "03:30", "market": "COIN", "type": "policy", "imp": 3, "title": "연준 의장 기자회견", "note": "의장 발언에 따라 급변동 가능.", "src": "ff:FOMC Press Conference"},
+    {"date": "2026-10-29", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 방향 — 위험자산 심리에 영향.", "src": "ff:Advance GDP q/q", "fc": {"Advance GDP q/q": "3.2%"}},
+    {"date": "2026-10-29", "time": "21:30", "market": "COIN", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준 핵심 물가 — 금리·달러 민감한 크립토에 직결.", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}}
   ]
 }
