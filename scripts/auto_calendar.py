@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""위클리 캘린더 자동 생성 (2026-10-26).
+
+feeds/calendar.json 의 weeks 는 원래 소몽카페 위클리 캘린더 사진을 보고 손으로 채웠다.
+사진이 없는 주에는 지난주가 그대로 보여서, 이 스크립트가 이번 주 칸을 자동으로 만든다.
+
+- 손으로 넣은 주(auto 표시 없음)는 절대 건드리지 않는다. 사진이 오면 그 주를 손 정리로 덮어쓰면 끝.
+- 자동 주(auto: true)는 매일 다시 만든다(실적 날짜가 바뀌거나 결과가 붙으므로).
+- 일정: events.json(미국 지표·연준, 한국 정기 일정) + ForexFactory 주간 피드의 주요국 금리 결정.
+- 실적: 나스닥 실적 일정에서 시총 큰 순. 날짜는 미국 날짜(장 전 / 장 마감 후) — 손 정리와 같은 기준.
+- earnings(아래 실적 목록): 시총 상위 종목의 앞으로 4주 실적일을 채우고, 3주 지난 것은 뺀다.
+- upcoming: 지난 일정은 뺀다.
+
+로컬 시험: FF_FILE=ff.json NASDAQ_DIR=dir python3 scripts/auto_calendar.py
+"""
+import json
+import os
+import sys
+import time
+import urllib.request
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
+
+KST = ZoneInfo("Asia/Seoul")
+ET = ZoneInfo("America/New_York")
+CAL = "feeds/calendar.json"
+FF_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
+NQ_URL = "https://api.nasdaq.com/api/calendar/earnings?date={}"
+UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+
+WEEK_MIN_CAP = 40e9     # 주간 칸에 올릴 실적: 시총 400억 달러 이상
+WEEK_MAX_PER_SLOT = 6   # 하루·장 전/후 한 칸에 최대 종목 수
+LIST_MIN_CAP = 400e9    # 아래 실적 목록: 시총 4천억 달러 이상(빅테크급)
+LIST_AHEAD = 28
+KEEP_WEEKS = 8
+
+# 미국 대형주 한글 이름 (없으면 영문 회사명 앞부분)
+KO = {
+    "AAPL": "애플", "MSFT": "마이크로소프트", "GOOGL": "알파벳", "GOOG": "알파벳", "AMZN": "아마존", "META": "메타",
+    "NVDA": "엔비디아", "TSLA": "테슬라", "AVGO": "브로드컴", "ORCL": "오라클", "AMD": "AMD", "INTC": "인텔",
+    "QCOM": "퀄컴", "TXN": "텍사스인스트루먼트", "MU": "마이크론", "AMAT": "어플라이드머티리얼즈", "LRCX": "램리서치",
+    "KLAC": "KLA", "ASML": "ASML", "TSM": "TSMC", "ARM": "ARM", "ADI": "아날로그디바이스", "MRVL": "마벨",
+    "NFLX": "넷플릭스", "CRM": "세일즈포스", "ADBE": "어도비", "NOW": "서비스나우", "IBM": "IBM", "CSCO": "시스코",
+    "PLTR": "팔란티어", "SHOP": "쇼피파이", "UBER": "우버", "ABNB": "에어비앤비", "PYPL": "페이팔", "SPOT": "스포티파이",
+    "INTU": "인튜이트", "ISRG": "인튜이티브서지컬", "PANW": "팔로알토", "CRWD": "크라우드스트라이크", "FTNT": "포티넷",
+    "ANET": "아리스타", "APH": "암페놀", "DELL": "델", "SMCI": "슈퍼마이크로", "WDC": "웨스턴디지털", "STX": "씨게이트",
+    "NET": "클라우드플레어", "SNOW": "스노우플레이크", "COIN": "코인베이스", "HOOD": "로빈후드", "MSTR": "스트래티지",
+    "SPCX": "스페이스X", "TMUS": "T모바일", "VZ": "버라이즌", "T": "AT&T", "CMCSA": "컴캐스트", "DIS": "디즈니",
+    "JPM": "JP모건", "BAC": "뱅크오브아메리카", "WFC": "웰스파고", "C": "씨티", "GS": "골드만삭스", "MS": "모건스탠리",
+    "BLK": "블랙록", "SCHW": "찰스슈왑", "AXP": "아멕스", "V": "비자", "MA": "마스터카드", "BRK.B": "버크셔",
+    "UNH": "유나이티드헬스", "LLY": "일라이릴리", "JNJ": "존슨앤드존슨", "ABBV": "애브비", "MRK": "머크", "PFE": "화이자",
+    "AMGN": "암젠", "GILD": "길리어드", "BMY": "BMS", "TMO": "써모피셔", "ABT": "애보트", "DHR": "다나허", "NVO": "노보노디스크",
+    "WMT": "월마트", "COST": "코스트코", "HD": "홈디포", "LOW": "로우스", "TGT": "타깃", "MCD": "맥도날드", "SBUX": "스타벅스",
+    "NKE": "나이키", "KO": "코카콜라", "PEP": "펩시코", "PG": "P&G", "PM": "필립모리스", "MO": "알트리아", "CL": "콜게이트",
+    "XOM": "엑슨모빌", "CVX": "셰브런", "COP": "코노코필립스", "SLB": "슐럼버거", "PSX": "필립스66",
+    "CAT": "캐터필러", "DE": "디어", "GE": "GE에어로스페이스", "GEV": "GE버노바", "HON": "허니웰", "BA": "보잉",
+    "LMT": "록히드마틴", "RTX": "RTX", "NOC": "노스롭그루먼", "GD": "제너럴다이내믹스", "UNP": "유니온퍼시픽", "UPS": "UPS",
+    "FDX": "페덱스", "ETN": "이튼", "VRT": "버티브", "CEG": "컨스텔레이션에너지", "VST": "비스트라", "NEE": "넥스트에라",
+    "LIN": "린데", "SPGI": "S&P글로벌", "ADP": "ADP", "BKNG": "부킹홀딩스", "MELI": "메르카도리브레", "BABA": "알리바바",
+    "PDD": "PDD", "SONY": "소니", "TM": "도요타", "SAP": "SAP", "AZN": "아스트라제네카", "NVS": "노바티스", "SHEL": "셸",
+    "HSBC": "HSBC", "UBS": "UBS", "SAN": "산탄데르", "GSK": "GSK", "BBVA": "BBVA", "RDDT": "레딧", "APP": "앱러빈",
+    "WELL": "웰타워", "NUE": "뉴코어", "PSA": "퍼블릭스토리지", "GLW": "코닝", "HCA": "HCA헬스케어", "NXPI": "NXP",
+    "OKE": "원오크", "SNDK": "샌디스크", "SYK": "스트라이커", "BP": "BP", "SNY": "사노피", "ABEV": "암베브", "CVE": "세노버스",
+    "BRK.A": "버크셔", "TTE": "토탈에너지스", "RIO": "리오틴토", "BHP": "BHP", "UL": "유니레버", "TD": "TD은행", "RY": "RBC",
+    "SNPS": "시놉시스", "CDNS": "케이던스", "MDLZ": "몬델리즈", "CME": "CME", "ICE": "ICE", "WM": "웨이스트매니지먼트",
+}
+
+# 주요국 금리 결정 (ForexFactory 제목 → 한글, 중요도)
+CB = {
+    ("EUR", "Main Refinancing Rate"): ("유럽중앙은행(ECB) 금리 결정", 2, ["ECB", "유럽중앙은행", "라가르드"]),
+    ("JPY", "BOJ Policy Rate"): ("일본은행(BOJ) 금리 결정", 3, ["BOJ", "일본은행", "일본 금리", "우에다"]),
+    ("GBP", "Official Bank Rate"): ("영란은행(BOE) 금리 결정", 2, ["BOE", "영란은행"]),
+    ("CAD", "Overnight Rate"): ("캐나다 중앙은행 금리 결정", 1, ["캐나다 중앙은행", "BOC"]),
+    ("CNY", "1-y Loan Prime Rate"): ("중국 대출우대금리(LPR)", 1, ["LPR", "인민은행"]),
+}
+
+TYPE_C = {"policy": "pol", "data": "data", "earnings": "earn", "event": "ev"}
+
+
+def get_json(url, headers=None, tries=(0, 20, 60)):
+    for wait in tries:
+        time.sleep(wait)
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json", **(headers or {})})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:  # noqa
+            print("받기 실패:", url, e, file=sys.stderr)
+    return None
+
+
+def load(path, default):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def cap(row):
+    try:
+        return float((row.get("marketCap") or "0").replace("$", "").replace(",", "") or 0)
+    except ValueError:
+        return 0.0
+
+
+_nq_cache = {}
+
+
+def nasdaq_day(d):
+    """그날(미국 날짜) 실적 발표 목록 [(심볼, 이름, 시총, 'B'|'A'|'')], 시총 큰 순. 실패하면 None."""
+    if d in _nq_cache:
+        return _nq_cache[d]
+    js = None
+    if os.environ.get("NASDAQ_DIR"):
+        js = load(os.path.join(os.environ["NASDAQ_DIR"], d + ".json"), None)
+    if js is None:
+        js = get_json(NQ_URL.format(d), {"Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}, (0, 5))
+        time.sleep(0.6)
+    if js is None:
+        _nq_cache[d] = None
+        return None
+    rows = ((js.get("data") or {}).get("rows")) or []
+    out, seen = [], set()
+    for r in sorted(rows, key=lambda r: -cap(r)):
+        sym = (r.get("symbol") or "").strip().upper()
+        name = (r.get("name") or "").strip()
+        sym = sym.replace("/", ".")
+        if sym == "GOOG":
+            sym = "GOOGL"
+        if sym == "BRK.A":
+            sym = "BRK.B"
+        if not sym or sym in seen:
+            continue
+        seen.add(sym)
+        t = r.get("time") or ""
+        when = "B" if "pre" in t else "A" if "after" in t else ""
+        out.append((sym, name, cap(r), when))
+    _nq_cache[d] = out
+    return out
+
+
+def ko_name(sym, name):
+    if sym in KO:
+        return KO[sym]
+    n = name.replace(",", "").split(" ")
+    stop = {"Inc.", "Inc", "Corporation", "Corp.", "Corp", "Company", "Co.", "plc", "Ltd.", "Ltd", "S.A.", "N.V.", "AG", "Holdings", "Group"}
+    n = [w for w in n if w not in stop][:2]
+    return " ".join(n) or sym
+
+
+def us_date_of(ev):
+    """events.json 의 한국 시각을 미국 동부 날짜로 (손 정리 캘린더와 같은 기준)."""
+    tm = ev.get("time") or ""
+    if len(tm) == 5 and tm[2] == ":" and ev.get("market") == "US":
+        dt = datetime.fromisoformat(ev["date"] + "T" + tm).replace(tzinfo=KST).astimezone(ET)
+        return dt.date().isoformat(), f"한국시간 {int(ev['date'][5:7])}/{int(ev['date'][8:])} {tm}"
+    return ev["date"], (f"한국시간 {tm}" if len(tm) == 5 and tm[2] == ":" else "")
+
+
+def kw_of(title):
+    return [w for w in title.replace("(", " ").replace(")", " ").split() if len(w) >= 2][:3]
+
+
+def build_week(monday, events_doc, ff):
+    days = [(monday + timedelta(days=i)).isoformat() for i in range(7)]
+    out = {d: [] for d in days}
+    focus3, n_earn_days = [], 0
+
+    for ev in (events_doc.get("events") or []):
+        if (ev.get("imp") or 0) < 2:
+            continue
+        d, sub = us_date_of(ev)
+        if d not in out:
+            continue
+        it = {"c": TYPE_C.get(ev.get("type"), "ev"), "t": ev["title"]}
+        if ev.get("imp", 0) >= 3:
+            it["imp"] = 3
+            focus3.append(ev["title"])
+        if sub:
+            it["sub"] = sub
+        kw = kw_of(ev["title"])
+        if kw:
+            it["kw"] = kw
+        out[d].append(it)
+
+    for e in (ff or []):
+        k = (e.get("country"), e.get("title"))
+        if k not in CB:
+            continue
+        dt = datetime.fromisoformat(e["date"])
+        d = dt.astimezone(ET).date().isoformat()
+        if d not in out:
+            continue
+        t, imp, kw = CB[k]
+        it = {"c": "pol", "t": t, "kw": kw, "sub": "한국시간 " + dt.astimezone(KST).strftime("%-m/%-d %H:%M")}
+        if imp >= 2:
+            it["imp"] = imp
+        if imp >= 3:
+            focus3.append(t)
+        out[d].append(it)
+
+    big_earn = []
+    for d in days[:5]:
+        rows = nasdaq_day(d)
+        if not rows:
+            continue
+        n_earn_days += 1
+        for when, label in (("B", "장 전"), ("A", "장 마감 후"), ("", "시간 미정")):
+            floor = WEEK_MIN_CAP if when else WEEK_MIN_CAP * 2.5  # 시간 미정은 더 큰 종목만
+            pick = [r for r in rows if r[3] == when and r[2] >= floor][:WEEK_MAX_PER_SLOT]
+            if not pick:
+                continue
+            it = {"c": "earn", "t": "·".join(ko_name(s, n) for s, n, _, _ in pick) + f" ({label})",
+                  "tk": ",".join(s for s, _, _, _ in pick)}
+            if when == "B":
+                it["when"] = "B"
+            out[d].append(it)
+            big_earn += [(c, ko_name(s, n)) for s, n, c, _ in pick]
+
+    focus = []
+    for t in focus3:
+        if t not in focus and len(focus) < 3:
+            focus.append(t)
+    big = [n for c, n in sorted(big_earn, key=lambda x: -x[0]) if c >= LIST_MIN_CAP]
+    if big:
+        focus.append("빅테크 실적 (" + "·".join(dict.fromkeys(big[:4])) + ")")
+    src = "자동 정리 — 이벤트 일정·나스닥 실적 일정" + ("" if n_earn_days else " (실적 일정 못 받음)")
+    return {"from": days[0], "to": days[6], "src": src, "auto": True, "focus": focus,
+            "days": {d: v for d, v in out.items() if v}}, n_earn_days
+
+
+def refresh_earnings(cal, today):
+    """아래 실적 목록: 지난 3주 + 앞으로 4주, 시총 상위 종목 자동 추가. 날짜가 바뀐 예정 건은 고친다."""
+    keep_from = (today - timedelta(days=21)).isoformat()
+    lst = [e for e in (cal.get("earnings") or []) if e.get("d", "") >= keep_from]
+    got_any = False
+    found = {}
+    for i in range(LIST_AHEAD + 1):
+        d = (today + timedelta(days=i))
+        if d.weekday() >= 5:
+            continue
+        rows = nasdaq_day(d.isoformat())
+        if rows is None:
+            continue
+        got_any = True
+        for s, n, c, w in rows:
+            if c >= LIST_MIN_CAP and s not in found:
+                found[s] = (d.isoformat(), ko_name(s, n), w)
+    if not got_any:
+        return lst
+    for s, (d, n, w) in found.items():
+        cur = [e for e in lst if e.get("tk") == s and e["d"] >= today.isoformat()]
+        if cur:
+            for e in cur:
+                e["d"] = d
+                if w:
+                    e["when"] = w
+        elif not any(e.get("tk") == s and e["d"] == d for e in lst):
+            e = {"d": d, "n": n, "tk": s, "auto": True}
+            if w:
+                e["when"] = w
+            lst.append(e)
+    # 같은 종목이 같은 날 두 번 → 하나만
+    uniq = {}
+    for e in lst:
+        uniq.setdefault((e.get("tk"), e["d"]), e)
+    return sorted(uniq.values(), key=lambda e: (e["d"], e.get("tk", "")))
+
+
+def main():
+    today = datetime.now(KST).date()
+    monday = today - timedelta(days=today.weekday())
+    cal = load(CAL, None)
+    if not cal:
+        print("calendar.json 을 못 읽음", file=sys.stderr)
+        return 1
+    events_doc = load("events.json", {})
+    ff = None
+    # update_events.py 가 받아 둔 피드를 쓴다(같은 피드를 또 부르면 429)
+    for path in (os.environ.get("FF_FILE"), "/tmp/ff_week.json"):
+        if ff is None and path and os.path.exists(path):
+            ff = load(path, None)
+    if ff is None:
+        ff = get_json(FF_URL, tries=(0, 60))
+
+    weeks = cal.get("weeks") or []
+    mon = monday.isoformat()
+    hand = [w for w in weeks if w.get("from") == mon and not w.get("auto")]
+    if hand:
+        print("이번 주는 손 정리가 있어 그대로 둠")
+    else:
+        wk, n = build_week(monday, events_doc, ff)
+        old = [w for w in weeks if w.get("from") == mon]
+        if ff is None and old:  # 피드를 못 받았으면 지난번에 넣은 주요국 금리 결정은 살린다
+            cbt = {v[0] for v in CB.values()}
+            for d, items in (old[0].get("days") or {}).items():
+                keep = [i for i in items if i.get("t") in cbt]
+                if keep:
+                    wk["days"].setdefault(d, []).extend(keep)
+        # 실적 일정을 하나도 못 받았으면 이미 만들어 둔 자동 주를 덮지 않는다(빈칸 방지)
+        if old and n == 0:
+            print("실적 일정을 못 받아 기존 자동 주 유지", file=sys.stderr)
+        else:
+            weeks = [w for w in weeks if w.get("from") != mon] + [wk]
+            print("이번 주 자동 생성:", mon, sum(len(v) for v in wk["days"].values()), "건 · 실적일", n)
+    weeks.sort(key=lambda w: w["from"])
+    cal["weeks"] = weeks[-KEEP_WEEKS:]
+
+    cal["earnings"] = refresh_earnings(cal, today)
+    cal["earningsNote"] = "장 전 / 장 마감 후는 미국 시간 기준 → 장 마감 후 발표는 다음 거래일에 반응"
+    cal["upcoming"] = sorted([u for u in (cal.get("upcoming") or []) if u.get("d", "") >= today.isoformat()],
+                             key=lambda u: u["d"])
+    cal["note"] = ("위클리 캘린더·실적 일정. 손으로 넣은 주(auto 없음)가 우선이고, 없는 주는 scripts/auto_calendar.py 가 "
+                   "매일 자동으로 만든다(auto: true — 사진 정리로 덮어쓰면 됨). scripts/watch_eval.py 가 지난 일정의 관련 뉴스(news-all.json)와 "
+                   "발표 뒤 주가 반응을 feeds/watch-eval.json 에 채운다. c = ev 주요 이벤트 · pol 정책/통화 · data 지표 · earn 실적 · talk 발언. "
+                   "실적 when = B 장 전 / A 장 마감 후 (미국 시간).")
+    with open(CAL, "w", encoding="utf-8") as f:
+        json.dump(cal, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

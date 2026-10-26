@@ -281,6 +281,11 @@ def main():
     if not ff:
         print("일정 피드를 못 받아 이번 실행은 건너뜀", file=sys.stderr)
         return 1
+    try:  # auto_calendar.py 가 같은 피드를 다시 부르지 않게 (2026-10-26)
+        with open("/tmp/ff_week.json", "w", encoding="utf-8") as f:
+            json.dump(ff, f)
+    except Exception:
+        pass
     auto = []
     for e in ff:
         if e.get("country") != "USD" or e.get("impact") not in ("High", "Medium"):

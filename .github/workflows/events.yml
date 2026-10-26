@@ -27,9 +27,13 @@ jobs:
           python-version: "3.12"
       - name: 이벤트 갱신
         run: python3 scripts/update_events.py
+      - name: 위클리 캘린더 자동 정리 (손 정리 없는 주만)
+        if: always()
+        run: python3 scripts/auto_calendar.py || echo "위클리 캘린더 자동 정리 실패 — 기존 내용 유지"
       - name: 변경분 올리기
+        if: always()
         run: |
-          git add events.json feeds/coin-events.json feeds/events-prev.json
+          git add events.json feeds/coin-events.json feeds/events-prev.json feeds/calendar.json
           if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
           git config user.name "github-actions[bot]"; git config user.email "41898099+github-actions[bot]@users.noreply.github.com"  # pull --rebase 도 커밋을 만든다
           git -c user.name="github-actions[bot]" -c user.email="41898099+github-actions[bot]@users.noreply.github.com" \
