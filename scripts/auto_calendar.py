@@ -36,7 +36,8 @@ WEEK_MAX_PER_SLOT = 6   # 하루·장 전/후 한 칸에 최대 종목 수
 LIST_MIN_CAP = 400e9    # 아래 실적 목록: 시총 4천억 달러 이상(빅테크급)
 LIST_AHEAD = 28
 KEEP_WEEKS = 8
-KR_TOP = 100            # 국장 실적: 시총 100위 안
+KR_TOP = 100            # 국장 실적: 시총 100위 안은 바로 보이고, 나머지는 '전체 보기' 안
+US_LO_CAP = 5e9         # 미국 실적: 50억 달러 이상은 '전체 보기' 안에
 
 # 미국 대형주 한글 이름 (없으면 영문 회사명 앞부분)
 KO = {
@@ -44,7 +45,8 @@ KO = {
     "NVDA": "엔비디아", "TSLA": "테슬라", "AVGO": "브로드컴", "ORCL": "오라클", "AMD": "AMD", "INTC": "인텔",
     "QCOM": "퀄컴", "TXN": "텍사스인스트루먼트", "MU": "마이크론", "AMAT": "어플라이드머티리얼즈", "LRCX": "램리서치",
     "KLAC": "KLA", "ASML": "ASML", "TSM": "TSMC", "ARM": "ARM", "ADI": "아날로그디바이스", "MRVL": "마벨",
-    "NFLX": "넷플릭스", "CRM": "세일즈포스", "ADBE": "어도비", "NOW": "서비스나우", "IBM": "IBM", "CSCO": "시스코",
+    "NFLX": "넷플릭스", "SHW": "셔윈윌리엄즈", "WHR": "월풀", "FCX": "프리포트맥모란", "JCI": "존슨컨트롤즈", "AMT": "아메리칸타워",
+    "ECL": "에코랩", "HLT": "힐튼", "ITW": "일리노이툴웍스", "MMM": "3M", "RCL": "로열캐리비안", "ROP": "로퍼", "CRM": "세일즈포스", "ADBE": "어도비", "NOW": "서비스나우", "IBM": "IBM", "CSCO": "시스코",
     "PLTR": "팔란티어", "SHOP": "쇼피파이", "UBER": "우버", "ABNB": "에어비앤비", "PYPL": "페이팔", "SPOT": "스포티파이",
     "INTU": "인튜이트", "ISRG": "인튜이티브서지컬", "PANW": "팔로알토", "CRWD": "크라우드스트라이크", "FTNT": "포티넷",
     "ANET": "아리스타", "APH": "암페놀", "DELL": "델", "SMCI": "슈퍼마이크로", "WDC": "웨스턴디지털", "STX": "씨게이트",
@@ -120,11 +122,111 @@ def kr_earn_by_day():
     rank = {c[0]: (i, c[1]) for i, c in enumerate(load("feeds/stock-list.json", []) or [])}
     out = {}
     for code, v in e.items():
-        if code not in rank or rank[code][0] >= KR_TOP:
+        if code not in rank:
             continue
         d = f"{v[0][:4]}-{v[0][4:6]}-{v[0][6:8]}"
         out.setdefault(d, []).append(rank[code])
     return {d: sorted(v) for d, v in out.items()}
+
+
+# 중요도 낮은 미국 지표(ForexFactory Low) 한글 이름 — 칸에서는 '전체 보기' 안에 들어간다 (2026-10-26)
+LOW_KO = [
+    ("Durable Goods", "내구재주문"), ("New Home Sales", "신규주택매매"), ("Pending Home Sales", "잠정주택매매"),
+    ("Existing Home Sales", "기존주택매매"), ("Building Permits", "건축허가"), ("Housing Starts", "주택착공"),
+    ("S&P/CS Composite-20 HPI", "S&P 코어로직/CS 주택가격지수"), ("HPI m/m", "주택가격지수(FHFA)"),
+    ("Richmond Manufacturing", "리치몬드 연은 제조업지수"), ("Philly Fed", "필라델피아 연은 제조업지수"),
+    ("Empire State", "뉴욕 연은 제조업지수"), ("Chicago PMI", "시카고 PMI"), ("ADP Weekly", "주간 ADP 취업자 변동"),
+    ("ADP Non-Farm", "ADP 민간고용"), ("Goods Trade Balance", "상품수지"), ("Trade Balance", "무역수지"),
+    ("Wholesale Inventories", "도매재고"), ("Business Inventories", "기업재고"), ("Crude Oil Inventories", "EIA 원유재고"),
+    ("API Weekly", "API 원유재고"), ("Natural Gas Storage", "천연가스 재고"), ("Personal Income", "개인소득"),
+    ("Personal Spending", "개인소비"), ("Factory Orders", "공장주문"), ("Industrial Production", "산업생산"),
+    ("Import Prices", "수입물가"), ("Current Account", "경상수지"), ("Consumer Credit", "소비자신용"),
+    ("Note Auction", "국채 입찰"), ("Bond Auction", "국채 입찰"), ("Bill Auction", "단기국채 입찰"),
+    ("Revised UoM", "미시간대 소비자심리(확정)"), ("Prelim UoM", "미시간대 소비자심리(예비)"), ("Inflation Expectations", "기대인플레이션"),
+    ("JOLTS", "JOLTS 구인건수"), ("Challenger", "챌린저 감원"), ("Beige Book", "베이지북"), ("FOMC Meeting Minutes", "FOMC 의사록"),
+    ("Federal Budget", "재정수지"), ("NFIB", "NFIB 소기업 낙관지수"), ("Final GDP", "GDP(확정)"), ("Prelim GDP", "GDP(잠정)"),
+    ("Flash Manufacturing PMI", "S&P 제조업 PMI(예비)"), ("Flash Services PMI", "S&P 서비스업 PMI(예비)"),
+    ("ISM Manufacturing", "ISM 제조업지수"), ("ISM Services", "ISM 서비스업지수"), ("Retail Sales", "소매판매"),
+    ("Empire", "뉴욕 연은 제조업지수"), ("Kansas", "캔자스시티 연은 제조업지수"), ("Dallas", "댈러스 연은 제조업지수"),
+]
+
+
+def low_ko(en):
+    for k, v in LOW_KO:
+        if k in en:
+            return v
+    return None
+
+
+KR_MACRO_KEY = ("국내총생산", "국민소득", "소비자물가", "고용동향", "국제수지", "산업활동동향")
+MODS_KEEP = ("소비자물가", "고용동향", "산업활동", "가계동향", "온라인쇼핑", "서비스업동향", "경제활동인구", "인구동향")
+
+
+def _get_text(url, enc="utf-8", legacy_tls=False):
+    import ssl
+    ctx = ssl.create_default_context()
+    if legacy_tls:  # 38커뮤니케이션은 옛 TLS 설정이라 기본값으로는 악수 실패
+        ctx.set_ciphers("DEFAULT@SECLEVEL=1")
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=30, context=ctx) as r:
+        return r.read().decode(enc, "ignore")
+
+
+def kr_macro_by_day(days):
+    """국내 지표 공표 일정 — 한국은행 통계공표일정(연간 표) + 국가데이터처(옛 통계청) 보도계획(월별). {날짜: [(시각, 제목)]}"""
+    import re
+    out = {}
+    years = sorted({d[:4] for d in days})
+    for y in years:
+        try:
+            t = _get_text(f"https://www.bok.or.kr/portal/stats/statsPublictSchdul/listCldr.do?menuNo=200775&year={y}")
+            for d, tm, ti in re.findall(r'<td>(\d{4}-\d\d-\d\d)</td>\s*<td>([^<]*)</td>\s*<td class="title">\s*<p>\s*(.*?)\s*</p>', t, re.S):
+                if d in days:
+                    out.setdefault(d, []).append((tm.strip(), re.sub(r"<[^>]+>", "", ti).strip()))
+        except Exception as e:  # noqa
+            print("한은 공표일정 실패:", e, file=sys.stderr)
+    for ym in sorted({d[:7] for d in days}):
+        try:
+            t = _get_text(f"https://mods.go.kr/newsPln.es?mid=a10305000000&act=list&oa_mm={ym[5:]}")
+            h = re.findall(r"(\d{4})년\s*(\d+)월 보도계획", t)
+            if not h or f"{h[0][0]}-{int(h[0][1]):02d}" != ym:
+                continue  # 다른 해 표면 버림
+            for mm, dd, tm, ti in re.findall(r'<td class="center"\s*>(\d\d)\.(\d\d)\.\(\s*\S+\s*\)</td>\s*<td class="center"\s*>([^<]*)</td>\s*<td>(.*?)</td>', t, re.S):
+                d = f"{ym[:4]}-{mm}-{dd}"
+                ti = re.sub(r"<[^>]+>", "", ti).strip()
+                if d in days and any(k in ti for k in MODS_KEEP):
+                    out.setdefault(d, []).append((tm.strip(), ti))
+        except Exception as e:  # noqa
+            print("국가데이터처 보도계획 실패:", e, file=sys.stderr)
+    return out
+
+
+def ipo_by_day():
+    """38커뮤니케이션 공모주 일정 — 신규상장일·공모청약(시작일). {날짜: {'list': [...], 'sub': [(이름, 끝)]}}"""
+    import re
+    out = {}
+    def rows(o):
+        try:
+            t = _get_text(f"https://www.38.co.kr/html/fund/index.htm?o={o}", "euc-kr", legacy_tls=True)
+        except Exception as e:  # noqa
+            print("38 받기 실패:", o, e, file=sys.stderr)
+            return []
+        res = []
+        for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", t, flags=re.S | re.I):
+            cells = [re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", c)).replace("&nbsp;", "").strip()
+                     for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, flags=re.S | re.I)]
+            if len(cells) >= 4 and cells[0]:
+                res.append(cells)
+        return res
+    for c in rows("nw"):  # 신규상장: [이름, 2026/11/04, ...]
+        m = re.match(r"(20\d\d)/(\d\d)/(\d\d)$", c[1])
+        if m:
+            out.setdefault(f"{m[1]}-{m[2]}-{m[3]}", {}).setdefault("list", []).append(c[0])
+    for c in rows("k"):  # 공모청약: [이름, 2026.11.05~11.06, ...]
+        m = re.match(r"(20\d\d)\.(\d\d)\.(\d\d)~(\d\d)\.(\d\d)$", c[1])
+        if m:
+            out.setdefault(f"{m[1]}-{m[2]}-{m[3]}", {}).setdefault("sub", []).append((c[0], f"{int(m[4])}/{int(m[5])}"))
+    return out
 
 
 TYPE_C = {"policy": "pol", "data": "data", "earnings": "earn", "event": "ev"}
@@ -196,7 +298,7 @@ def nasdaq_day(d):
 def ko_name(sym, name):
     if sym in KO:
         return KO[sym]
-    n = name.replace(",", "").split(" ")
+    n = name.replace(",", "").replace("(The)", "").split(" ")
     stop = {"Inc.", "Inc", "Corporation", "Corp.", "Corp", "Company", "Co.", "plc", "Ltd.", "Ltd", "S.A.", "N.V.", "AG", "Holdings", "Group"}
     n = [w for w in n if w not in stop][:2]
     return " ".join(n) or sym
@@ -306,10 +408,59 @@ def build_week(monday, events_doc, ff):
     kr = kr_earn_by_day()
     kr_big = []
     for d in days[:5]:
-        pick = (kr.get(d) or [])[:WEEK_MAX_PER_SLOT]
+        allk = kr.get(d) or []
+        pick = [x for x in allk if x[0] < KR_TOP][:WEEK_MAX_PER_SLOT]
+        rest = [x for x in allk if x not in pick]
         if pick:
             out[d].append({"c": "earn", "t": "·".join(n for _, n in pick) + " (국내)", "kw": [n for _, n in pick]})
             kr_big += [(r, n) for r, n in pick if r < 10]
+        if rest:
+            out[d].append({"c": "earn", "lo": 1, "t": "국내 실적 " + str(len(rest)) + "곳: " + "·".join(n for _, n in rest), "kw": [n for _, n in rest]})
+
+    # 미국 지표 중 이벤트 일정(중요도 보통 이상)에 없는 것 = 펼치기 (ForexFactory Low 포함)
+    have = {(ev.get("src") or "")[3:] for ev in (events_doc.get("events") or [])}
+    seen = set()
+    for e in (ff or []):
+        if e.get("country") != "USD" or e.get("title") in have or talk_of(e) or (e.get("country"), e.get("title")) in CB:
+            continue
+        if e.get("impact") not in ("Low", "Medium", "High"):
+            continue
+        ko = low_ko(e["title"])
+        if not ko:
+            continue
+        dt = datetime.fromisoformat(e["date"])
+        d = dt.astimezone(ET).date().isoformat()
+        if d not in out or (d, ko) in seen:
+            continue
+        seen.add((d, ko))
+        out[d].append({"c": "data", "lo": 1, "t": "美 " + ko, "sub": "한국시간 " + dt.astimezone(KST).strftime("%-m/%-d %H:%M"), "kw": [ko.split("(")[0]]})
+
+    # 국내 지표 (한은·국가데이터처 공표 일정) — GDP·물가·고용·국제수지·산업활동은 바로, 나머지는 펼치기
+    import re as _re
+    for d, lst in kr_macro_by_day(days).items():
+        for tm, ti in lst:
+            t = "韓 " + _re.sub(r"^20\d\d년\s*", "", ti)
+            if any(i.get("t") == t for i in out[d]):
+                continue
+            it = {"c": "data", "t": t, "kw": [_re.sub(r"^20\d\d년\s*|\(.*?\)", "", ti).strip()[:12]]}
+            if tm:
+                it["sub"] = "한국시간 " + (tm if len(tm) == 5 else "0" + tm)
+            if any(k in ti for k in KR_MACRO_KEY):
+                if "국내총생산" in ti:
+                    it["imp"] = 3
+                    focus3.append(t)
+            else:
+                it["lo"] = 1
+            out[d].append(it)
+
+    # 신규상장·공모청약 (38커뮤니케이션) = 펼치기
+    ipo = ipo_by_day()
+    for d in days[:5]:
+        x = ipo.get(d) or {}
+        if x.get("list"):
+            out[d].append({"c": "ipo", "lo": 1, "t": "신규상장: " + "·".join(x["list"]), "kw": x["list"]})
+        if x.get("sub"):
+            out[d].append({"c": "ipo", "lo": 1, "t": "공모청약: " + "·".join(f"{n}(~{e})" for n, e in x["sub"]), "kw": [n for n, _ in x["sub"]]})
 
     big_earn = []
     for d in days[:5]:
@@ -328,6 +479,12 @@ def build_week(monday, events_doc, ff):
                 it["when"] = "B"
             out[d].append(it)
             big_earn += [(c, ko_name(s, n)) for s, n, c, _ in pick]
+        shown = set(t for i in out[d] if i.get("c") == "earn" and i.get("tk") for t in i["tk"].split(","))
+        rest = [r for r in rows if r[2] >= US_LO_CAP and r[0] not in shown]
+        if rest:  # 시총 큰 순 20곳까지 이름, 나머지는 '외 N곳' (tk 는 안 붙임 — 반응 집계가 수백 종목으로 불어남)
+            lab = {"B": "(전)", "A": "(후)", "": ""}
+            names = "·".join(ko_name(s, n) + lab[w] for s, n, _, w in rest[:20]) + (f" 외 {len(rest) - 20}곳" if len(rest) > 20 else "")
+            out[d].append({"c": "earn", "lo": 1, "t": "미국 실적 " + str(len(rest)) + "곳: " + names})
 
     focus = []
     for t in focus3:
