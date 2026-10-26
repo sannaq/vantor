@@ -51,3 +51,6 @@ input[type=search]{width:100%;padding:10px 12px;border-radius:10px;border:1px so
 .flash .say{font-size:16px;padding:4px 12px}
 details summary .tag{margin-left:4px}
 .chip.on .muted{color:#fff;opacity:.8}
+.lesson p,.lesson li{font-size:15px}
+.lesson table{margin:10px 0}
+a.card:hover{border-color:var(--accent)}

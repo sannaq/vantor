@@ -1,5 +1,10 @@
 (() => {
   const P5 = window.P5 || [], P6 = window.P6 || [], P7 = window.P7 || [];
+  const DAILY = window.DAILY || [], SENT = window.SENT || [], BASIC = (window.BASIC || []).sort((a, b) => a.no - b.no);
+  // 초보자반 문제에 id 를 붙여 오답노트·기록과 연결
+  const BQ = [];
+  BASIC.forEach(l => l.quiz.forEach((q, i) => { q.id = `b${l.no}-${i}`; q.topic = `${l.no}강`; q.level = 1; q._kind = "bq"; BQ.push(q); }));
+  DAILY.forEach(q => q._kind = "dl");
   const VOCAB = window.VOCAB || [], GRAMMAR = window.GRAMMAR || [];
   const RES = window.RES || [], GUIDE = window.GUIDE || [], PLAN = window.PLAN || [];
   const KO_P5 = window.KO_P5 || {}, KO_P6 = window.KO_P6 || {}, KO_P7 = window.KO_P7 || {};
@@ -11,7 +16,7 @@
 
   // ---------- 저장 ----------
   const KEY = "toeic.v1";
-  const S = Object.assign({ p5: {}, p6: {}, p7: {}, known: {}, wrong: [], log: {}, plan: {} },
+  const S = Object.assign({ p5: {}, p6: {}, p7: {}, dl: {}, bq: {}, st: {}, sknown: {}, known: {}, wrong: [], log: {}, plan: {} },
     JSON.parse(localStorage.getItem(KEY) || "{}"));
   const save = () => localStorage.setItem(KEY, JSON.stringify(S));
   const today = () => new Date().toLocaleDateString("sv-SE");
@@ -36,7 +41,7 @@
   const h = (html) => { app.innerHTML = html; window.scrollTo(0, 0); };
 
   // ---------- 라우터 ----------
-  const routes = { home, p5, p6, p7, vocab, grammar, wrong, guide, res };
+  const routes = { home, basic, daily, sent, p5, p6, p7, vocab, grammar, wrong, guide, res };
   function go() {
     const [r, arg] = (location.hash.slice(1) || "home").split("/");
     document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.dataset.r === r));
@@ -58,7 +63,10 @@
     </div>
     <h2>바로 시작</h2>
     <div class="row">
-      <a class="btn" href="#p5">Part 5 문제 풀기</a>
+      <a class="btn" href="#daily">매일 문법 50문항</a>
+      <a class="btn ghost" href="#basic">초보자반</a>
+      <a class="btn ghost" href="#sent">오늘 문장</a>
+      <a class="btn ghost" href="#p5">Part 5 주제별</a>
       <a class="btn ghost" href="#vocab">오늘 단어</a>
       <a class="btn ghost" href="#p7">Part 7 지문</a>
       <a class="btn ghost" href="#wrong">오답 다시 풀기</a>
@@ -135,11 +143,12 @@
         const k = +b.dataset.k, ok = k === q.answer;
         app.querySelectorAll(".opt").forEach(o => { o.disabled = true; if (+o.dataset.k === q.answer) o.classList.add("ok"); });
         if (!ok) b.classList.add("bad");
-        record("p5", q.id, ok);
-        if (ok) { right++; removeWrong("p5:" + q.id); } else missed.push(q);
+        const kind = q._kind || "p5";
+        record(kind, q.id, ok);
+        if (ok) { right++; removeWrong(kind + ":" + q.id); } else missed.push(q);
         glossOpts(".opt", q);
         app.querySelector("#after").innerHTML = `<div class="exp"><b>${ok ? "정답" : "오답 — 정답 (" + L[q.answer] + ")"}</b><br>${esc(q.explain)}</div>${koBox(q)}
-          <div class="row" style="margin-top:8px">${spk(q.q.replace("-------", q.choices[q.answer]), "▶ 문장 듣기")}</div>
+          ${q.q.includes("-------") && !/[가-힣]/.test(q.q) ? `<div class="row" style="margin-top:8px">${spk(q.q.replace("-------", q.choices[q.answer]), "▶ 문장 듣기")}</div>` : ""}
           <div class="row" style="margin-top:12px"><button class="btn" id="next">${i + 1 < qs.length ? "다음 문제" : "결과 보기"}</button></div>`;
         app.querySelector("#next").onclick = () => { i++; i < qs.length ? show() : done(); };
       });
@@ -299,18 +308,21 @@
   function wrong() {
     const items = S.wrong.map(k => {
       const [kind, id] = k.split(":");
-      if (kind === "p5") { const q = P5.find(x => x.id === id); return q && { k, kind, q, label: q.q }; }
+      const single = { p5: P5, dl: DAILY, bq: BQ }[kind];
+      if (single) { const q = single.find(x => x.id === id); return q && { k, kind, q, label: q.q }; }
+      if (kind === "st") { const t = SENT.find(x => x.id === id); return t && { k, kind, t, label: t.en }; }
       const [sid, n] = [id.slice(0, id.lastIndexOf("-")), +id.slice(id.lastIndexOf("-") + 1)];
       const s = (kind === "p6" ? P6 : P7).find(x => x.id === sid);
       return s && s.questions[n] && { k, kind, s, n, label: `${s.title} — ${s.questions[n].q || "(" + (n + 1) + ")번 빈칸"}` };
     }).filter(Boolean);
-    const p5w = items.filter(x => x.kind === "p5");
+    const p5w = items.filter(x => x.q);
+    const TAG = { p5: "P5", p6: "P6", p7: "P7", dl: "매일 문법", bq: "초보자반", st: "문장" };
     h(`<h1>오답노트</h1><p class="muted">틀린 문제가 자동으로 쌓이고, 다시 풀어 맞히면 빠져요.</p>
-      ${p5w.length ? `<button class="btn" id="redo">Part 5 오답 ${p5w.length}개 다시 풀기</button>` : ""}
+      ${p5w.length ? `<button class="btn" id="redo">문법 오답 ${p5w.length}개 다시 풀기</button>` : ""}
       <div style="margin-top:12px">${items.length ? items.map(x => {
-        const q = x.q || x.s.questions[x.n];
-        return `<div class="card"><details><summary><span class="tag">${x.kind.toUpperCase()}</span>${blanks(x.label)}</summary>
-          <div style="margin-top:10px">${review(q)}</div></details>
+        const body = x.t ? `<div class="q">${spk(x.t.en)}${esc(x.t.en)}</div><div class="exp ko"><b>해석</b><br>${esc(x.t.ko)}</div><div class="muted">${esc(x.t.key)}</div>` : review(x.q || x.s.questions[x.n]);
+        return `<div class="card"><details><summary><span class="tag">${TAG[x.kind] || x.kind}</span>${blanks(x.label)}</summary>
+          <div style="margin-top:10px">${body}</div></details>
           <div class="row" style="margin-top:8px">${x.s ? `<button class="btn ghost" data-set="${x.kind}|${x.s.id}">지문 열어 다시 풀기</button>` : ""}<button class="chip" data-del="${x.k}">삭제</button></div></div>`;
       }).join("") : `<div class="card">아직 틀린 문제가 없어요.</div>`}</div>`);
     const r = app.querySelector("#redo"); if (r) r.onclick = () => quiz(shuffle(p5w.map(x => x.q)), "#wrong");
@@ -339,6 +351,129 @@
     app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { rc.cat = b.dataset.cat; res(); });
     app.querySelector("#rs").oninput = e => { rc.term = e.target.value; render(); };
     render();
+  }
+
+  // ---------- 초보자반 ----------
+  function basic(arg) {
+    if (arg) {
+      const l = BASIC.find(x => String(x.no) === arg); if (!l) return basic();
+      const prev = BASIC.find(x => x.no === l.no - 1), next = BASIC.find(x => x.no === l.no + 1);
+      h(`<a class="muted" href="#basic">← 초보자반 목록</a><h1>${l.no}강. ${esc(l.title)}</h1>
+        ${l.goal ? `<p class="muted">목표: ${esc(l.goal)}</p>` : ""}
+        <div class="card lesson">${l.body}</div>
+        <div class="row"><button class="btn" id="lq">확인 문제 ${l.quiz.length}개 풀기</button>
+        ${prev ? `<a class="btn ghost" href="#basic/${prev.no}">← ${prev.no}강</a>` : ""}${next ? `<a class="btn ghost" href="#basic/${next.no}">${next.no}강 →</a>` : ""}</div>`);
+      app.querySelector("#lq").onclick = () => quiz(l.quiz, "#basic/" + l.no);
+      return;
+    }
+    h(`<h1>초보자반 — 완전 기초부터</h1><p class="muted">중학 영문법부터 차근차근. 강의를 읽고 확인 문제를 풀어요. 끝까지 하면 매일 문법 Day 1 로 넘어가세요.</p>
+      <div class="card">${BASIC.length ? BASIC.map(l => {
+        const r = l.quiz.map(q => S.bq[q.id]).filter(Boolean), ok = r.filter(x => x.last).length;
+        return `<div class="list-item"><div><b>${l.no}강</b> ${esc(l.title)}</div>
+          <div class="row"><span class="muted">${r.length ? `${ok}/${l.quiz.length} 맞음` : "시작 전"}</span><a class="btn ghost" href="#basic/${l.no}">공부하기</a></div></div>`;
+      }).join("") : "강의를 불러오지 못했어요."}</div>`);
+  }
+
+  // ---------- 매일 문법 ----------
+  const DAYS_T = ["", "품사 자리 ① 명사·형용사", "품사 자리 ② 부사·동사", "대명사", "수일치", "시제 ①", "시제 ② 완료", "능동/수동 ①", "수동태 ②", "to부정사", "동명사",
+    "분사", "분사구문", "관계대명사", "관계부사·복합관계사", "접속사 vs 전치사", "등위·상관접속사", "명사절 접속사", "부사절 접속사", "비교", "가정법·도치",
+    "전치사 ①", "전치사 ② 관용", "어휘 ① 동사", "어휘 ② 명사", "어휘 ③ 형용사·부사", "어휘 ④ 혼동·짝꿍", "명사·한정사", "조동사·당위 that절", "실전 모의 ①", "실전 모의 ②"];
+  function daily(arg) {
+    const days = uniq(DAILY.map(q => q.day)).sort((a, b) => a - b);
+    const stat = d => { const qs = DAILY.filter(q => q.day === d), r = qs.map(q => S.dl[q.id]).filter(Boolean); return { n: qs.length, done: r.length, ok: r.filter(x => x.last).length }; };
+    if (arg) {
+      const d = +arg, qs = DAILY.filter(q => q.day === d), st = stat(d);
+      const left = qs.filter(q => !S.dl[q.id] || !S.dl[q.id].last);
+      h(`<a class="muted" href="#daily">← 매일 문법</a><h1>Day ${d} — ${esc(DAYS_T[d] || "")}</h1>
+        <div class="card"><div class="stat">${st.done} / ${st.n}</div><div class="muted">푼 문제 · 맞힌 문제 ${st.ok}개</div><div class="bar"><i style="width:${pct(st.done, st.n)}%"></i></div></div>
+        <div class="row"><button class="btn" data-go="all">처음부터 ${qs.length}문항</button>
+        ${left.length && left.length < qs.length ? `<button class="btn ghost" data-go="left">안 푼·틀린 것만 ${left.length}문항</button>` : ""}
+        <a class="btn ghost" href="#grammar">문법 정리 보기</a></div>`);
+      app.querySelectorAll("[data-go]").forEach(b => b.onclick = () => quiz(b.dataset.go === "all" ? qs : left, "#daily/" + d));
+      return;
+    }
+    const next = days.find(d => stat(d).done < stat(d).n) || days[0];
+    h(`<h1>매일 문법 — 30일 · 하루 50문항</h1><p class="muted">그날 주제 40문항 + 앞 일차 복습 10문항. 풀면서 해석·보기 뜻을 바로 확인해요.</p>
+      ${next ? `<a class="btn" href="#daily/${next}">이어서 하기: Day ${next}</a>` : ""}
+      <div class="grid" style="margin-top:12px">${days.map(d => { const t = stat(d); return `<a class="card" href="#daily/${d}" style="text-decoration:none;color:inherit">
+        <b>Day ${d}</b><div class="muted">${esc(DAYS_T[d] || "")}</div><div class="bar"><i style="width:${pct(t.done, t.n)}%"></i></div>
+        <div class="muted">${t.done ? `${t.ok}/${t.n} 맞음` : `${t.n}문항`}</div></a>`; }).join("") || "<div class='card'>문제를 불러오지 못했어요.</div>"}</div>`);
+  }
+
+  // ---------- 문장 ----------
+  const sc = { day: 1, mode: "card" };
+  const norm = t => t.toLowerCase().replace(/[.’]/g, m => m === "’" ? "'" : "").replace(/[^a-z0-9' ]/g, " ").replace(/\s+/g, " ").trim();
+  function sent() {
+    const days = uniq(SENT.map(x => x.day)).sort((a, b) => a - b);
+    const list = SENT.filter(x => x.day === sc.day);
+    const dayDone = d => SENT.filter(x => x.day === d && S.sknown[x.id]).length;
+    h(`<h1>문장</h1><p class="muted">토익 빈출 문장 300개 · 하루 10문장. 듣고, 뜻 보고, 순서 맞추고, 받아쓰고, 영작을 골라요.</p>
+      <div class="chips">${days.map(d => `<button class="chip ${sc.day === d ? "on" : ""}" data-day="${d}">Day ${d} <span class="muted">${dayDone(d)}</span></button>`).join("")}</div>
+      <div class="chips">${[["card", "문장 카드"], ["order", "순서 맞추기"], ["dict", "듣고 받아쓰기"], ["pick", "영작 고르기"]].map(([v, l]) => `<button class="chip ${sc.mode === v ? "on" : ""}" data-mode="${v}">${l}</button>`).join("")}</div>
+      <div id="sbox"></div>`);
+    app.querySelectorAll("[data-day]").forEach(b => b.onclick = () => { sc.day = +b.dataset.day; sent(); });
+    app.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { sc.mode = b.dataset.mode; sent(); });
+    const box = app.querySelector("#sbox");
+    if (!list.length) { box.innerHTML = `<div class="card">문장을 불러오지 못했어요.</div>`; return; }
+    const deck = shuffle(list); let i = 0, right = 0;
+    const mark = (t, ok) => { record("st", t.id, ok); if (ok) { right++; removeWrong("st:" + t.id); S.sknown[t.id] = 1; save(); } };
+    const footer = (t, ok) => `<div class="exp"><b>${ok === undefined ? "" : ok ? "정답" : "오답"}</b>${ok === undefined ? "" : "<br>"}${spk(t.en, "▶")} ${esc(t.en)}<br>${esc(t.ko)}<div class="muted">${esc(t.key || "")}</div></div>
+      <button class="btn" style="margin-top:10px" id="sn">${i + 1 < deck.length ? "다음" : "결과"}</button>`;
+    const nextBtn = () => box.querySelector("#sn").onclick = () => { i++; i < deck.length ? show() : done(); };
+    const done = () => { box.innerHTML = sc.mode === "card" ? `<div class="card">Day ${sc.day} 문장 카드를 다 봤어요.</div><button class="btn" id="sr">다시</button>`
+      : `<div class="card"><div class="stat">${right} / ${deck.length}</div><div class="muted">틀린 문장은 오답노트에 쌓여요.</div></div><button class="btn" id="sr">다시</button>`; box.querySelector("#sr").onclick = sent; };
+    const head = () => `<div class="muted">${i + 1} / ${deck.length} · ${esc(deck[i].tag || "")}</div>`;
+    const show = () => {
+      const t = deck[i];
+      if (sc.mode === "card") {
+        let open = false;
+        const draw = () => {
+          box.innerHTML = `${head()}<div class="card flash" id="fc"><div class="m" style="font-size:20px">${esc(t.en)} ${spk(t.en)}</div>
+            ${open ? `<div class="m">${esc(t.ko)}</div><div class="muted" style="margin-top:6px">${esc(t.key || "")}</div>` : `<div class="muted" style="margin-top:8px">눌러서 뜻 보기</div>`}</div>
+            <div class="row"><button class="btn ghost" id="again">다시 볼래요</button><button class="btn" id="know">외웠어요</button></div>`;
+          box.querySelector("#fc").onclick = () => { open = !open; draw(); };
+          box.querySelector("#again").onclick = () => { deck.push(t); i++; show(); };
+          box.querySelector("#know").onclick = () => { S.sknown[t.id] = 1; save(); i++; i < deck.length ? show() : done(); };
+        };
+        if (vc.auto) say(t.en);
+        draw();
+      } else if (sc.mode === "order") {
+        const words = t.en.split(" "); const pool = shuffle(words.map((w, k) => ({ w, k }))); const built = [];
+        const draw = () => {
+          box.innerHTML = `${head()}<div class="card"><div class="q">${esc(t.ko)}</div>
+            <div class="passage" style="min-height:48px">${built.map((b, j) => `<button class="chip on" data-b="${j}">${esc(b.w)}</button>`).join(" ") || '<span class="muted">아래 단어를 순서대로 눌러요 (누른 단어를 다시 누르면 빠져요)</span>'}</div>
+            <div class="chips">${pool.map((p, j) => `<button class="chip" data-p="${j}">${esc(p.w)}</button>`).join("")}</div>
+            <button class="btn" id="chk" ${pool.length ? "disabled" : ""}>확인</button><div id="sa"></div></div>`;
+          box.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { built.push(pool.splice(+b.dataset.p, 1)[0]); draw(); });
+          box.querySelectorAll("[data-b]").forEach(b => b.onclick = () => { pool.push(built.splice(+b.dataset.b, 1)[0]); draw(); });
+          box.querySelector("#chk").onclick = () => { const ok = built.map(b => b.w).join(" ") === t.en; mark(t, ok); box.querySelector("#chk").disabled = true; box.querySelector("#sa").innerHTML = footer(t, ok); say(t.en); nextBtn(); };
+        };
+        draw();
+      } else if (sc.mode === "dict") {
+        box.innerHTML = `${head()}<div class="card"><div class="row">${spk(t.en, "🔊 듣기")}${TTS ? `<button class="say" id="slow">🐢 천천히</button>` : ""}<span class="muted">힌트: ${esc(t.ko)}</span></div>
+          <input type="search" id="din" placeholder="들은 문장을 영어로 써요" style="margin-top:10px" autocomplete="off">
+          <div class="row" style="margin-top:8px"><button class="btn" id="chk">확인</button></div><div id="sa"></div></div>`;
+        if (TTS) { say(t.en); box.querySelector("#slow").onclick = () => { const r = vc.rate; vc.rate = 0.6; say(t.en); vc.rate = r; }; }
+        const inp = box.querySelector("#din"); inp.focus();
+        const chk = () => {
+          const ok = norm(inp.value) === norm(t.en); mark(t, ok); inp.disabled = true; box.querySelector("#chk").disabled = true;
+          const want = norm(t.en).split(" "), got = norm(inp.value).split(" ");
+          const diff = want.map((w, k) => got[k] === w ? esc(w) : `<b style="color:var(--bad)">${esc(w)}</b>`).join(" ");
+          box.querySelector("#sa").innerHTML = (ok ? "" : `<div class="muted" style="margin-top:8px">틀린 자리: ${diff}</div>`) + footer(t, ok); nextBtn();
+        };
+        box.querySelector("#chk").onclick = chk; inp.onkeydown = e => { if (e.key === "Enter" && !inp.disabled) chk(); };
+      } else {
+        const opts = shuffle([t.en, ...(t.wrong || [])]);
+        box.innerHTML = `${head()}<div class="card"><div class="q">${esc(t.ko)}</div><div class="muted">알맞은 영어 문장을 고르세요</div>
+          ${opts.map(o => `<button class="opt" data-o="${esc(o)}">${esc(o)}</button>`).join("")}<div id="sa"></div></div>`;
+        box.querySelectorAll(".opt").forEach(b => b.onclick = () => {
+          const ok = b.dataset.o === t.en; mark(t, ok);
+          box.querySelectorAll(".opt").forEach(o => { o.disabled = true; if (o.dataset.o === t.en) o.classList.add("ok"); }); if (!ok) b.classList.add("bad");
+          box.querySelector("#sa").innerHTML = footer(t, ok); say(t.en); nextBtn();
+        });
+      }
+    };
+    show();
   }
 
   go();
