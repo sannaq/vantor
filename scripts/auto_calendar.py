@@ -9,6 +9,7 @@ feeds/calendar.json 의 weeks 는 원래 소몽카페 위클리 캘린더 사진
 - 일정: events.json(미국 지표·연준, 한국 정기 일정) + ForexFactory 주간 피드의 주요국 금리 결정.
 - 실적: 나스닥 실적 일정에서 시총 큰 순. 날짜는 미국 날짜(장 전 / 장 마감 후) — 손 정리와 같은 기준.
 - earnings(아래 실적 목록): 시총 상위 종목의 앞으로 4주 실적일을 채우고, 3주 지난 것은 뺀다.
+- 연간 행사 표(feeds/events-annual.json): 기업 행사·정상회의·휴장을 그 주 칸과 앞으로 일정(60일)에 올린다.
 - upcoming: 지난 일정은 뺀다.
 
 로컬 시험: FF_FILE=ff.json NASDAQ_DIR=dir python3 scripts/auto_calendar.py
@@ -24,6 +25,8 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 ET = ZoneInfo("America/New_York")
 CAL = "feeds/calendar.json"
+ANNUAL = "feeds/events-annual.json"
+UPCOMING_DAYS = 60
 FF_URL = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 NQ_URL = "https://api.nasdaq.com/api/calendar/earnings?date={}"
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
@@ -266,6 +269,8 @@ def build_week(monday, events_doc, ff):
 
     # upcoming(앞으로의 큰 일정, 손으로 모아 둔 것)에 이번 주 날짜가 있으면 그날 칸에도 올린다
     for u in (load(CAL, {}).get("upcoming") or []):
+        if u.get("auto"):
+            continue  # 연간 행사 표에서 온 것은 아래에서 따로 (기간·부가 설명 포함)
         words = [w for w in kw_of(u.get("t", "")) if not w[:-1].isdigit() and w not in ("미", "미국", "한국")]
         if u.get("d") in out and not any(i.get("t") == u.get("t") or any(w in i.get("t", "") for w in words)
                                          for i in out[u["d"]]):
@@ -276,6 +281,27 @@ def build_week(monday, events_doc, ff):
             if kw:
                 it["kw"] = kw
             out[u["d"]].append(it)
+
+    # 연간 행사 표(feeds/events-annual.json) — 기업 행사·정상회의·휴장 등. 여러 날짜 행사는 이번 주 첫 날짜 칸에 '(~끝)' 으로
+    for a in (load(ANNUAL, {}).get("items") or []):
+        st, en = a.get("d", ""), a.get("end") or a.get("d", "")
+        if en < days[0] or st > days[6]:
+            continue
+        d = st if st >= days[0] else days[0]
+        words = [w for w in (a.get("kw") or []) if len(w) >= 3]
+        if any(i.get("t") == a["t"] or (a.get("c") == "pol" and any(w in i.get("t", "") for w in words)) for i in out[d]):
+            continue  # FOMC 처럼 이벤트 일정에 이미 있으면 건너뜀
+        it = {"c": a.get("c", "ev"), "t": a["t"] + (f" (~{int(en[5:7])}/{int(en[8:])})" if en != st else "")}
+        for k in ("imp", "sub", "kw", "tk"):
+            if a.get(k):
+                it[k] = a[k]
+        if st < days[0]:
+            it["sub"] = ((it.get("sub") or "") + " · 진행 중").strip(" ·")
+        if a.get("sure") is False:
+            it["sub"] = ((it.get("sub") or "") + " · 날짜 대략").strip(" ·")
+        if it.get("imp", 0) >= 3:
+            focus3.append(it["t"])
+        out[d].append(it)
 
     kr = kr_earn_by_day()
     kr_big = []
@@ -312,7 +338,7 @@ def build_week(monday, events_doc, ff):
         focus.append("빅테크 실적 (" + "·".join(dict.fromkeys(big[:4])) + ")")
     if kr_big:
         focus.append("국내 실적 (" + "·".join(n for _, n in sorted(kr_big)[:4]) + ")")
-    src = "자동 정리 — 이벤트·발언 일정·나스닥/국내 IR 실적 일정" + ("" if n_earn_days else " (실적 일정 못 받음)")
+    src = "자동 정리 — 이벤트·발언·연간 행사·나스닥/국내 IR 실적 일정" + ("" if n_earn_days else " (실적 일정 못 받음)")
     return {"from": days[0], "to": days[6], "src": src, "auto": True, "focus": focus,
             "days": {d: v for d, v in out.items() if v}}, n_earn_days
 
@@ -396,8 +422,21 @@ def main():
 
     cal["earnings"] = refresh_earnings(cal, today)
     cal["earningsNote"] = "장 전 / 장 마감 후는 미국 시간 기준 → 장 마감 후 발표는 다음 거래일에 반응"
-    cal["upcoming"] = sorted([u for u in (cal.get("upcoming") or []) if u.get("d", "") >= today.isoformat()],
-                             key=lambda u: u["d"])
+    # 앞으로 일정 = 손으로 넣은 것 + 연간 행사 표의 60일 안 일정(auto, 매일 다시 채움). 지난 일정은 뺀다.
+    t0, t1 = today.isoformat(), (today + timedelta(days=UPCOMING_DAYS)).isoformat()
+    hand_up = [u for u in (cal.get("upcoming") or []) if not u.get("auto") and u.get("d", "") >= t0]
+    auto_up = []
+    for a in (load(ANNUAL, {}).get("items") or []):
+        if not (t0 <= a.get("d", "") <= t1) or a.get("c") == "earn":
+            continue
+        words = [w for w in (a.get("kw") or []) if len(w) >= 3]
+        if any(abs((date.fromisoformat(u["d"]) - date.fromisoformat(a["d"])).days) <= 1 and any(w in u.get("t", "") for w in words) for u in hand_up):
+            continue
+        u = {"d": a["d"], "c": a.get("c", "ev"), "t": a["t"], "auto": True}
+        if a.get("sure") is False:
+            u["approx"] = True
+        auto_up.append(u)
+    cal["upcoming"] = sorted(hand_up + auto_up, key=lambda u: u["d"])
     cal["note"] = ("위클리 캘린더·실적 일정. 손으로 넣은 주(auto 없음)가 우선이고, 없는 주는 scripts/auto_calendar.py 가 "
                    "매일 자동으로 만든다(auto: true — 사진 정리로 덮어쓰면 됨). scripts/watch_eval.py 가 지난 일정의 관련 뉴스(news-all.json)와 "
                    "발표 뒤 주가 반응을 feeds/watch-eval.json 에 채운다. c = ev 주요 이벤트 · pol 정책/통화 · data 지표 · earn 실적 · talk 발언. "

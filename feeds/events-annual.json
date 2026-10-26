@@ -1,0 +1,28 @@
+{
+ "note": "연간 행사 표 (2026-10-26). 기업 행사·정상회의·휴장처럼 무료 일정 자료로 못 받는 큰 일정을 모아 둔다. scripts/auto_calendar.py 가 그 주 위클리 캘린더 칸과 아래 '앞으로 일정'(60일 안)에 자동으로 올린다. 날짜가 발표되거나 바뀌면 여기만 고치면 된다. d=시작(미국 현지 날짜), end=끝, sub=부가 설명, sure=false 면 '날짜 대략'. src=확인한 곳.",
+ "items": [
+  {"d": "2026-11-17", "end": "2026-11-20", "c": "ev", "t": "마이크로소프트 이그나이트 (샌프란시스코)", "kw": ["이그나이트", "Ignite"], "tk": "MSFT", "src": "https://itdaily.com/events/microsoft-ignite/"},
+  {"d": "2026-11-18", "end": "2026-11-19", "c": "ev", "t": "APEC 정상회의 (중국 선전)", "imp": 2, "kw": ["APEC", "에이펙"], "src": "https://www.lg.gov.cn/english/news/latestnews/content/post_12588327.html"},
+  {"d": "2026-11-26", "c": "ev", "t": "미국 추수감사절 — 뉴욕증시 휴장", "kw": ["추수감사절"]},
+  {"d": "2026-11-27", "c": "ev", "t": "블랙프라이데이 — 뉴욕증시 조기 폐장", "kw": ["블랙프라이데이", "Black Friday"]},
+  {"d": "2026-11-30", "end": "2026-12-04", "c": "ev", "t": "AWS 리인벤트 (라스베이거스)", "kw": ["리인벤트", "re:Invent", "AWS"], "tk": "AMZN", "src": "https://web.govevents.com/details/98147/aws-reinvent-2026"},
+  {"d": "2026-11-30", "end": "2026-12-03", "c": "ev", "t": "엔비디아 GTC 워싱턴", "kw": ["GTC", "엔비디아"], "tk": "NVDA", "src": "https://www.nvidia.com/en-us/gtc/dc/"},
+  {"d": "2026-12-01", "c": "talk", "t": "젠슨 황 GTC 워싱턴 기조연설", "imp": 3, "sub": "한국시간 12/2 04:00", "kw": ["젠슨", "Jensen", "GTC"], "tk": "NVDA", "src": "https://www.nvidia.com/en-us/gtc/dc/"},
+  {"d": "2026-12-03", "c": "ev", "t": "테슬라 연례 주주총회", "imp": 2, "sub": "한국시간 12/4 06:00", "kw": ["테슬라 주총", "주주총회", "Tesla"], "tk": "TSLA", "src": "https://driveteslacanada.ca/news/tesla-2026-annual-shareholder-meeting-december-3/"},
+  {"d": "2026-12-09", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 12/10 04:00", "kw": ["FOMC", "연준", "기준금리"]},
+  {"d": "2026-12-14", "end": "2026-12-15", "c": "ev", "t": "G20 정상회의 (미국 마이애미)", "imp": 2, "kw": ["G20"], "src": "https://en.wikipedia.org/wiki/2026_G20_Miami_summit"},
+  {"d": "2026-12-25", "c": "ev", "t": "크리스마스 — 뉴욕증시 휴장", "kw": ["크리스마스"]},
+  {"d": "2027-01-06", "end": "2027-01-09", "c": "ev", "t": "CES 2027 (라스베이거스)", "imp": 2, "kw": ["CES"], "src": "https://www.gophotonics.com/events/details/1169-ces-2027"},
+  {"d": "2027-01-18", "end": "2027-01-22", "c": "ev", "t": "다보스포럼 (세계경제포럼)", "kw": ["다보스", "Davos", "WEF"], "src": "https://www.davos.ch/en/experience/events/world-economic-forum-annual-meeting-2027"},
+  {"d": "2027-01-27", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 1/28 04:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-03-15", "end": "2027-03-18", "c": "ev", "t": "엔비디아 GTC 2027 (산호세)", "imp": 2, "sub": "젠슨 황 기조연설 날짜는 발표 후 추가", "kw": ["GTC", "엔비디아", "젠슨"], "tk": "NVDA", "src": "https://www.nvidia.com/en-zz/gtc/faq/"},
+  {"d": "2027-03-17", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 3/18 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-04-28", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 4/29 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-06-01", "end": "2027-06-04", "c": "ev", "t": "컴퓨텍스 (타이베이)", "imp": 2, "kw": ["컴퓨텍스", "Computex"], "src": "https://en.wikipedia.org/wiki/Computex"},
+  {"d": "2027-06-09", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 6/10 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-07-28", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 7/29 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-09-15", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 9/16 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-10-27", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 10/28 03:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"},
+  {"d": "2027-12-08", "c": "pol", "t": "FOMC 금리 결정", "imp": 3, "sub": "한국시간 12/9 04:00", "kw": ["FOMC", "연준", "기준금리"], "src": "https://www.federalreserve.gov/newsevents/pressreleases/monetary20250905a.htm"}
+ ]
+}
