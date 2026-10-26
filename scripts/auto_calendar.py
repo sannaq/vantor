@@ -33,6 +33,7 @@ WEEK_MAX_PER_SLOT = 6   # 하루·장 전/후 한 칸에 최대 종목 수
 LIST_MIN_CAP = 400e9    # 아래 실적 목록: 시총 4천억 달러 이상(빅테크급)
 LIST_AHEAD = 28
 KEEP_WEEKS = 8
+KR_TOP = 100            # 국장 실적: 시총 100위 안
 
 # 미국 대형주 한글 이름 (없으면 영문 회사명 앞부분)
 KO = {
@@ -73,6 +74,55 @@ CB = {
     ("CAD", "Overnight Rate"): ("캐나다 중앙은행 금리 결정", 1, ["캐나다 중앙은행", "BOC"]),
     ("CNY", "1-y Loan Prime Rate"): ("중국 대출우대금리(LPR)", 1, ["LPR", "인민은행"]),
 }
+
+# 중앙은행 인사 발언·기자회견 (ForexFactory). 미국은 전부, 그 밖은 총재 발언·기자회견만.
+SPEAKER_KO = {
+    "Powell": "파월", "Jefferson": "제퍼슨", "Waller": "월러", "Bowman": "보우먼", "Barr": "바", "Cook": "쿡",
+    "Kugler": "쿠글러", "Miran": "미란", "Williams": "윌리엄스", "Logan": "로건", "Daly": "데일리", "Musalem": "무살렘",
+    "Hammack": "해맥", "Kashkari": "카시카리", "Goolsbee": "굴스비", "Bostic": "보스틱", "Schmid": "슈미드",
+    "Collins": "콜린스", "Harker": "하커", "Barkin": "바킨", "Paulson": "폴슨", "Hassett": "해싯", "Warsh": "워시",
+    "Bessent": "베센트", "Lagarde": "라가르드", "Ueda": "우에다", "Bailey": "베일리", "Macklem": "매클럼",
+}
+TALK_ORG = {"USD": "연준", "EUR": "ECB", "JPY": "일본은행", "GBP": "영란은행"}
+PRESS_KO = {("EUR", "ECB Press Conference"): "ECB 총재 기자회견", ("JPY", "BOJ Press Conference"): "일본은행 총재 기자회견",
+            ("GBP", "BOE Press Conference"): "영란은행 기자회견"}
+
+
+def talk_of(e):
+    """FF 일정 → (제목, 중요도, kw) 또는 None"""
+    c, t = e.get("country"), e.get("title") or ""
+    if (c, t) in PRESS_KO:
+        return PRESS_KO[(c, t)], 2, [PRESS_KO[(c, t)].split()[0]]
+    if c not in TALK_ORG or not any(w in t for w in ("Speaks", "Testifies")):
+        return None
+    name = next((n for n in SPEAKER_KO if n in t), None)
+    head = t.replace(" Speaks", "").replace(" Testifies", "")
+    if c != "USD" and not any(w in head for w in ("President", "Gov ", "Governor")) or (c != "USD" and "Member" in head):
+        return None
+    role = "의장" if "Chair" in head and "Vice" not in head else "부의장" if "Vice Chair" in head else \
+        "재무장관" if "Treasury" in head else "총재" if c != "USD" else "위원"
+    org = "미 재무부" if role == "재무장관" else TALK_ORG[c]
+    nm = SPEAKER_KO.get(name, name or head.split()[-1])
+    imp = 3 if role == "의장" else 2 if role in ("부의장", "재무장관", "총재") else 0
+    if "Testifies" in t:
+        imp, act = max(imp, 2), "의회 증언"
+    else:
+        act = "발언"
+    return f"{org} {nm} {role} {act}", imp, [nm, name] if name else [nm]
+
+
+def kr_earn_by_day():
+    """국장 실적 발표일(네이버 IR 일정, picks.yml 이 feeds/earn.json 갱신) — 시총 순위 표(stock-list.json) 상위만"""
+    e = (load("feeds/earn.json", {}) or {}).get("items") or {}
+    rank = {c[0]: (i, c[1]) for i, c in enumerate(load("feeds/stock-list.json", []) or [])}
+    out = {}
+    for code, v in e.items():
+        if code not in rank or rank[code][0] >= KR_TOP:
+            continue
+        d = f"{v[0][:4]}-{v[0][4:6]}-{v[0][6:8]}"
+        out.setdefault(d, []).append(rank[code])
+    return {d: sorted(v) for d, v in out.items()}
+
 
 TYPE_C = {"policy": "pol", "data": "data", "earnings": "earn", "event": "ev"}
 
@@ -200,6 +250,41 @@ def build_week(monday, events_doc, ff):
             focus3.append(t)
         out[d].append(it)
 
+    for e in (ff or []):
+        tk = talk_of(e)
+        if not tk:
+            continue
+        dt = datetime.fromisoformat(e["date"])
+        d = dt.astimezone(ET).date().isoformat()
+        if d not in out:
+            continue
+        t, imp, kw = tk
+        it = {"c": "talk", "t": t, "kw": [k for k in kw if k], "sub": "한국시간 " + dt.astimezone(KST).strftime("%-m/%-d %H:%M")}
+        if imp:
+            it["imp"] = imp
+        out[d].append(it)
+
+    # upcoming(앞으로의 큰 일정, 손으로 모아 둔 것)에 이번 주 날짜가 있으면 그날 칸에도 올린다
+    for u in (load(CAL, {}).get("upcoming") or []):
+        words = [w for w in kw_of(u.get("t", "")) if not w[:-1].isdigit() and w not in ("미", "미국", "한국")]
+        if u.get("d") in out and not any(i.get("t") == u.get("t") or any(w in i.get("t", "") for w in words)
+                                         for i in out[u["d"]]):
+            it = {"c": u.get("c", "ev"), "t": u["t"]}
+            if u.get("approx"):
+                it["sub"] = "날짜 대략"
+            kw = kw_of(u["t"])
+            if kw:
+                it["kw"] = kw
+            out[u["d"]].append(it)
+
+    kr = kr_earn_by_day()
+    kr_big = []
+    for d in days[:5]:
+        pick = (kr.get(d) or [])[:WEEK_MAX_PER_SLOT]
+        if pick:
+            out[d].append({"c": "earn", "t": "·".join(n for _, n in pick) + " (국내)", "kw": [n for _, n in pick]})
+            kr_big += [(r, n) for r, n in pick if r < 10]
+
     big_earn = []
     for d in days[:5]:
         rows = nasdaq_day(d)
@@ -225,7 +310,9 @@ def build_week(monday, events_doc, ff):
     big = [n for c, n in sorted(big_earn, key=lambda x: -x[0]) if c >= LIST_MIN_CAP]
     if big:
         focus.append("빅테크 실적 (" + "·".join(dict.fromkeys(big[:4])) + ")")
-    src = "자동 정리 — 이벤트 일정·나스닥 실적 일정" + ("" if n_earn_days else " (실적 일정 못 받음)")
+    if kr_big:
+        focus.append("국내 실적 (" + "·".join(n for _, n in sorted(kr_big)[:4]) + ")")
+    src = "자동 정리 — 이벤트·발언 일정·나스닥/국내 IR 실적 일정" + ("" if n_earn_days else " (실적 일정 못 받음)")
     return {"from": days[0], "to": days[6], "src": src, "auto": True, "focus": focus,
             "days": {d: v for d, v in out.items() if v}}, n_earn_days
 
@@ -295,7 +382,7 @@ def main():
         if ff is None and old:  # 피드를 못 받았으면 지난번에 넣은 주요국 금리 결정은 살린다
             cbt = {v[0] for v in CB.values()}
             for d, items in (old[0].get("days") or {}).items():
-                keep = [i for i in items if i.get("t") in cbt]
+                keep = [i for i in items if i.get("t") in cbt or i.get("c") == "talk"]
                 if keep:
                     wk["days"].setdefault(d, []).extend(keep)
         # 실적 일정을 하나도 못 받았으면 이미 만들어 둔 자동 주를 덮지 않는다(빈칸 방지)
