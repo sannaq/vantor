@@ -2815,7 +2815,7 @@ function _huntNotifyAdd(r,add,old){ if(!_huntHook())return; _huntSend({embeds:[{
 /* TP·SL 도달·중간 청산 → 디스코드 (2026-10-19 사용자 결정, 10/21 청산 추가) — 이 화면을 열어 둔 기기가 감지한 순간 1번 */
 function _huntNotifyHit(r){ if(!_huntHook())return; var ret=_huntRet(r), win=_huntWin(r), t0=r.openAt||r.at;
   var mins=Math.round((r.hitAt-t0)/60000), dur=mins<60?mins+'분':mins<1440?(mins/60).toFixed(1)+'시간':(mins/1440).toFixed(1)+'일';
-  var ttl=r.hit==='CL'?((win?'💰 ':'✂️ ')+(r.ck||'청산')+(win?' (이익)':' (손실)')):(r.hit==='TP'?'✅ TP 도달':'❌ SL 도달');
+  var ttl=r.hit==='CL'?((win?'💰 ':'✂️ ')+(r.ck||'청산')+(win?' (이익)':' (손실)')):(r.hit==='TP'?'✅ TP 도달':(win?'🟢 SL 도달 (물타기 평단 기준 이익 · 승)':'❌ SL 도달'));
   _huntSend({embeds:[{title:ttl+' — '+r.s+' '+(r.side!=='short'?'롱':'숏'),color:win?0x2ebd85:0xf6465d,
     fields:[{name:'결과',value:_huntImpact(ret,r),inline:false},{name:'평단 → 청산',value:'$'+_huntFmt(r.p0)+' → $'+_huntFmt(_huntExit(r)),inline:true},{name:'레버리지·비중',value:_huntPosTxt(r),inline:true},{name:'걸린 시간',value:dur,inline:true},
       {name:'누적 승률',value:_huntWR(),inline:true}],
