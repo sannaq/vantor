@@ -25,7 +25,7 @@
   const save = () => {
     localStorage.setItem(KEY, JSON.stringify(S));
     // 로그인 상태면 2초 모아서 서버에도 저장
-    if (Auth.user) { clearTimeout(pushTimer); pushTimer = setTimeout(Auth.push, 2000); }
+    if (Auth.ok) { clearTimeout(pushTimer); pushTimer = setTimeout(Auth.push, 2000); }
   };
   const today = () => new Date().toLocaleDateString("sv-SE");
   function record(kind, id, ok) {
@@ -49,9 +49,14 @@
   const h = (html) => { app.innerHTML = html; window.scrollTo(0, 0); };
 
   // ---------- 라우터 ----------
-  const routes = { home, zero, account, basic, daily, sent, p5, p6, p7, vocab, grammar, wrong, guide, res };
+  const routes = { home, zero, account, admin, basic, daily, sent, p5, p6, p7, vocab, grammar, wrong, guide, res };
   function go() {
     const [r, arg] = (location.hash.slice(1) || "home").split("/");
+    // 승인 회원만 이용: 서버 연결이 돼 있으면 로그인·승인 전에는 회원 화면만
+    if (Auth.ready && r !== "account") {
+      if (!Auth.checked) { h(`<div class="card">불러오는 중…</div>`); return; }
+      if (!Auth.ok) { document.querySelectorAll("#nav a").forEach(a => a.classList.remove("on")); account(Auth.user ? undefined : "gate"); return; }
+    }
     document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on", a.dataset.r === r));
     (routes[r] || home)(arg ? decodeURIComponent(arg) : undefined);
   }
@@ -63,7 +68,7 @@
     const known = Object.keys(S.known).length;
     const days = Object.keys(S.log).length;
     let html = `<h1>TOTORI <span class="muted" style="font-size:15px">왕초보부터 토익 800까지</span></h1>
-    ${!Auth.user && Auth.ready ? `<div class="card row" style="justify-content:space-between"><span>회원가입하면 휴대폰·PC 어디서든 기록이 이어져요.</span><a class="btn" href="#account">회원가입 / 로그인</a></div>` : ""}
+    ${Auth.ok ? `<p class="muted">${esc(Auth.nick())} 님, 기록은 계정에 자동 저장돼요.</p>` : ""}
     <div class="grid">
       <div class="card"><div class="muted">Part 5 푼 문제</div><div class="stat">${p5n} / ${P5.length}</div><div class="muted">최근 정답률 ${pct(p5ok, p5n)}%</div></div>
       <div class="card"><div class="muted">외운 단어</div><div class="stat">${known} / ${VOCAB.length}</div><div class="bar"><i style="width:${pct(known, VOCAB.length)}%"></i></div></div>
@@ -486,7 +491,7 @@
     show();
   }
 
-  // ---------- 회원 (Supabase) ----------
+  // ---------- 회원 (Supabase, VOLTA 방식: 아이디+비밀번호, 관리자 승인) ----------
   // 기록 합치기: 문제별로 더 많이 푼 쪽, 외운 목록은 합집합, 날짜별 횟수는 큰 값
   function mergeState(a, b) {
     const out = { ...a };
@@ -500,92 +505,139 @@
     out.wrong = uniq([...(a.wrong || []), ...(b.wrong || [])]).filter(w => { const [k, id] = w.split(":"); const r = out[k] && out[k][id]; return !r || !r.last; });
     return out;
   }
+  // 아이디만 받으므로 Supabase Auth 용 이메일은 내부용으로 만들어 쓴다 (메일은 보내지 않음)
+  const idToEmail = id => `${id.toLowerCase()}@users.totori.local`;
+  const ID_RE = /^[a-z0-9_.-]{3,20}$/;
   const Auth = {
-    sb: null, user: null, ready: false, status: "",
+    sb: null, user: null, member: null, ready: false, checked: false, status: "",
+    get ok() { return !!(this.user && this.member && this.member.status === "approved"); },
+    get admin() { return this.ok && this.member.role === "admin"; },
     init() {
       const c = window.TOTORI_CONFIG || {};
       if (!c.supabaseUrl || !c.supabaseAnonKey || !window.supabase) return;
-      this.sb = window.supabase.createClient(c.supabaseUrl, c.supabaseAnonKey);
+      this.sb = window.supabase.createClient(c.supabaseUrl, c.supabaseAnonKey, { auth: { storageKey: "totori-auth" } });
       this.ready = true;
-      this.sb.auth.onAuthStateChange(async (ev, session) => {
-        const prev = this.user;
-        this.user = session ? session.user : null;
-        if (ev === "PASSWORD_RECOVERY") { location.hash = "#account/reset"; }
-        if (this.user && (!prev || prev.id !== this.user.id)) await this.pull();
-        renderAcct(); if (location.hash.startsWith("#account") || location.hash === "" || location.hash === "#home") go();
-      });
+      this.sb.auth.onAuthStateChange((ev, session) => { setTimeout(() => this.onSession(session), 0); });
     },
-    nick() { return (this.user && (this.user.user_metadata || {}).nick) || (this.user ? this.user.email.split("@")[0] : ""); },
+    async onSession(session) {
+      const prev = this.user && this.user.id, first = !this.checked;
+      this.user = session ? session.user : null;
+      this.checked = true;
+      if (!this.user) { this.member = null; renderAcct(); go(); return; }
+      if (prev === this.user.id && this.member && !first) return;
+      await this.loadMember();
+      if (this.ok) { await this.sb.rpc("totori_touch_login"); await this.pull(); }
+      renderAcct();
+      go();
+    },
+    async loadMember() {
+      const { data } = await this.sb.from("totori_members").select("*").eq("user_id", this.user.id).maybeSingle();
+      this.member = data || null;
+    },
+    nick() { return (this.member && (this.member.nick || this.member.username)) || ""; },
     async pull() {
       this.status = "기록 불러오는 중…"; renderAcct();
       const { data, error } = await this.sb.from("totori_progress").select("data").eq("user_id", this.user.id).maybeSingle();
-      if (error) { this.status = "기록을 불러오지 못했어요: " + error.message; renderAcct(); return; }
+      if (error) { this.status = "기록을 불러오지 못했어요: " + error.message; return; }
       const merged = mergeState(S, (data && data.data) || {});
       Object.keys(S).forEach(k => delete S[k]); Object.assign(S, merged);
       localStorage.setItem(KEY, JSON.stringify(S));
       await this.push();
     },
     push: async () => {
-      if (!Auth.user) return;
+      if (!Auth.ok) return;
       const { error } = await Auth.sb.from("totori_progress").upsert({ user_id: Auth.user.id, data: S, updated_at: new Date().toISOString() });
       Auth.status = error ? "서버 저장 실패: " + error.message : "저장됨 " + new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
-      renderAcct();
     },
   };
   function renderAcct() {
     const a = document.getElementById("acct"); if (!a) return;
-    a.textContent = Auth.user ? "👤 " + Auth.nick() : "로그인";
+    a.textContent = !Auth.user ? "로그인" : Auth.ok ? "👤 " + Auth.nick() : "승인 대기";
+    const ad = document.getElementById("adminLink"); if (ad) ad.style.display = Auth.admin ? "" : "none";
   }
+  const msgBox = (t, bad) => { const m = app.querySelector("#amsg"); if (m) m.innerHTML = `<div class="exp" style="${bad ? "border-color:var(--bad)" : ""}">${esc(t)}</div>`; };
   function account(arg) {
     if (!Auth.ready) {
       h(`<h1>회원</h1><div class="card">회원 기능을 준비하고 있어요. 서버 연결이 끝나면 여기서 가입·로그인할 수 있어요.<br><span class="muted">지금도 기록은 이 기기에 저장돼요.</span></div>`); return;
     }
     const sb = Auth.sb;
-    const msg = (t, bad) => { const m = app.querySelector("#amsg"); if (m) m.innerHTML = `<div class="exp" style="${bad ? "border-color:var(--bad)" : ""}">${esc(t)}</div>`; };
-    if (arg === "reset") {
-      h(`<h1>새 비밀번호</h1><div class="card"><input type="password" id="np" placeholder="새 비밀번호 (6자 이상)" class="inp"><div class="row" style="margin-top:10px"><button class="btn" id="go">변경</button></div><div id="amsg"></div></div>`);
-      app.querySelector("#go").onclick = async () => { const { error } = await sb.auth.updateUser({ password: app.querySelector("#np").value }); error ? msg(error.message, 1) : (msg("비밀번호를 바꿨어요."), setTimeout(() => location.hash = "#account", 800)); };
-      return;
-    }
     if (Auth.user) {
-      const u = Auth.user;
-      h(`<h1>내 정보</h1><div class="card"><div class="stat">${esc(Auth.nick())}</div><div class="muted">${esc(u.email)}</div>
-        <p>학습 기록이 이 계정에 저장돼요. 다른 기기에서 같은 계정으로 로그인하면 이어서 공부할 수 있어요.</p>
+      const m = Auth.member;
+      if (!m || m.status !== "approved") {
+        h(`<h1>${m && m.status === "rejected" ? "가입이 거절됐어요" : "승인 대기 중"}</h1><div class="card">
+          ${m && m.status === "rejected" ? "관리자가 가입을 승인하지 않았어요." : `<b>${esc(m ? m.username : "")}</b> 님, 가입 신청이 접수됐어요. 관리자가 승인하면 바로 이용할 수 있어요.`}
+          <div class="row" style="margin-top:10px"><button class="btn ghost" id="re">승인됐는지 다시 확인</button><button class="btn ghost" id="out">로그아웃</button></div></div>`);
+        app.querySelector("#re").onclick = async () => { await Auth.loadMember(); if (Auth.ok) { await sb.rpc("totori_touch_login"); await Auth.pull(); } renderAcct(); account(); };
+        app.querySelector("#out").onclick = async () => { await sb.auth.signOut(); location.hash = "#home"; };
+        return;
+      }
+      h(`<h1>내 정보</h1><div class="card"><div class="stat">${esc(Auth.nick())}</div><div class="muted">아이디 ${esc(m.username)}${Auth.admin ? " · 관리자" : ""}</div>
+        <p>학습 기록이 이 계정에 저장돼요. 다른 기기에서 같은 아이디로 로그인하면 이어서 공부할 수 있어요.</p>
         <div class="muted" id="ast">${esc(Auth.status)}</div>
-        <div class="row" style="margin-top:10px"><button class="btn ghost" id="sync">지금 저장</button><button class="btn ghost" id="out">로그아웃</button></div></div>`);
+        <div class="row" style="margin-top:10px"><button class="btn ghost" id="sync">지금 저장</button>${Auth.admin ? `<a class="btn" href="#admin">회원 승인 관리</a>` : ""}<button class="btn ghost" id="out">로그아웃</button></div></div>
+        <div class="card"><b>비밀번호 바꾸기</b><input type="password" id="np" class="inp" placeholder="새 비밀번호 (6자 이상)" autocomplete="new-password"><button class="btn ghost" id="cp">변경</button><div id="amsg"></div></div>`);
       app.querySelector("#sync").onclick = async () => { await Auth.push(); app.querySelector("#ast").textContent = Auth.status; };
       app.querySelector("#out").onclick = async () => { await Auth.push(); await sb.auth.signOut(); location.hash = "#home"; };
+      app.querySelector("#cp").onclick = async () => { const v = app.querySelector("#np").value; if (v.length < 6) return msgBox("6자 이상으로 써 주세요.", 1); const { error } = await sb.auth.updateUser({ password: v }); error ? msgBox(error.message, 1) : msgBox("비밀번호를 바꿨어요."); };
       return;
     }
-    const mode = arg === "signup" ? "signup" : arg === "find" ? "find" : "login";
-    h(`<h1>${mode === "signup" ? "회원가입" : mode === "find" ? "비밀번호 찾기" : "로그인"}</h1>
-      <div class="chips"><a class="chip ${mode === "login" ? "on" : ""}" href="#account">로그인</a><a class="chip ${mode === "signup" ? "on" : ""}" href="#account/signup">회원가입</a><a class="chip ${mode === "find" ? "on" : ""}" href="#account/find">비밀번호 찾기</a></div>
+    const signup = arg === "signup";
+    h(`${arg === "gate" ? `<div class="card"><b>TOTORI</b> 는 승인된 회원만 이용할 수 있어요. 로그인하거나 가입 신청해 주세요.</div>` : ""}<h1>${signup ? "회원가입" : "로그인"}</h1>
+      <div class="chips"><a class="chip ${!signup ? "on" : ""}" href="#account">로그인</a><a class="chip ${signup ? "on" : ""}" href="#account/signup">회원가입</a></div>
       <div class="card">
-        ${mode === "signup" ? `<input id="nick" placeholder="닉네임" class="inp">` : ""}
-        <input id="em" type="email" placeholder="이메일" class="inp" autocomplete="email">
-        ${mode !== "find" ? `<input id="pw" type="password" placeholder="비밀번호 (6자 이상)" class="inp" autocomplete="${mode === "signup" ? "new-password" : "current-password"}">` : ""}
-        <div class="row" style="margin-top:10px"><button class="btn" id="go">${mode === "signup" ? "가입하기" : mode === "find" ? "재설정 메일 받기" : "로그인"}</button></div>
+        <input id="uid" class="inp" placeholder="아이디 (영문 소문자·숫자 3~20자)" autocomplete="username" autocapitalize="off">
+        ${signup ? `<input id="nick" class="inp" placeholder="닉네임 (화면에 보일 이름)">` : ""}
+        <input id="pw" type="password" class="inp" placeholder="비밀번호 (6자 이상)" autocomplete="${signup ? "new-password" : "current-password"}">
+        ${signup ? `<input id="pw2" type="password" class="inp" placeholder="비밀번호 확인" autocomplete="new-password">` : ""}
+        <div class="row" style="margin-top:10px"><button class="btn" id="go">${signup ? "가입 신청" : "로그인"}</button></div>
         <div id="amsg"></div>
-        <p class="muted">이 기기에 있던 기록은 로그인하면 계정 기록과 합쳐져요.</p></div>`);
-    const v = id => (app.querySelector("#" + id) || {}).value || "";
-    const back = location.href.split("#")[0];
-    app.querySelector("#go").onclick = async () => {
-      const em = v("em").trim();
-      if (!em) return msg("이메일을 입력해 주세요.", 1);
-      if (mode === "find") { const { error } = await sb.auth.resetPasswordForEmail(em, { redirectTo: back }); return error ? msg(error.message, 1) : msg("재설정 메일을 보냈어요. 메일의 링크를 눌러 주세요."); }
-      if (v("pw").length < 6) return msg("비밀번호는 6자 이상이에요.", 1);
-      if (mode === "signup") {
-        const { data, error } = await sb.auth.signUp({ email: em, password: v("pw"), options: { data: { nick: v("nick").trim() || em.split("@")[0] }, emailRedirectTo: back } });
-        if (error) return msg(error.message, 1);
-        if (!data.session) return msg("가입 확인 메일을 보냈어요. 메일의 링크를 누르면 가입이 끝나요.");
-        location.hash = "#home";
+        <p class="muted">${signup ? "가입하면 관리자 승인 후 이용할 수 있어요." : "비밀번호를 잊었으면 관리자에게 문의해 주세요."} 이 기기에 있던 기록은 로그인하면 계정 기록과 합쳐져요.</p></div>`);
+    const v = id => ((app.querySelector("#" + id) || {}).value || "");
+    const run = async () => {
+      const id = v("uid").trim().toLowerCase(), pw = v("pw");
+      if (!ID_RE.test(id)) return msgBox("아이디는 영문 소문자·숫자·_ . - 로 3~20자예요.", 1);
+      if (pw.length < 6) return msgBox("비밀번호는 6자 이상이에요.", 1);
+      if (signup) {
+        if (pw !== v("pw2")) return msgBox("비밀번호 확인이 달라요.", 1);
+        const { data, error } = await sb.auth.signUp({ email: idToEmail(id), password: pw, options: { data: { username: id, nick: v("nick").trim() || id } } });
+        if (error) return msgBox(/registered|already/i.test(error.message) ? "이미 있는 아이디예요." : error.message, 1);
+        if (!data.session) return msgBox("서버 설정 확인이 필요해요 (이메일 확인 기능이 켜져 있어요). 관리자에게 알려 주세요.", 1);
+        location.hash = "#account";
       } else {
-        const { error } = await sb.auth.signInWithPassword({ email: em, password: v("pw") });
-        if (error) return msg(error.message === "Invalid login credentials" ? "이메일 또는 비밀번호가 맞지 않아요." : error.message, 1);
-        location.hash = "#home";
+        const { error } = await sb.auth.signInWithPassword({ email: idToEmail(id), password: pw });
+        if (error) return msgBox(/Invalid login/i.test(error.message) ? "아이디 또는 비밀번호가 맞지 않아요." : error.message, 1);
+        location.hash = "#account";
       }
     };
+    app.querySelector("#go").onclick = run;
+    app.querySelectorAll(".inp").forEach(i => i.onkeydown = e => { if (e.key === "Enter") run(); });
   }
+
+  // ---------- 관리자: 회원 승인 ----------
+  const adm = { f: "pending" };
+  async function admin() {
+    if (!Auth.admin) { h(`<h1>관리자</h1><div class="card">관리자만 볼 수 있어요.</div>`); return; }
+    h(`<h1>회원 승인 관리</h1><div class="card">불러오는 중…</div>`);
+    const { data: ms, error } = await Auth.sb.from("totori_members").select("*").order("created_at", { ascending: false });
+    if (error) { h(`<h1>회원 승인 관리</h1><div class="card">불러오지 못했어요: ${esc(error.message)}</div>`); return; }
+    const { data: pr } = await Auth.sb.from("totori_progress").select("user_id,data,updated_at");
+    const prog = {}; (pr || []).forEach(r => { const d = r.data || {}; prog[r.user_id] = { n: ["p5", "dl", "bq", "zq", "st"].reduce((a, k) => a + Object.keys(d[k] || {}).length, 0), at: r.updated_at }; });
+    const ST = { pending: "승인 대기", approved: "승인됨", rejected: "거절" };
+    const cnt = k => ms.filter(m => m.status === k).length;
+    const list = ms.filter(m => adm.f === "all" || m.status === adm.f);
+    h(`<h1>회원 승인 관리</h1>
+      <div class="chips">${[["pending", "승인 대기"], ["approved", "승인됨"], ["rejected", "거절"], ["all", "전체"]].map(([k, l]) => `<button class="chip ${adm.f === k ? "on" : ""}" data-f="${k}">${l} ${k === "all" ? ms.length : cnt(k)}</button>`).join("")}</div>
+      <div class="card">${list.map(m => `<div class="list-item"><div><b>${esc(m.nick || m.username)}</b> <span class="muted">@${esc(m.username)}</span> <span class="tag">${ST[m.status] || m.status}</span>${m.role === "admin" ? '<span class="tag">관리자</span>' : ""}
+          <div class="muted">가입 ${esc(fmtT(m.created_at))} · 최근 로그인 ${esc(fmtT(m.last_login))} · 로그인 ${m.login_count || 0}회${prog[m.user_id] ? ` · 푼 문제 ${prog[m.user_id].n}개` : ""}</div></div>
+          <div class="row">${m.role === "admin" ? "" : [["approved", "승인"], ["rejected", "거절"], ["pending", "대기로"]].filter(([k]) => k !== m.status).map(([k, l]) => `<button class="${k === "approved" ? "btn" : "chip"}" data-set="${m.user_id}|${k}">${l}</button>`).join("")}</div></div>`).join("") || "해당하는 회원이 없어요."}</div>`);
+    app.querySelectorAll("[data-f]").forEach(b => b.onclick = () => { adm.f = b.dataset.f; admin(); });
+    app.querySelectorAll("[data-set]").forEach(b => b.onclick = async () => {
+      const [uid, st] = b.dataset.set.split("|");
+      const { error } = await Auth.sb.from("totori_members").update({ status: st }).eq("user_id", uid);
+      if (error) alert("바꾸지 못했어요: " + error.message); admin();
+    });
+  }
+  const fmtT = iso => iso ? new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-";
 
   // ---------- 왕초보 0단계 ----------
   const zc = { tab: "abc", cat: "" };
