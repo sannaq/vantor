@@ -159,6 +159,23 @@
      },
      {
       "c": "earn",
+      "lo": 1,
+      "t": "국내 실적 2곳: HD건설기계·BNK금융지주",
+      "kw": [
+       "HD건설기계",
+       "BNK금융지주"
+      ]
+     },
+     {
+      "c": "ipo",
+      "lo": 1,
+      "t": "공모청약: 아이엠스팩1호(~10/27)",
+      "kw": [
+       "아이엠스팩1호"
+      ]
+     },
+     {
+      "c": "earn",
       "t": "버라이즌 (장 전)",
       "tk": "VZ",
       "when": "B"
@@ -167,6 +184,11 @@
       "c": "earn",
       "t": "웰타워·케이던스·뉴코어·퍼블릭스토리지 (장 마감 후)",
       "tk": "WELL,CDNS,NUE,PSA"
+     },
+     {
+      "c": "earn",
+      "lo": 1,
+      "t": "미국 실적 18곳: The Hartford(후)·Celestica(후)·Cincinnati Financial(후)·Brown &(후)·Principal Financial(후)·POSCO HOLDINGS·Cemex S.A.B.(전)·Sun Communities(후)·Summit Therapeutics·BioMarin Pharmaceutical·Gerdau(후)·Amkor Technology(후)·Rambus(후)·Brixmor Property(후)·Simpson Manufacturing(후)·Alexandria Real(후)·Noble(후)·PriceSmart(후)"
      }
     ],
     "2026-10-27": [
@@ -192,6 +214,110 @@
      },
      {
       "c": "earn",
+      "lo": 1,
+      "t": "국내 실적 8곳: JB금융지주·삼성카드·iM금융지주·동아쏘시오홀딩스·동아에스티·ISC·에스티팜·칩스앤미디어",
+      "kw": [
+       "JB금융지주",
+       "삼성카드",
+       "iM금융지주",
+       "동아쏘시오홀딩스",
+       "동아에스티",
+       "ISC",
+       "에스티팜",
+       "칩스앤미디어"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 주간 ADP 취업자 변동",
+      "sub": "한국시간 10/27 21:15",
+      "kw": [
+       "주간 ADP 취업자 변동"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 내구재주문",
+      "sub": "한국시간 10/27 21:30",
+      "kw": [
+       "내구재주문"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 주택가격지수(FHFA)",
+      "sub": "한국시간 10/27 22:00",
+      "kw": [
+       "주택가격지수"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 S&P 코어로직/CS 주택가격지수",
+      "sub": "한국시간 10/27 22:00",
+      "kw": [
+       "S&P 코어로직/CS 주택가격지수"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 신규주택매매",
+      "sub": "한국시간 10/27 23:00",
+      "kw": [
+       "신규주택매매"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 리치몬드 연은 제조업지수",
+      "sub": "한국시간 10/27 23:00",
+      "kw": [
+       "리치몬드 연은 제조업지수"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 API 원유재고",
+      "sub": "한국시간 10/28 05:30",
+      "kw": [
+       "API 원유재고"
+      ]
+     },
+     {
+      "c": "data",
+      "t": "韓 10월 소비자동향조사 결과",
+      "kw": [
+       "10월 소비자동향조사 "
+      ],
+      "sub": "한국시간 06:00",
+      "lo": 1
+     },
+     {
+      "c": "data",
+      "t": "韓 3/4분기 실질 국내총생산(속보)",
+      "kw": [
+       "3/4분기 실질 국내총"
+      ],
+      "sub": "한국시간 08:00",
+      "imp": 3
+     },
+     {
+      "c": "ipo",
+      "lo": 1,
+      "t": "신규상장: SK증권스팩14호",
+      "kw": [
+       "SK증권스팩14호"
+      ]
+     },
+     {
+      "c": "earn",
       "t": "코카콜라·노바티스·보잉·S&P글로벌·코닝·HCA헬스케어 (장 전)",
       "tk": "KO,NVS,BA,SPGI,GLW,HCA",
       "when": "B"
@@ -205,6 +331,11 @@
       "c": "earn",
       "t": "HSBC (시간 미정)",
       "tk": "HSBC"
+     },
+     {
+      "c": "earn",
+      "lo": 1,
+      "t": "미국 실적 69곳: 프리포트맥모란(전)·존슨컨트롤즈(전)·UPS(전)·아메리칸타워(전)·셔윈윌리엄즈(전)·에코랩(전)·힐튼(전)·일리노이툴웍스(전)·로열캐리비안(전)·PACCAR(전)·Baker Hughes(후)·페이팔(전)·Teradyne(후)·IQVIA(전)·Ventas(후)·Centene(전)·Arch Capital(후)·EQT(후)·Extra Space(후)·CenterPoint Energy(전) 외 49곳"
      }
     ],
     "2026-10-28": [
@@ -253,14 +384,67 @@
      },
      {
       "c": "earn",
+      "lo": 1,
+      "t": "국내 실적 5곳: SKC·한미사이언스·두산퓨얼셀·OCI·PI첨단소재",
+      "kw": [
+       "SKC",
+       "한미사이언스",
+       "두산퓨얼셀",
+       "OCI",
+       "PI첨단소재"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 상품수지",
+      "sub": "한국시간 10/28 21:30",
+      "kw": [
+       "상품수지"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 도매재고",
+      "sub": "한국시간 10/28 21:30",
+      "kw": [
+       "도매재고"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 EIA 원유재고",
+      "sub": "한국시간 10/28 23:30",
+      "kw": [
+       "EIA 원유재고"
+      ]
+     },
+     {
+      "c": "data",
+      "t": "韓 8월 인구동향",
+      "kw": [
+       "8월 인구동향"
+      ],
+      "sub": "한국시간 12:00",
+      "lo": 1
+     },
+     {
+      "c": "earn",
       "t": "GE버노바·산탄데르·암페놀·UBS·ADP·필립스66 (장 전)",
       "tk": "GEV,SAN,APH,UBS,ADP,PSX",
       "when": "B"
      },
      {
       "c": "earn",
-      "t": "알파벳·마이크로소프트·KLA·T모바일·서비스나우·BBVA (장 마감 후)",
-      "tk": "GOOGL,MSFT,KLAC,TMUS,NOW,BBVA"
+      "t": "알파벳·마이크로소프트·KLA·서비스나우·T모바일·BBVA (장 마감 후)",
+      "tk": "GOOGL,MSFT,KLAC,NOW,TMUS,BBVA"
+     },
+     {
+      "c": "earn",
+      "lo": 1,
+      "t": "미국 실적 99곳: 포티넷(후)·GSK(전)·Equinix(후)·Agnico Eagle(후)·Canadian Pacific(후)·버티브(전)·O'Reilly Automotive(후)·페덱스(후)·American Electric(전)·Boston Scientific(전)·Aon(전)·Carvana(후)·TE Connectivity(전)·Garmin(전)·eBay(후)·Honeywell Aerospace(후)·United Microelectronics(전)·Ford Motor(후)·Fomento Economico(전)·Old Dominion(전) 외 79곳"
      }
     ],
     "2026-10-29": [
@@ -349,6 +533,75 @@
      },
      {
       "c": "earn",
+      "lo": 1,
+      "t": "국내 실적 9곳: SK이노베이션·삼성중공업·삼성에스디에스·한화솔루션·대한전선·두산밥캣·두산로보틱스·OCI홀딩스·보령",
+      "kw": [
+       "SK이노베이션",
+       "삼성중공업",
+       "삼성에스디에스",
+       "한화솔루션",
+       "대한전선",
+       "두산밥캣",
+       "두산로보틱스",
+       "OCI홀딩스",
+       "보령"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 개인소득",
+      "sub": "한국시간 10/29 21:30",
+      "kw": [
+       "개인소득"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 개인소비",
+      "sub": "한국시간 10/29 21:30",
+      "kw": [
+       "개인소비"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 천연가스 재고",
+      "sub": "한국시간 10/29 23:30",
+      "kw": [
+       "천연가스 재고"
+      ]
+     },
+     {
+      "c": "data",
+      "t": "韓 9월 금융기관 가중평균금리",
+      "kw": [
+       "9월 금융기관 가중평균"
+      ],
+      "sub": "한국시간 12:00",
+      "lo": 1
+     },
+     {
+      "c": "data",
+      "t": "韓 10월 기업경기조사 결과 및 경제심리지수(ESI)",
+      "kw": [
+       "10월 기업경기조사 결"
+      ],
+      "sub": "한국시간 06:00",
+      "lo": 1
+     },
+     {
+      "c": "ipo",
+      "lo": 1,
+      "t": "신규상장: 티앤이코리아",
+      "kw": [
+       "티앤이코리아"
+      ]
+     },
+     {
+      "c": "earn",
       "t": "일라이릴리·마스터카드·머크·캐터필러·셸·린데 (장 전)",
       "tk": "LLY,MA,MRK,CAT,SHEL,LIN",
       "when": "B"
@@ -357,6 +610,11 @@
       "c": "earn",
       "t": "아마존·인텔·길리어드·샌디스크·스트라이커·스타벅스 (장 마감 후)",
       "tk": "AMZN,INTC,GILD,SNDK,SYK,SBUX"
+     },
+     {
+      "c": "earn",
+      "lo": 1,
+      "t": "미국 실적 136곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ICE(전)·ASE Technology(전)·몬델리즈(후)·Lloyds Banking(전)·Quanta Services(전)·Enterprise Products(전)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Takeda Pharmaceutical(전)·Digital Realty(후)·스트래티지(후)·Cheniere Energy(전)·CRH PLC(전) 외 116곳"
      }
     ],
     "2026-10-30": [
@@ -410,9 +668,55 @@
      },
      {
       "c": "earn",
+      "lo": 1,
+      "t": "국내 실적 7곳: LG씨엔에스·키움증권·현대제철·GS건설·DL이앤씨·케이뱅크·SOOP",
+      "kw": [
+       "LG씨엔에스",
+       "키움증권",
+       "현대제철",
+       "GS건설",
+       "DL이앤씨",
+       "케이뱅크",
+       "SOOP"
+      ]
+     },
+     {
+      "c": "data",
+      "lo": 1,
+      "t": "美 시카고 PMI",
+      "sub": "한국시간 10/30 22:45",
+      "kw": [
+       "시카고 PMI"
+      ]
+     },
+     {
+      "c": "data",
+      "t": "韓 9월 산업활동동향",
+      "kw": [
+       "9월 산업활동동향"
+      ],
+      "sub": "한국시간 08:00"
+     },
+     {
+      "c": "ipo",
+      "lo": 1,
+      "t": "신규상장: 크리에이츠·인텔리빅스·한화플러스스팩6호",
+      "kw": [
+       "크리에이츠",
+       "인텔리빅스",
+       "한화플러스스팩6호"
+      ]
+     },
+     {
+      "c": "earn",
       "t": "엑슨모빌·애브비·셰브런·아스트라제네카·BP·사노피 (장 전)",
       "tk": "XOM,ABBV,CVX,AZN,BP,SNY",
       "when": "B"
+     },
+     {
+      "c": "earn",
+      "lo": 1,
+      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·콜게이트(전)·Canadian National(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·BrightSpring Health(전)·Cboe Global(전) 외 8곳"
      }
     ]
    }
