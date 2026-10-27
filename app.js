@@ -1179,8 +1179,10 @@ function syncPush(cb){ var code=_syncCode(); if(!code||!_SYNC_URL){cb&&cb(null);
 function syncApply(blob){ if(!blob||!blob.data)return 0; var n=0; _SYNC_KEYS.forEach(function(k){ if(blob.data[k]!=null){ try{localStorage.setItem(k,blob.data[k]);n++;}catch(e){} } }); return n; }
 function syncPull(code,cb){ code=code||_syncCode(); if(!code){cb&&cb(null);return;} fetch(_SYNC_URL+'?key='+encodeURIComponent(code)).then(function(r){return r.json();}).then(function(j){cb&&cb(j);}).catch(function(){cb&&cb(null);}); }
 function _newSyncCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; function seg(){var s='';for(var i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;} return 'VANTOR-'+seg()+'-'+seg()+'-'+seg(); }
-setInterval(function(){ if(!_syncCode())return; if(_syncHash(_syncCollect())!==_syncLast)syncPush(); },20000);
-window.addEventListener('beforeunload',function(){ var code=_syncCode(); if(!code)return; try{ var blob=_syncCollect(); if(_syncHash(blob)!==_syncLast&&navigator.sendBeacon){ navigator.sendBeacon(_SYNC_URL+'?key='+encodeURIComponent(code), new Blob([JSON.stringify(blob)],{type:'application/json'})); } }catch(e){} });
+setInterval(function(){ if(!_syncCode())return; if(_syncHash(_syncCollect())!==_syncLast)_huntSync(); },20000);
+/* 창을 다시 볼 때 Hoon 기록 받아와 합침 (PC 탭을 켜 둔 채 폰에서 진입한 경우) */
+document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&_syncCode())_huntSync(); });
+window.addEventListener('beforeunload',function(){ var code=_syncCode(); if(!code)return; try{ if(window._syncRemote)_huntMerge(window._syncRemote); var blob=_syncCollect(); if(_syncHash(blob)!==_syncLast&&navigator.sendBeacon){ navigator.sendBeacon(_SYNC_URL+'?key='+encodeURIComponent(code), new Blob([JSON.stringify(blob)],{type:'application/json'})); } }catch(e){} });
 window.openSync=function(){ var code=_syncCode(); var bg=document.createElement('div'); bg.className='modal-bg';
   var ts=''; try{var t=+localStorage.getItem('aurSyncTs');if(t)ts=new Date(t).toLocaleString('ko-KR');}catch(e){}
   var inCss='flex:1;font-family:monospace;font-size:14px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--ink);outline:none';
@@ -2763,7 +2765,7 @@ function _huntLogHTML(){ var L=_huntLogs().filter(function(r){ return !r.del&&!r
       var st=r.st==='wait'?'<span style="color:var(--gold)">진입 대기</span><br><small style="color:var(--faint)">$'+_huntFmt(r.e)+'</small>'
         :r.hit?'<b style="color:'+(_huntWin(r)?'#2ebd85':'#f6465d')+'">'+(r.hit==='CL'?(r.ck||'청산'):r.hit+' 도달')+'</b><br><small style="color:var(--faint)">'+T(r.hitAt)+'</small>':'<span style="color:var(--sub)">진행 중</span>';
       if((r.ed||[]).length)st+='<br><small style="color:var(--gold)" title="'+esc(r.ed.map(function(x){ return T(x.at)+' TP '+(x.tp0?_huntFmt(x.tp0):'—')+'→'+(x.tp?_huntFmt(x.tp):'—')+' · SL '+(x.sl0?_huntFmt(x.sl0):'—')+'→'+(x.sl?_huntFmt(x.sl):'—'); }).join('\n'))+'">TP/SL 수정 '+r.ed.length+'회</small>';
-      return '<tr><td>'+T(r.at)+'</td><td><b style="cursor:pointer" onclick="_huntPick(\''+r.s+'\')">'+esc(r.s)+'</b><br><small style="color:var(--faint)">'+(lg?'롱':'숏')+' '+_huntLev(r)+'x'+(wt!=null?' · '+(+wt.toFixed(2))+'%':'')+'</small></td>'
+      return '<tr><td>'+T(r.at)+'</td><td><b style="cursor:pointer" onclick="_huntPick(\''+r.s+'\')">'+esc(r.s)+'</b><br>'+_huntSideTag(r)+' <small style="font-weight:700;color:'+(lg?'#f6465d':'#2ebd85')+'">'+_huntLev(r)+'x'+(wt!=null?' · '+(+wt.toFixed(2))+'%':'')+'</small></td>'
         +'<td>'+(r.p0?'$'+_huntFmt(r.p0)+(nf>1?'<br><small style="color:var(--gold)">물타기 '+(nf-1)+'회</small>':''):'—')+'</td>'
         +'<td><span style="color:#2ebd85">'+(r.tp?_huntFmt(r.tp):'—')+'</span><br><span style="color:#f6465d">'+(r.sl?_huntFmt(r.sl):'—')+'</span></td><td>1 : '+rr+'</td>'
         +'<td>'+_huntP3(v,r,1)+'</td><td>'+st+'</td><td><span style="cursor:pointer;color:var(--faint)" title="이 기록 지우기" onclick="_huntLogDel(\''+r.s+'\','+r.at+')">✕</span></td></tr>'; }).join('')+'</table></div>'; }
@@ -2797,12 +2799,13 @@ function _huntHookBox(){ var h=_huntHook(), own=(function(){ try{ return localSt
     +'<div style="font-size:11px;color:var(--faint);margin-top:4px">디스코드 채널 설정 → 연동 → 웹후크에서 주소 복사. 이 기기(와 같은 동기화 코드 기기)에만 저장되고 사이트 코드엔 안 들어가요.</div></details>'; }
 function _huntWR(){ var L=_huntLogs().filter(function(x){ return !x.del&&_huntDone(x); }), w=L.filter(_huntWin).length; return L.length?(w/L.length*100).toFixed(1)+'% ('+w+'승 '+(L.length-w)+'패)':'아직 결과 없음'; }
 function _huntF(v){ return v==null?'—':(v>=0?'+':'')+v.toFixed(2)+'%'; }
+function _huntSideTag(r){ var lg=r.side!=='short'; return '<b style="display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;font-weight:800;color:#fff;background:'+(lg?'#f6465d':'#2ebd85')+'">'+(lg?'롱':'숏')+'</b>'; }
 function _huntPosTxt(r){ var wt=_huntWt(r); return _huntLev(r)+'x'+(wt!=null?' · 비중 '+(+wt.toFixed(2))+'%':''); }
 /* 이 결과가 계좌에 주는 영향 한 줄: 가격% → 레버리지 → 계좌 */
 function _huntImpact(v,r){ if(v==null)return '—'; var a=_huntAcct(v,r); return _huntF(v)+(_huntLev(r)>1?' → '+_huntF(_huntROE(v,r))+' ('+_huntLev(r)+'x)':'')+(a!=null?' → 계좌 '+_huntF(a):''); }
 function _huntNotify(r){ if(!_huntHook())return; var lg=r.side!=='short', base=r.p0||r.e, wait=r.st==='wait', tmp={side:r.side,p0:base,lev:r.lev,w:r.w};
   var rr=(r.tp&&r.sl&&base)?(Math.abs(r.tp-base)/Math.abs(base-r.sl)).toFixed(2):'—';
-  _huntSend({embeds:[{title:'🎯 Hoon TP/SL '+(wait?'지정가 대기':'진입')+' — '+r.s+' '+(lg?'롱':'숏'),color:lg?0x2ebd85:0xf6465d,
+  _huntSend({embeds:[{title:'🎯 Hoon TP/SL '+(wait?'지정가 대기':'진입')+' — '+r.s+' '+(lg?'롱':'숏'),color:lg?0xf6465d:0x2ebd85,
     fields:[{name:wait?'진입 지정가 (대기)':'진입가',value:'$'+_huntFmt(base),inline:true},{name:'레버리지·비중',value:_huntPosTxt(r),inline:true},{name:'손익비',value:'1 : '+rr,inline:true},
       {name:'TP',value:r.tp?'$'+_huntFmt(r.tp)+'\n'+_huntImpact(_huntPct(tmp,r.tp),tmp):'—',inline:true},{name:'SL',value:r.sl?'$'+_huntFmt(r.sl)+'\n'+_huntImpact(_huntPct(tmp,r.sl),tmp):'—',inline:true},
       {name:'지금까지 승률',value:_huntWR(),inline:true}],
@@ -2843,7 +2846,7 @@ function _huntMerge(remote){ if(!remote||!remote.data)return false; var ch=false
 var _huntSyncT=null;
 function _huntSyncSoon(){ if(!_syncCode())return; clearTimeout(_huntSyncT); _huntSyncT=setTimeout(function(){ _huntSync(); },1500); }
 function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb(); return; }
-  syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); } syncPush(); cb&&cb(); }); }
+  syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; if(!blob&&j&&j.ok&&!j.found)blob={data:{}}; if(!blob){ cb&&cb(); return; } window._syncRemote=blob; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); _huntPosRender(); _huntChartLines(); } syncPush(); cb&&cb(); }); }
 function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
 async function renderHunt(el){
   el.innerHTML='<div class="sec-title">🎯 Hoon TP/SL</div><p class="sec-sub">코인을 누르고 롱/숏·<b>진입가</b>(비우면 현재가)·<b>레버리지</b>·<b>비중</b>·<b>TP</b>·<b>SL</b>을 넣어 제출하세요. 진행 중 포지션은 <b>익절·약손절·물타기</b> 버튼으로 관리하고, 수익률은 가격%·레버리지 수익률·계좌%로 보여줘요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
@@ -2864,7 +2867,7 @@ function _huntList(){ var el=$('#huntList'); if(!el||!_HUNT.list)return; var q=(
   if(!q){ var top=arr.filter(function(x){ return act[x.s]||fav.indexOf(x.s)>=0; }); arr=top.concat(arr.filter(function(x){ return top.indexOf(x)<0; }).slice(0,40)); } else arr=arr.slice(0,40);
   el.innerHTML=arr.length?arr.map(function(x){ var d=act[x.s];
     return '<div class="rowbtn" onclick="_huntPick(\''+x.s+'\')" style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line2);cursor:pointer'+(_HUNT.sel===x.s?';background:var(--panel2)':'')+'"><b style="min-width:70px">'+esc(x.s)+'</b>'
-      +(d?'<span style="font-size:11px;color:var(--sub)">'+(d.st==='wait'?'<b style="color:var(--gold)">대기</b> ':'')+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+'</span>':'')
+      +(d?'<span style="font-size:11px;color:var(--sub)">'+_huntSideTag(d)+' '+(d.st==='wait'?'<b style="color:var(--gold)">대기</b> ':'')+(d.tp?'TP '+_huntFmt(d.tp):'')+(d.tp&&d.sl?' · ':'')+(d.sl?'SL '+_huntFmt(d.sl):'')+'</span>':'')
       +'<span style="margin-left:auto;font-variant-numeric:tabular-nums">$<span data-hp="'+x.s+'">'+_huntFmt(_HUNT.px[x.s])+'</span></span><span style="width:64px;text-align:right;font-size:12px;font-weight:700;color:'+cCol(x.c)+'">'+(x.c>=0?'+':'')+x.c.toFixed(2)+'%</span></div>'; }).join('')
     :'<div class="muted" style="font-size:12px">찾는 코인이 없어요</div>'; }
 /* 입력 (2026-10-20 사용자: 코인 진입 화면처럼 한 화면에서, 10/21 레버리지·비중·진입가 추가) — 방향 [롱|숏] + 진입가 + 레버리지·비중 + TP·SL 가격/% 칸.
@@ -2877,7 +2880,7 @@ function _huntPctOf(k,p,px){ return p&&px?+((p/px-1)*100*_huntSgn(k)).toFixed(2)
 function _huntPxOf(k,c,px){ return c!==''&&c!=null&&isFinite(+c)&&px?_huntR(px*(1+_huntSgn(k)*(+c)/100)):null; }
 function _huntEntryIn(){ return +(($('#huntE')||{}).value)||0; }
 function _huntBase(){ return _huntEntryIn()||_HUNT.px[_HUNT.sel]; }
-window._huntSide=function(sd){ _HUNT.side=sd; $$('.hs-side button').forEach(function(b){ var on=b.dataset.sd===sd; b.classList.toggle('on',on); b.style.background=on?(sd==='long'?'#2ebd85':'#f6465d'):'transparent'; b.style.color=on?'#fff':'var(--sub)'; });
+window._huntSide=function(sd){ _HUNT.side=sd; $$('.hs-side button').forEach(function(b){ var on=b.dataset.sd===sd; b.classList.toggle('on',on); b.style.background=on?(sd==='long'?'#f6465d':'#2ebd85'):'transparent'; b.style.color=on?'#fff':'var(--sub)'; });
   ['tp','sl'].forEach(function(k){ _huntSync1(k); }); _huntCalc(); };
 /* k 의 짝 칸을 맞춘다 — src 가 px 면 % 를, pct 면 가격을 다시 쓴다 */
 function _huntSync1(k){ var px=_huntBase(), P=$('#hunt'+(k==='tp'?'Tp':'Sl')), C=$('#hunt'+(k==='tp'?'Tp':'Sl')+'C'); if(!P||!C||!px)return;
@@ -2901,7 +2904,7 @@ function _huntPick(sym){ _HUNT.sel=sym; var el=$('#huntSel'); if(!el)return; var
     return '<div style="margin-top:8px">'+lab(t,col)+'<div style="display:grid;grid-template-columns:1fr 92px;gap:6px">'
       +'<div style="position:relative"><input id="'+id+'" type="number" step="any" inputmode="decimal" value="'+(v||'')+'" placeholder="가격" oninput="_huntIn(\''+k+'\',\'px\')" style="'+box+';padding-left:20px"><span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">$</span></div>'
       +'<div style="position:relative"><input id="'+id+'C" type="number" step="any" inputmode="decimal" value="'+(v?_huntPctOf(k,v,px):'')+'" placeholder="%" oninput="_huntIn(\''+k+'\',\'pct\')" style="'+box+';padding-right:22px;text-align:right"><span style="position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--faint)">%</span></div></div></div>'; };
-  var sideBtn=function(sd,t){ var on=sd===_HUNT.side; return '<button data-sd="'+sd+'" class="'+(on?'on':'')+'" onclick="_huntSide(\''+sd+'\')" style="flex:1;border:none;padding:8px 0;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:'+(on?(sd==='long'?'#2ebd85':'#f6465d'):'transparent')+';color:'+(on?'#fff':'var(--sub)')+'">'+t+'</button>'; };
+  var sideBtn=function(sd,t){ var on=sd===_HUNT.side; return '<button data-sd="'+sd+'" class="'+(on?'on':'')+'" onclick="_huntSide(\''+sd+'\')" style="flex:1;border:none;padding:8px 0;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;background:'+(on?(sd==='long'?'#f6465d':'#2ebd85'):'transparent')+';color:'+(on?'#fff':'var(--sub)')+'">'+t+'</button>'; };
   var chip=function(cls,fn,v,t,on){ return '<button class="tf'+(on?' on':'')+'" data-v="'+v+'" onclick="'+fn+'(\''+v+'\')" style="padding:4px 8px;font-size:12px">'+t+'</button>'; };
   var levs=[1,3,5,10,20,25,50].map(function(v){ return chip('',"_huntLevSet",v,v+'x',v===_HUNT.lev); }).join('');
   var ws=['5','10','20','30','50'].map(function(v){ return chip('',"_huntWSet",v,v+'%',v===_HUNT.w); }).join('');
@@ -2946,7 +2949,7 @@ function _huntPosRender(){ var el=$('#huntPos'); if(!el||!_HUNT.sel)return; var 
   var box='padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--ink);font:inherit;font-size:14px;font-variant-numeric:tabular-nums;width:100%;min-width:0';
   el.innerHTML='<div style="font-weight:800;font-size:13px;margin-top:14px">📌 진행 중 ('+A.length+')</div>'+A.map(function(r){ var id=r.at, lg=r.side!=='short', wait=r.st==='wait', v=wait?null:_huntPct(r,px), open=_HUNT.addOpen===id;
     return '<div style="border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-top:6px">'
-      +'<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:12.5px"><b style="color:'+(lg?'#2ebd85':'#f6465d')+'">'+(lg?'롱':'숏')+' '+_huntPosTxt(r)+'</b>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:12.5px">'+_huntSideTag(r)+'<b style="color:'+(lg?'#f6465d':'#2ebd85')+'">'+_huntPosTxt(r)+'</b>'
         +(wait?'<span style="color:var(--gold)">진입 대기 $'+_huntFmt(r.e)+'</span>':'<span>평단 <b>$'+_huntFmt(r.p0)+'</b>'+((r.f||[]).length>1?' <small style="color:var(--gold)">물타기 '+(r.f.length-1)+'회</small>':'')+'</span>')
         +'<span style="color:var(--faint)">TP '+(r.tp?_huntFmt(r.tp):'—')+' · SL '+(r.sl?_huntFmt(r.sl):'—')+'</span>'
         +(wait?'':'<span style="margin-left:auto" data-hpos="'+id+'">'+_huntImpact(v,r)+'</span>')+'</div>'
