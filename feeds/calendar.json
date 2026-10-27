@@ -188,7 +188,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 18곳: The Hartford(후)·Celestica(후)·Cincinnati Financial(후)·Brown &(후)·Principal Financial(후)·POSCO HOLDINGS·Cemex S.A.B.(전)·Sun Communities(후)·Summit Therapeutics·BioMarin Pharmaceutical·Gerdau(후)·Amkor Technology(후)·Rambus(후)·Brixmor Property(후)·Simpson Manufacturing(후)·Alexandria Real(후)·Noble(후)·PriceSmart(후)"
+      "t": "미국 실적 18곳: The Hartford(후)·Celestica(후)·Cincinnati Financial(후)·Brown &(후)·Principal Financial(후)·POSCO HOLDINGS·Cemex S.A.B.(전)·Sun Communities(후)·Summit Therapeutics·BioMarin Pharmaceutical·Gerdau(후)·Amkor Technology(후)·Rambus(후)·Brixmor Property(후)·Noble(후)·Simpson Manufacturing(후)·Alexandria Real(후)·PriceSmart(후)"
      }
     ],
     "2026-10-27": [
@@ -324,8 +324,8 @@
      },
      {
       "c": "earn",
-      "t": "비자·씨게이트·웨이스트매니지먼트·로빈후드·NXP·원오크 (장 마감 후)",
-      "tk": "V,STX,WM,HOOD,NXPI,OKE"
+      "t": "비자·씨게이트·웨이스트매니지먼트·로빈후드·원오크·NXP (장 마감 후)",
+      "tk": "V,STX,WM,HOOD,OKE,NXPI"
      },
      {
       "c": "earn",
@@ -335,7 +335,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 69곳: 프리포트맥모란(전)·존슨컨트롤즈(전)·UPS(전)·아메리칸타워(전)·셔윈윌리엄즈(전)·에코랩(전)·힐튼(전)·일리노이툴웍스(전)·로열캐리비안(전)·PACCAR(전)·Baker Hughes(후)·페이팔(전)·Teradyne(후)·IQVIA(전)·Ventas(후)·Centene(전)·Arch Capital(후)·EQT(후)·Extra Space(후)·CenterPoint Energy(전) 외 49곳"
+      "t": "미국 실적 69곳: 프리포트맥모란(전)·아메리칸타워(전)·존슨컨트롤즈(전)·UPS(전)·셔윈윌리엄즈(전)·에코랩(전)·힐튼(전)·일리노이툴웍스(전)·로열캐리비안(전)·PACCAR(전)·Baker Hughes(후)·페이팔(전)·Teradyne(후)·IQVIA(전)·Ventas(후)·EQT(후)·Arch Capital(후)·Centene(전)·Extra Space(후)·CenterPoint Energy(전) 외 49곳"
      }
     ],
     "2026-10-28": [
@@ -614,7 +614,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 136곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ICE(전)·ASE Technology(전)·몬델리즈(후)·Lloyds Banking(전)·Quanta Services(전)·Enterprise Products(전)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Takeda Pharmaceutical(전)·Digital Realty(후)·스트래티지(후)·Cheniere Energy(전)·CRH PLC(전) 외 116곳"
+      "t": "미국 실적 134곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ICE(전)·ASE Technology(전)·몬델리즈(후)·Quanta Services(전)·Enterprise Products(전)·Lloyds Banking(전)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Takeda Pharmaceutical(전)·Digital Realty(후)·Cheniere Energy(전)·스트래티지(후)·CRH PLC(전) 외 114곳"
      }
     ],
     "2026-10-30": [
@@ -716,7 +716,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·콜게이트(전)·Canadian National(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·BrightSpring Health(전)·Cboe Global(전) 외 8곳"
+      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·콜게이트(전)·Canadian National(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·Banco Santander(전)·RBC Bearings(전)·BrightSpring Health(전)·Cboe Global(전) 외 8곳"
      }
     ]
    }
