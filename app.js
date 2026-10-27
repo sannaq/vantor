@@ -1172,14 +1172,30 @@ function _setHolding(key,avg,qty){ if(!key||!(avg>0))return; try{ var m=_holding
 window._getHolding=_getHolding; window._setHolding=_setHolding;
 function _syncCode(){ try{return localStorage.getItem('aurSyncCode')||'';}catch(e){return '';} }
 function _syncCollect(){ var d={}; _SYNC_KEYS.forEach(function(k){ try{ var v=localStorage.getItem(k); if(v!=null)d[k]=v; }catch(e){} });
-  /* 동기화 서버 상한 300KB (10/27 확인) — 넘으면 서버가 통째로 거부해 Hoon 기록까지 못 올라갔다. Hoon 외 큰 항목부터 뺀다 */
-  var MAX=280000, size=JSON.stringify(d).length, drop=[];
-  if(size>MAX){ Object.keys(d).filter(function(k){ return !/^hunt/.test(k); }).sort(function(a,b){ return d[b].length-d[a].length; }).forEach(function(k){ if(size>MAX){ size-=d[k].length+k.length+6; drop.push(k); delete d[k]; } }); }
-  window._syncDrop=drop; return {ver:1,ts:Date.now(),data:d}; }
+  /* 동기화 서버 상한 300KB (10/27 확인) — 넘으면 서버가 통째로 거부해 Hoon 기록까지 못 올라갔다.
+     Hoon 외 큰 항목부터 본 묶음에서 빼서 '<코드>-X0', '-X1'… 조각 묶음으로 따로 올린다 (사용자 '나'). 한 항목이 커도 글자 단위로 쪼갠다 */
+  var MAX=280000, size=JSON.stringify(d).length, drop=[], parts=[], cur=[], cs=0;
+  if(size>MAX){ Object.keys(d).filter(function(k){ return !/^hunt/.test(k); }).sort(function(a,b){ return d[b].length-d[a].length; }).forEach(function(k){ if(size>MAX){ size-=d[k].length+k.length+6; drop.push(k); } }); }
+  drop.forEach(function(k){ var v=d[k], n=Math.max(1,Math.ceil(v.length/MAX)); delete d[k];
+    for(var i=0;i<n;i++){ var piece=v.slice(i*MAX,(i+1)*MAX); if(cs+piece.length>MAX&&cur.length){ parts.push(cur); cur=[]; cs=0; } cur.push([k,i,n,piece]); cs+=piece.length+k.length+20; } });
+  if(cur.length)parts.push(cur);
+  if(parts.length){ d._x=parts.length; d._xh=parts.map(_syncSum).join('.'); }
+  window._syncDrop=drop; window._syncParts=parts; return {ver:1,ts:Date.now(),data:d}; }
+function _syncSum(o){ var t=JSON.stringify(o), h=5381; for(var i=0;i<t.length;i+=7)h=((h<<5)+h+t.charCodeAt(i))|0; return (h>>>0).toString(36)+t.length.toString(36); }
+var _syncXLast={};
+/* 조각 묶음 올리기 — 바뀐 조각만 (쓰기 횟수 아끼기) */
+function _syncPushParts(code,parts,cb){ var i=0, fail=null;
+  (function next(){ if(i>=parts.length){ cb&&cb(fail); return; } var k=i++, h=_syncSum(parts[k]); if(_syncXLast[code+k]===h){ next(); return; }
+    fetch(_SYNC_URL+'?key='+encodeURIComponent(code+'-X'+k),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ver:1,ts:Date.now(),parts:parts[k]})}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok)_syncXLast[code+k]=h; else fail=(j&&j.error)||'조각 저장 실패'; next(); }).catch(function(){ fail='조각 연결 실패'; next(); }); })(); }
+/* 본 묶음 + 조각 묶음을 받아 한 덩어리(data)로 합친다 — 불러오기용 */
+function syncPullAll(code,cb){ syncPull(code,function(j){ if(!(j&&j.ok&&j.found&&j.data&&j.data.data)){ cb&&cb(j); return; } var d=j.data.data, n=+d._x||0, got=0, buf={}, bad=false; if(!n){ cb&&cb(j); return; }
+  for(var k=0;k<n;k++)(function(k){ fetch(_SYNC_URL+'?key='+encodeURIComponent(code+'-X'+k)).then(function(r){return r.json();}).then(function(x){ var P=(x&&x.ok&&x.found&&x.data&&x.data.parts)||null; if(!P)bad=true; else P.forEach(function(q){ (buf[q[0]]=buf[q[0]]||{n:q[2],p:[]}).p[q[1]]=q[3]; }); }).catch(function(){ bad=true; }).then(function(){ if(++got<n)return;
+    Object.keys(buf).forEach(function(key){ var b=buf[key], ok=true; for(var i=0;i<b.n;i++)if(b.p[i]==null)ok=false; if(ok)d[key]=b.p.join(''); });
+    j.partsBad=bad; cb&&cb(j); }); })(k); }); }
 function _syncHash(b){ try{return JSON.stringify(b.data);}catch(e){return '';} }
 var _syncLast='';
-function syncPush(cb){ var code=_syncCode(); if(!code||!_SYNC_URL){cb&&cb(null);return;} var blob=_syncCollect(); _syncLast=_syncHash(blob);
-  fetch(_SYNC_URL+'?key='+encodeURIComponent(code),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(blob)}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){try{localStorage.setItem('aurSyncTs',String(j.ts||Date.now()));localStorage.removeItem('aurSyncErr');}catch(e){}} else { _syncLast=''; try{localStorage.setItem('aurSyncErr',(j&&j.error)||'응답 없음');}catch(e){} } _huntSyncInfo(); cb&&cb(j); }).catch(function(){ _syncLast=''; try{localStorage.setItem('aurSyncErr','연결 실패');}catch(e){} _huntSyncInfo(); cb&&cb(null); }); }
+function syncPush(cb){ var code=_syncCode(); if(!code||!_SYNC_URL){cb&&cb(null);return;} var blob=_syncCollect(), parts=window._syncParts||[]; _syncLast=_syncHash(blob);
+  fetch(_SYNC_URL+'?key='+encodeURIComponent(code),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(blob)}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){try{localStorage.setItem('aurSyncTs',String(j.ts||Date.now()));localStorage.removeItem('aurSyncErr');}catch(e){} if(parts.length){ _syncPushParts(code,parts,function(f){ if(f){ _syncLast=''; try{localStorage.setItem('aurSyncErr',f);}catch(e){} } _huntSyncInfo(); }); } } else { _syncLast=''; try{localStorage.setItem('aurSyncErr',(j&&j.error)||'응답 없음');}catch(e){} } _huntSyncInfo(); cb&&cb(j); }).catch(function(){ _syncLast=''; try{localStorage.setItem('aurSyncErr','연결 실패');}catch(e){} _huntSyncInfo(); cb&&cb(null); }); }
 function syncApply(blob){ if(!blob||!blob.data)return 0; var n=0; _SYNC_KEYS.forEach(function(k){ if(blob.data[k]!=null){ try{localStorage.setItem(k,blob.data[k]);n++;}catch(e){} } }); return n; }
 function syncPull(code,cb){ code=code||_syncCode(); if(!code){cb&&cb(null);return;} fetch(_SYNC_URL+'?key='+encodeURIComponent(code)).then(function(r){return r.json();}).then(function(j){cb&&cb(j);}).catch(function(){cb&&cb(null);}); }
 function _newSyncCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; function seg(){var s='';for(var i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;} return 'VANTOR-'+seg()+'-'+seg()+'-'+seg(); }
@@ -1207,7 +1223,7 @@ window.openSync=function(){ var code=_syncCode(); var bg=document.createElement(
   var msg=Q('#syMsg'); function say(t,c){msg.innerHTML=t;msg.style.color=c||'var(--faint)';}
   var cp=Q('#syCopy'); if(cp)cp.onclick=function(){ try{navigator.clipboard.writeText(code);say('복사됐어요 ✓','var(--up)');}catch(e){var i=Q('#syCode');i.select();try{document.execCommand('copy');}catch(_){}say('복사됨');} };
   var nw=Q('#syNew'); if(nw)nw.onclick=function(){ var c=_newSyncCode(); try{localStorage.setItem('aurSyncCode',c);}catch(e){} say('코드 생성 · 업로드 중…'); syncPush(function(j){ if(j&&j.ok){ close(); openSync(); } else say('업로드 실패 — 잠시 후 다시','var(--down)'); }); };
-  var ld=Q('#syLoad'); if(ld)ld.onclick=function(){ var c=(Q('#syIn').value||'').trim().toUpperCase(); if(!/^[A-Z0-9-]{8,64}$/.test(c)){say('코드 형식을 확인하세요','var(--down)');return;} say(c+' 불러오는 중…'); syncPull(c,function(j){ if(j&&j.ok&&j.found&&j.data){ var loc=_syncCollect(); var n=syncApply(j.data); try{localStorage.setItem('aurSyncCode',c);}catch(e){} _huntMerge(loc); say(n+'개 항목 불러옴 · 새로고침…','var(--up)'); syncPush(function(){ setTimeout(function(){location.reload();},300); }); } else if(j&&j.ok&&!j.found){ say('그 코드에 저장된 데이터가 없어요','var(--down)'); } else { say('불러오기 실패 — 코드를 확인하세요','var(--down)'); } }); };
+  var ld=Q('#syLoad'); if(ld)ld.onclick=function(){ var c=(Q('#syIn').value||'').trim().toUpperCase(); if(!/^[A-Z0-9-]{8,64}$/.test(c)){say('코드 형식을 확인하세요','var(--down)');return;} say(c+' 불러오는 중…'); syncPullAll(c,function(j){ if(j&&j.ok&&j.found&&j.data){ var loc=_syncCollect(); var n=syncApply(j.data); try{localStorage.setItem('aurSyncCode',c);}catch(e){} _huntMerge(loc); say(n+'개 항목 불러옴 · 새로고침…','var(--up)'); syncPush(function(){ setTimeout(function(){location.reload();},300); }); } else if(j&&j.ok&&!j.found){ say('그 코드에 저장된 데이터가 없어요','var(--down)'); } else { say('불러오기 실패 — 코드를 확인하세요','var(--down)'); } }); };
 };
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
@@ -2852,7 +2868,7 @@ var _huntSyncT=null, _huntSI={};
 function _huntSyncInfo(){ var el=$('#huntSyncSt'); if(!el)return; var c=_syncCode(), err='', T=function(t){ return t?new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—'; }; try{ err=localStorage.getItem('aurSyncErr')||''; }catch(e){}
   el.innerHTML='☁️ 동기화 중 (…'+esc(c.slice(-4))+') · 받기 '+T(_huntSI.at)+(_huntSI.rn!=null?' · 서버 '+_huntSI.rn+'건 / 이 기기 '+_huntLogs().length+'건':'')
     +(err?' · <b style="color:#f6465d">올리기 실패: '+esc(err)+'</b>':'')+(_huntSI.pullErr?' · <b style="color:#f6465d">받기 실패</b>':'')
-    +((window._syncDrop||[]).length?' · <span style="color:var(--gold)">용량 초과로 '+window._syncDrop.length+'개 설정 제외</span>':''); }
+    +((window._syncParts||[]).length?' · <span style="color:var(--faint)">큰 설정 '+window._syncDrop.length+'개는 '+window._syncParts.length+'조각으로 나눠 올림</span>':''); }
 function _huntSyncSoon(){ if(!_syncCode())return; clearTimeout(_huntSyncT); _huntSyncT=setTimeout(function(){ _huntSync(); },1500); }
 function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb(); return; }
   syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; if(!blob&&j&&j.ok&&!j.found)blob={data:{}}; _huntSI.pullErr=!blob; if(!blob){ _huntSyncInfo(); cb&&cb(); return; } _huntSI.at=Date.now(); try{ var rt=_huntResetAt(); _huntSI.rn=JSON.parse((blob.data||{}).huntLog||'[]').filter(function(r){ return r&&r.at>=rt; }).length; }catch(e){ _huntSI.rn=0; } window._syncRemote=blob; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); _huntPosRender(); _huntChartLines(); } syncPush(); cb&&cb(); }); }
