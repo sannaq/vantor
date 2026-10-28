@@ -1,11 +1,11 @@
 {
   "week": "2026년 10월 5주차",
   "range": "10/26~10/30",
-  "updated": "2026-10-26",
+  "updated": "2026-10-28",
   "intro": "이번 주 핵심: **FOMC 금리 결정**, **연준 의장 기자회견**, **GDP 성장률** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-10-27", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 80.5 · 직전 81.9)", "src": "ff:CB Consumer Confidence"},
+    {"date": "2026-10-27", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 80.5 · 직전 81.9)", "src": "ff:CB Consumer Confidence", "rx": {"day": "2026-10-27", "mk": "US", "items": [["S&P500", 0.6, "pct"], ["나스닥", 1.18, "pct"], ["미 10년물", 1, "bp"], ["달러지수", 0.37, "pct"]]}},
     {"date": "2026-10-29", "time": "03:00", "market": "US", "type": "policy", "imp": 3, "title": "FOMC 금리 결정", "note": "금리 결정과 성명 문구. 주 최대 이벤트. (예상 4.00% · 직전 4.00%)", "src": "ff:Federal Funds Rate"},
     {"date": "2026-10-29", "time": "03:30", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 기자회견", "note": "향후 경로 힌트.", "src": "ff:FOMC Press Conference"},
     {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 전체 성적표. (예상 3.2% · 직전 1.5%)", "src": "ff:Advance GDP q/q", "fc": {"Advance GDP q/q": "3.2%"}},

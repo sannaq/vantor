@@ -145,27 +145,11 @@
     "FOMC 금리 결정",
     "연준 의장 기자회견",
     "GDP 성장률",
-    "빅테크 실적 (알파벳·마이크로소프트·아마존·일라이릴리)",
+    "빅테크 실적 (마이크로소프트·알파벳·아마존·일라이릴리)",
     "국내 실적 (삼성전자·SK하이닉스·삼성전기·현대차)"
    ],
    "days": {
     "2026-10-26": [
-     {
-      "c": "earn",
-      "t": "HD현대마린솔루션 (국내)",
-      "kw": [
-       "HD현대마린솔루션"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 2곳: HD건설기계·BNK금융지주",
-      "kw": [
-       "HD건설기계",
-       "BNK금융지주"
-      ]
-     },
      {
       "c": "ipo",
       "lo": 1,
@@ -176,19 +160,13 @@
      },
      {
       "c": "earn",
-      "t": "버라이즌 (장 전)",
-      "tk": "VZ",
-      "when": "B"
-     },
-     {
-      "c": "earn",
-      "t": "웰타워·케이던스·뉴코어·퍼블릭스토리지 (장 마감 후)",
-      "tk": "WELL,CDNS,NUE,PSA"
+      "t": "버라이즌·웰타워 (시간 미정)",
+      "tk": "VZ,WELL"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 18곳: The Hartford(후)·Celestica(후)·Cincinnati Financial(후)·Brown &(후)·Principal Financial(후)·POSCO HOLDINGS·Cemex S.A.B.(전)·Sun Communities(후)·Summit Therapeutics·BioMarin Pharmaceutical·Gerdau(후)·Amkor Technology(후)·Rambus(후)·Brixmor Property(후)·Noble(후)·Simpson Manufacturing(후)·Alexandria Real(후)·PriceSmart(후)"
+      "t": "미국 실적 20곳: 케이던스·뉴코어·퍼블릭스토리지·The Hartford·Celestica·Cincinnati Financial·Brown &·Principal Financial·POSCO HOLDINGS·Cemex S.A.B.·Sun Communities·Rambus·Gerdau·Amkor Technology·Brixmor Property·Noble·Alexandria Real·Simpson Manufacturing·Coca Cola·PriceSmart"
      }
     ],
     "2026-10-27": [
@@ -324,8 +302,8 @@
      },
      {
       "c": "earn",
-      "t": "비자·씨게이트·웨이스트매니지먼트·로빈후드·원오크·NXP (장 마감 후)",
-      "tk": "V,STX,WM,HOOD,OKE,NXPI"
+      "t": "비자·씨게이트·웨이스트매니지먼트·로빈후드·NXP·원오크 (장 마감 후)",
+      "tk": "V,STX,WM,HOOD,NXPI,OKE"
      },
      {
       "c": "earn",
@@ -335,7 +313,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 69곳: 프리포트맥모란(전)·아메리칸타워(전)·존슨컨트롤즈(전)·UPS(전)·셔윈윌리엄즈(전)·에코랩(전)·힐튼(전)·일리노이툴웍스(전)·로열캐리비안(전)·PACCAR(전)·Baker Hughes(후)·페이팔(전)·Teradyne(후)·IQVIA(전)·Ventas(후)·EQT(후)·Arch Capital(후)·Centene(전)·Extra Space(후)·CenterPoint Energy(전) 외 49곳"
+      "t": "미국 실적 66곳: 프리포트맥모란(전)·존슨컨트롤즈(전)·아메리칸타워(전)·UPS(전)·셔윈윌리엄즈(전)·에코랩(전)·힐튼(전)·일리노이툴웍스(전)·로열캐리비안(전)·Baker Hughes(후)·PACCAR(전)·Teradyne(후)·페이팔(전)·IQVIA(전)·Ventas(후)·Arch Capital(후)·EQT(후)·Centene(전)·Extra Space(후)·CenterPoint Energy(전) 외 46곳"
      }
     ],
     "2026-10-28": [
@@ -385,9 +363,10 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 5곳: SKC·한미사이언스·두산퓨얼셀·OCI·PI첨단소재",
+      "t": "국내 실적 6곳: SKC·유한양행·한미사이언스·두산퓨얼셀·OCI·PI첨단소재",
       "kw": [
        "SKC",
+       "유한양행",
        "한미사이언스",
        "두산퓨얼셀",
        "OCI",
@@ -438,13 +417,13 @@
      },
      {
       "c": "earn",
-      "t": "알파벳·마이크로소프트·KLA·서비스나우·T모바일·BBVA (장 마감 후)",
-      "tk": "GOOGL,MSFT,KLAC,NOW,TMUS,BBVA"
+      "t": "마이크로소프트·알파벳·KLA·서비스나우·T모바일·BBVA (장 마감 후)",
+      "tk": "MSFT,GOOGL,KLAC,NOW,TMUS,BBVA"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 99곳: 포티넷(후)·GSK(전)·Equinix(후)·Agnico Eagle(후)·Canadian Pacific(후)·버티브(전)·O'Reilly Automotive(후)·페덱스(후)·American Electric(전)·Boston Scientific(전)·Aon(전)·Carvana(후)·TE Connectivity(전)·Garmin(전)·eBay(후)·Honeywell Aerospace(후)·United Microelectronics(전)·Ford Motor(후)·Fomento Economico(전)·Old Dominion(전) 외 79곳"
+      "t": "미국 실적 101곳: 포티넷(후)·GSK(전)·Equinix(후)·Agnico Eagle(후)·Canadian Pacific(후)·버티브(전)·O'Reilly Automotive(후)·페덱스(후)·American Electric(전)·Boston Scientific(전)·Aon(전)·Carvana(후)·TE Connectivity(전)·Garmin(전)·Honeywell Aerospace(후)·eBay(후)·United Microelectronics(전)·Ford Motor(후)·Fomento Economico(전)·Old Dominion(전) 외 81곳"
      }
     ],
     "2026-10-29": [
@@ -534,7 +513,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 9곳: SK이노베이션·삼성중공업·삼성에스디에스·한화솔루션·대한전선·두산밥캣·두산로보틱스·OCI홀딩스·보령",
+      "t": "국내 실적 10곳: SK이노베이션·삼성중공업·삼성에스디에스·한화솔루션·대한전선·두산밥캣·두산로보틱스·OCI홀딩스·금호타이어·보령",
       "kw": [
        "SK이노베이션",
        "삼성중공업",
@@ -544,6 +523,7 @@
        "두산밥캣",
        "두산로보틱스",
        "OCI홀딩스",
+       "금호타이어",
        "보령"
       ]
      },
@@ -614,7 +594,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 134곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ICE(전)·ASE Technology(전)·몬델리즈(후)·Quanta Services(전)·Enterprise Products(전)·Lloyds Banking(전)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Takeda Pharmaceutical(전)·Digital Realty(후)·Cheniere Energy(전)·스트래티지(후)·CRH PLC(전) 외 114곳"
+      "t": "미국 실적 135곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ICE(전)·ASE Technology(전)·Quanta Services(전)·몬델리즈(후)·Enterprise Products(전)·Lloyds Banking(전)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Digital Realty(후)·Takeda Pharmaceutical(전)·Cheniere Energy(전)·스트래티지(후)·Monolithic Power(후) 외 115곳"
      }
     ],
     "2026-10-30": [
@@ -716,7 +696,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·콜게이트(전)·Canadian National(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·Banco Santander(전)·RBC Bearings(전)·BrightSpring Health(전)·Cboe Global(전) 외 8곳"
+      "t": "미국 실적 27곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·Canadian National(전)·콜게이트(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·BrightSpring Health(전)·Cboe Global(전) 외 7곳"
      }
     ]
    }
