@@ -77,6 +77,7 @@ export async function collectFilings(market, candidate) {
       for (const row of (Array.isArray(rows) ? rows : []).slice(0,2)) {
         const url = `https://m.stock.naver.com/api/stock/${candidate.c}/disclosure/${encodeURIComponent(row.disclosureId)}`;
         const d = await get(url), text = plainText(d.disclosure?.contents);
+        if (d.disclosure?.itemCode !== candidate.c) continue;
         const stamp = d.disclosure?.datetime || row.datetime;
         const publishedAt = new Date(/[zZ]|[+-]\d\d:\d\d$/.test(stamp) ? stamp : stamp + 'Z').toISOString();
         if (text.length < 160 || Date.parse(publishedAt) > Date.now()) continue;

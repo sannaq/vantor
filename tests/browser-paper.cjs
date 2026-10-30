@@ -14,7 +14,9 @@ const root = path.resolve(__dirname, '..');
       }
       if (!process.env.VANTOR_LIVE) await context.route(/\/feeds\/paper-(kr|us)\.json/, r => {
         const filename = new URL(r.request().url()).pathname.split('/').pop();
-        return r.fulfill({ contentType: 'application/json', body: fs.readFileSync(path.join(root,'feeds',filename),'utf8') });
+        const data=JSON.parse(fs.readFileSync(path.join(root,'feeds',filename),'utf8'));
+        data.status='waiting_key'; data.message='Gemini 무료 API 키 등록 대기';
+        return r.fulfill({ contentType: 'application/json', body: JSON.stringify(data) });
       });
       await context.route(/discord(?:app)?\.com\/api\/webhooks/,r => r.fulfill({status:204,body:''}));
       await context.addInitScript(() => {
