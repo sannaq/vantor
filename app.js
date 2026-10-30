@@ -1524,6 +1524,29 @@ function _btHTML(b){ if(!b||!b.all)return '';
     +'<div style="margin-top:6px">점수와 이후 수익률의 순위 상관(예측력) <b>'+b.all.ic+'</b> (앞 '+b.first.ic+' · 뒤 '+b.second.ic+'). 0이면 무관, 0.05만 넘어도 의미 있는 편이에요. '+(b.market==='US'?'미장 공식은 앞 1.5년으로 고르고 <b>뒤 1.5년이 확인 구간</b>이에요. 국장 공식(안정성·고점 근접·이익)은 미장 뒤 1.5년에 추천이 시장보다 못해서 쓰지 않아요.':'<b>매수 금지 쪽이 더 확실</b>하고, 추천은 평균으로는 낫지만 주마다 들쭉날쭉해요.')+'</div>'
     +'<div style="overflow-x:auto;margin-top:10px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">지표</th><th>앞 절반 예측력</th><th>뒤 절반</th><th></th></tr></thead><tbody>'+fac+'</tbody></table></div>'
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">한계: '+(b.limits||[]).map(esc).join(' · ')+'</div></div></div>'; }
+var _PAPER={};
+function _paperPanel(US){
+  var key=US?'US':'KR', p=_PAPER[key];
+  if(p===undefined){ _PAPER[key]=null; _loadJ('feeds/paper-'+key.toLowerCase()+'.json').then(function(j){_PAPER[key]=j||false;if(_recoUS()===US)renderReco();}); }
+  var h='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>AI·퀀트 모의계좌 · '+(US?'미국':'국내')+'</h2></div><div class="pad" style="padding-top:6px;font-size:13px;line-height:1.7">';
+  if(!p)return h+'모의계좌 자료 '+(p===false?'확인 대기':'불러오는 중…')+'</div></div>';
+  var a=p.account, money=function(n){return (US?'$':'₩')+Number(n||0).toLocaleString('ko-KR',{maximumFractionDigits:US?2:0});};
+  var statuses={review_pass:'AI 검토 통과',risk_hold:'AI 위험 보류',waiting_evidence:'기사·공시 본문 확인 대기',quota_wait:'무료 한도 대기',api_error:'AI 연결 오류',api_or_parse_error:'AI 응답 확인 대기',review_invalid:'AI 근거 검증 실패',review_incomplete:'AI 응답 미완료'};
+  var reasons={drawdown_pause:'계좌 하락 한도 도달',budget_below_one_share:'배정 금액 부족',quote_or_costs_invalid:'매수·손절 가격 확인 필요',position_already_allocated:'이미 보유 중',quant_conditions_not_met:'선정 조건 미충족'};
+  h+='<b>'+esc(p.message||'상태 확인 대기')+'</b>'+(a.paused?' · <b>신규 매수 중단</b>':'')
+    +'<div>평가액 '+money(a.equity)+' · 현금 '+money(a.cash)+' · 시작 대비 '+((a.equity/a.initialCapital-1)*100).toFixed(2)+'%</div>'
+    +'<div>보유 '+a.positions.length+'종목 · 다음 거래일 주문 대기 '+a.pending.length+'건 · 최고 평가액 대비 하락 '+((1-a.equity/a.peakEquity)*100).toFixed(2)+'%</div>'
+    +'<div style="color:var(--sub)">20~60거래일 중기 검증 · 종목당 최대 15% · 손절 계획 손실 1% · 계좌 하락 15%면 신규 매수 중단</div>'
+    +'<div style="color:var(--faint);font-size:11.5px">'+esc(p.notice||'')+' · 마지막 실행 '+esc(new Date(p.updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}))+' (한국시간)</div>';
+  if(p.status==='waiting_key'||p.status==='waiting_free_tier_confirmation')h+='<div style="margin-top:8px">무료 API 연결 전이에요. 연결될 때까지 신규 모의매수는 대기해요.</div>';
+  if(a.positions.length)h+='<div style="margin-top:8px">'+a.positions.map(function(x){return '<div><b>'+esc(x.name||x.symbol)+'</b> · '+x.quantity+'주 · '+x.heldDays+'거래일 보유 · 손절 '+money(x.stop)+'</div>';}).join('')+'</div>';
+  var reviewed=(p.reviews||[]).slice(-10).reverse();
+  h+=reviewed.map(function(r){var v=r.review||{}, sources=r.sources||[];
+    return '<details style="margin-top:8px;border-top:1px solid var(--line2);padding-top:8px"><summary style="cursor:pointer"><b>'+esc(r.name||r.symbol)+'</b> · '+esc(statuses[r.status]||'검토 대기')+(r.entryStatus==='ready'?' · 모의주문 준비':r.entryReason?' · '+esc(reasons[r.entryReason]||'매수 조건 확인 대기'):'')+'</summary>'
+      +'<div>'+esc(v.company||'회사 설명은 근거 검토 후 표시돼요.')+'</div><div>'+esc(v.reason||'본문 자료가 충분히 확보되지 않았어요.')+'</div>'
+      +sources.filter(function(s){return /^https:\/\//.test(s.url||'');}).map(function(s){return '<a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a>';}).join(' · ')+'</details>';}).join('');
+  return h+'</div></div>';
+}
 function renderReco(){
   var el=$('#recoBoard'); if(!el)return;
   var US=_recoUS(), F=_recoF;
@@ -1554,11 +1577,11 @@ function renderReco(){
   var VAL='<div style="margin-bottom:10px">'+tabs+'</div>'+_tcSummary(D.trk)+(D.trk?_trkHTML(D.trk):(US?'<div class="card" style="margin-top:14px"><div class="ch"><h2>📈 실제 성과 (기록)</h2></div><div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--faint)">미장 기록은 10/9(미국) 추천부터 시작해요. 20일 결과는 11월 초에 나와요.</div></div>':''))
     +_btHTML(D.bt60)+_audHTML(D.aud)+_btHTML(D.bt)+_btlHTML(D.btl60)+_btlHTML(D.btl);
   var vb=$('#recoVal'); if(vb)vb.innerHTML=VAL;
-  if(!F.full){ el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
+  if(!F.full){ el.innerHTML=tabs+_paperPanel(US)+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
     +'<div class="pad" style="padding-top:6px">'+_fsLine(US)+_ladderList(US)
     +'<button class="tf" onclick="_recoSet(\'full\',1)" style="width:100%;margin-top:14px">🔎 전 종목 순위·필터 보기 ('+all.length.toLocaleString()+'종목)</button>'
     +'<div style="font-size:11px;color:var(--faint);margin-top:10px">교육용 참고 지표이며 매매 신호가 아닙니다 · 투자 판단과 책임은 본인에게 있습니다 · 검증 결과는 위 [🧪 검증·성과] 탭</div></div></div>'; }
-  else el.innerHTML=tabs+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
+  else el.innerHTML=tabs+_paperPanel(US)+'<div class="card"><div class="ch"><h2>🧭 '+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
     +'<div class="pad" style="padding-top:6px"><button class="tf" onclick="_recoSet(\'full\',0)" style="margin-bottom:10px">← 오늘 추천으로</button>'+bar
     +'<div style="font-size:11.5px;color:var(--faint);margin:6px 0 2px">'+list.length.toLocaleString()+'종목 · 누르면 이유·차트·매수 가격·뉴스가 펼쳐져요 · '+formula+' = 100점 · 추천 '+(cut.buy||'')+'점↑ · 매수 금지 '+(cut.ban||'')+'점 미만</div>'
     +(US&&j.spy&&j.spy.below?'<div style="font-size:12.5px;color:var(--ink);margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid #f6465d;background:rgba(246,70,93,.08)">⚠ <b>하락장 주의</b> — S&amp;P500(SPY '+_usd(j.spy.px)+')이 200일선('+_usd(j.spy.ma200)+')보다 '+Math.abs(j.spy.gap)+'% 아래예요. 모멘텀 종목은 하락장에서 한꺼번에 급반전할 수 있어요. 점수는 그대로예요(3년 중 이런 구간이 13주뿐이라 검증 근거 부족).</div>':'')

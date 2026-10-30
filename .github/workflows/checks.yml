@@ -1,7 +1,7 @@
 name: 동기화·자동화 회귀 검사
 on:
   push:
-    paths: ['app.js', 'sync-core.js', 'tests/**', 'scripts/paper-policy.mjs', 'scripts/automation_schedule.py', 'scripts/kr_brief.py', 'scripts/us_brief.py', '.github/workflows/**']
+    paths: ['app.js', 'sync-core.js', 'tests/**', 'scripts/paper-*.mjs', 'scripts/gemini-review.mjs', 'scripts/automation_schedule.py', 'scripts/kr_brief.py', 'scripts/us_brief.py', '.github/workflows/**']
   pull_request:
     paths: ['app.js', 'sync-core.js', 'tests/**', 'scripts/**', '.github/workflows/**']
 permissions:
@@ -18,10 +18,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: node --check app.js && node --test tests/sync-core.test.cjs
-      - run: node --test tests/paper-policy.test.mjs
+      - run: node --test tests/paper-*.test.mjs
       - run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Browser sync regression
         run: |
           npm install --no-save --package-lock=false playwright@1.59.1
           npx playwright install --with-deps chromium
           node tests/browser-sync.cjs
+          node tests/browser-paper.cjs

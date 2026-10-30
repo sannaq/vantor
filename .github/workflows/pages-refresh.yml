@@ -11,6 +11,7 @@ on:
       - "이번주 이벤트 자동 갱신"
       - "시장 심리·전망 채점 (매일)"
       - "종합 평점 백테스트 (매달)"
+      - "AI 퀀트 모의계좌"
     types: [completed]
   workflow_dispatch: {}
 permissions:
