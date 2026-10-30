@@ -40,7 +40,7 @@ def build(now, day, slot):
         name = row['stockName']
         text = f'{name} {value:,.2f} ({change:+.2f}%)'
         lines.append(text)
-        pills.append({'t': text, 'cls': 'g' if change >= 0 else 'r'})
+        pills.append({'t': text, 'cl': 'g' if change >= 0 else 'r'})
         dates.append(traded.isoformat())
     summary = ' · '.join(lines) + '.\n\n'
     summary += f'원본 시세 기준 {max(dates)}. 네이버 증권에서 확인된 지수만 자동 요약했습니다. '
@@ -49,7 +49,7 @@ def build(now, day, slot):
     return {'date': day.isoformat(), 'slot': slot, 'title': title,
             'src': 'VANTOR · 네이버 증권 자동 요약', 'lead': summary,
             'generatedAt': now.isoformat(), 'sourceAsOf': dates,
-            'kr': {'title': '한국 증시', 'pills': pills, 'body': summary},
+            'kr': {'title': '한국 증시', 'pills': pills, 'text': summary},
             'core': {'title': '확인된 시장 흐름', 'body': summary},
             'checks': ['지수 등락과 종목별 차이를 구분해서 확인', '시세 기준 시각 확인'],
             'us': {'title': '미국장', 'tiles': [], 'note': '미장 브리핑에서 별도로 확인하세요.'}}
