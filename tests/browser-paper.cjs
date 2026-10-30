@@ -20,6 +20,7 @@ const root = path.resolve(__dirname, '..');
       await context.addInitScript(() => {
         localStorage.setItem('vtGate','9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04');
         localStorage.setItem('aurTourDone','1');
+        localStorage.setItem('aurSeenHelp','1');
       });
       const page = await context.newPage(), errors = [];
       page.on('pageerror', e => errors.push(e.message));
