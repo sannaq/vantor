@@ -1164,45 +1164,80 @@ window._selftest=function(){ var out=[],ok=0,fail=0; function A(name,cond){ out.
   return {ok:ok,fail:fail,details:out}; };
 /* ── ☁️ 간단 동기화 (동기화 코드 · 계정/비번 없음) ── */
 var _SYNC_URL=(typeof PROXY!=='undefined'&&PROXY?PROXY:'')+'/sync';
-var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog','huntHook','huntResetAt','wcPaste'];
+var _SYNC_KEYS=['aurWatch','coinFav','coinAlerts','coinTrades','aurCards','aurtune','aurFont','aurFib','aurBrief','aurHideETF','aurtheme','coinLines','oxbal','oxlev','oxrisk','aurHoldings','aurDraw','coinChartType','coinChartLog','aurBriefBoard','huntTpSl','huntLog','huntHook','huntResetAt','huntLev','huntW','wcPaste'];
 /* 내 보유(평단) 저장 — 종목별 평단, 동기화됨 */
 function _holdings(){ try{return JSON.parse(localStorage.getItem('aurHoldings')||'{}')||{};}catch(e){return {};} }
 function _getHolding(key){ if(!key)return null; var h=_holdings()[String(key).toUpperCase()]; return (h&&h.avg>0)?h:null; }
 function _setHolding(key,avg,qty){ if(!key||!(avg>0))return; try{ var m=_holdings(); m[String(key).toUpperCase()]={avg:+avg,qty:(qty>0?+qty:(m[String(key).toUpperCase()]||{}).qty||0),ts:Date.now()}; localStorage.setItem('aurHoldings',JSON.stringify(m)); }catch(e){} }
 window._getHolding=_getHolding; window._setHolding=_setHolding;
 function _syncCode(){ try{return localStorage.getItem('aurSyncCode')||'';}catch(e){return '';} }
-function _syncCollect(){ var d={}; _SYNC_KEYS.forEach(function(k){ try{ var v=localStorage.getItem(k); if(v!=null)d[k]=v; }catch(e){} });
-  /* 동기화 서버 상한 300KB (10/27 확인) — 넘으면 서버가 통째로 거부해 Hoon 기록까지 못 올라갔다.
-     Hoon 외 큰 항목부터 본 묶음에서 빼서 '<코드>-X0', '-X1'… 조각 묶음으로 따로 올린다 (사용자 '나'). 한 항목이 커도 글자 단위로 쪼갠다 */
-  var MAX=280000, size=JSON.stringify(d).length, drop=[], parts=[], cur=[], cs=0;
-  if(size>MAX){ Object.keys(d).filter(function(k){ return !/^hunt/.test(k); }).sort(function(a,b){ return d[b].length-d[a].length; }).forEach(function(k){ if(size>MAX){ size-=d[k].length+k.length+6; drop.push(k); } }); }
-  drop.forEach(function(k){ var v=d[k], n=Math.max(1,Math.ceil(v.length/MAX)); delete d[k];
-    for(var i=0;i<n;i++){ var piece=v.slice(i*MAX,(i+1)*MAX); if(cs+piece.length>MAX&&cur.length){ parts.push(cur); cur=[]; cs=0; } cur.push([k,i,n,piece]); cs+=piece.length+k.length+20; } });
-  if(cur.length)parts.push(cur);
-  if(parts.length){ d._x=parts.length; d._xh=parts.map(_syncSum).join('.'); }
-  window._syncDrop=drop; window._syncParts=parts; return {ver:1,ts:Date.now(),data:d}; }
-function _syncSum(o){ var t=JSON.stringify(o), h=5381; for(var i=0;i<t.length;i+=7)h=((h<<5)+h+t.charCodeAt(i))|0; return (h>>>0).toString(36)+t.length.toString(36); }
-var _syncXLast={};
-/* 조각 묶음 올리기 — 바뀐 조각만 (쓰기 횟수 아끼기) */
-function _syncPushParts(code,parts,cb){ var i=0, fail=null;
-  (function next(){ if(i>=parts.length){ cb&&cb(fail); return; } var k=i++, h=_syncSum(parts[k]); if(_syncXLast[code+k]===h){ next(); return; }
-    fetch(_SYNC_URL+'?key='+encodeURIComponent(code+'-X'+k),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({ver:1,ts:Date.now(),parts:parts[k]})}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok)_syncXLast[code+k]=h; else fail=(j&&j.error)||'조각 저장 실패'; next(); }).catch(function(){ fail='조각 연결 실패'; next(); }); })(); }
-/* 본 묶음 + 조각 묶음을 받아 한 덩어리(data)로 합친다 — 불러오기용 */
-function syncPullAll(code,cb){ syncPull(code,function(j){ if(!(j&&j.ok&&j.found&&j.data&&j.data.data)){ cb&&cb(j); return; } var d=j.data.data, n=+d._x||0, got=0, buf={}, bad=false; if(!n){ cb&&cb(j); return; }
-  for(var k=0;k<n;k++)(function(k){ fetch(_SYNC_URL+'?key='+encodeURIComponent(code+'-X'+k)).then(function(r){return r.json();}).then(function(x){ var P=(x&&x.ok&&x.found&&x.data&&x.data.parts)||null; if(!P)bad=true; else P.forEach(function(q){ (buf[q[0]]=buf[q[0]]||{n:q[2],p:[]}).p[q[1]]=q[3]; }); }).catch(function(){ bad=true; }).then(function(){ if(++got<n)return;
-    Object.keys(buf).forEach(function(key){ var b=buf[key], ok=true; for(var i=0;i<b.n;i++)if(b.p[i]==null)ok=false; if(ok)d[key]=b.p.join(''); });
-    j.partsBad=bad; cb&&cb(j); }); })(k); }); }
-function _syncHash(b){ try{return JSON.stringify(b.data);}catch(e){return '';} }
-var _syncLast='';
-function syncPush(cb){ var code=_syncCode(); if(!code||!_SYNC_URL){cb&&cb(null);return;} var blob=_syncCollect(), parts=window._syncParts||[]; _syncLast=_syncHash(blob);
-  fetch(_SYNC_URL+'?key='+encodeURIComponent(code),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(blob)}).then(function(r){return r.json();}).then(function(j){ if(j&&j.ok){try{localStorage.setItem('aurSyncTs',String(j.ts||Date.now()));localStorage.removeItem('aurSyncErr');}catch(e){} if(parts.length){ _syncPushParts(code,parts,function(f){ if(f){ _syncLast=''; try{localStorage.setItem('aurSyncErr',f);}catch(e){} } _huntSyncInfo(); }); } } else { _syncLast=''; try{localStorage.setItem('aurSyncErr',(j&&j.error)||'응답 없음');}catch(e){} } _huntSyncInfo(); cb&&cb(j); }).catch(function(){ _syncLast=''; try{localStorage.setItem('aurSyncErr','연결 실패');}catch(e){} _huntSyncInfo(); cb&&cb(null); }); }
-function syncApply(blob){ if(!blob||!blob.data)return 0; var n=0; _SYNC_KEYS.forEach(function(k){ if(blob.data[k]!=null){ try{localStorage.setItem(k,blob.data[k]);n++;}catch(e){} } }); return n; }
-function syncPull(code,cb){ code=code||_syncCode(); if(!code){cb&&cb(null);return;} fetch(_SYNC_URL+'?key='+encodeURIComponent(code)).then(function(r){return r.json();}).then(function(j){cb&&cb(j);}).catch(function(){cb&&cb(null);}); }
-function _newSyncCode(){ var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; function seg(){var s='';for(var i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;} return 'VANTOR-'+seg()+'-'+seg()+'-'+seg(); }
-setInterval(function(){ if(!_syncCode())return; if(_syncHash(_syncCollect())!==_syncLast)_huntSync(); },20000);
-/* 창을 다시 볼 때 Hoon 기록 받아와 합침 (PC 탭을 켜 둔 채 폰에서 진입한 경우) */
-document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible'&&_syncCode())_huntSync(); });
-window.addEventListener('beforeunload',function(){ var code=_syncCode(); if(!code)return; try{ if(window._syncRemote)_huntMerge(window._syncRemote); var blob=_syncCollect(); if(_syncHash(blob)!==_syncLast&&navigator.sendBeacon){ navigator.sendBeacon(_SYNC_URL+'?key='+encodeURIComponent(code), new Blob([JSON.stringify(blob)],{type:'application/json'})); } }catch(e){} });
+function _syncCollect(){var d={};_SYNC_KEYS.forEach(function(k){var v=localStorage.getItem(k);if(v!=null)d[k]=v;});return {ver:2,ts:Date.now(),data:d};}
+function _syncHash(b){return JSON.stringify(_SYNC_KEYS.map(function(k){return [k,b.data[k]==null?null:b.data[k]];}));}
+// Full-content hashes for local change detection, not sampled characters.
+function _syncSum(v){var s=JSON.stringify(v),a=2166136261,b=5381;for(var i=0;i<s.length;i++){a=Math.imul(a^s.charCodeAt(i),16777619);b=(Math.imul(b,33)^s.charCodeAt(i))|0;}return (a>>>0).toString(36)+':'+(b>>>0).toString(36)+':'+s.length;}
+var _syncLast='', _syncQueue=Promise.resolve(), _syncBusy=false, _syncBases={};
+function _syncBase(code){if(!_syncBases[code]){try{_syncBases[code]=JSON.parse(localStorage.getItem('aurSyncBase:'+code)||'null');}catch(e){}if(!_syncBases[code])_syncBases[code]=_syncSnapshot(_syncCollect().data);}return _syncBases[code];}
+function _syncSnapshot(d){var b={};_SYNC_KEYS.forEach(function(k){b[k]=_syncSum(d[k]==null?null:d[k]);});return b;}
+function _syncRemember(code,d){_syncBases[code]=_syncSnapshot(d);try{localStorage.setItem('aurSyncBase:'+code,JSON.stringify(_syncBases[code]));}catch(e){}}
+if(_syncCode())_syncBase(_syncCode());
+async function _syncRequest(key,body){
+  var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},20000);
+  try{var r=await fetch(_SYNC_URL+'?key='+encodeURIComponent(key),body===undefined?{signal:controller.signal,cache:'no-store'}:{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:controller.signal});var j=await r.json();if(!r.ok||!j||!j.ok)throw new Error(j&&j.error||'동기화 서버 응답 오류');return j;}finally{clearTimeout(timer);}
+}
+function syncPull(code,cb){return _syncRequest(code||_syncCode()).then(function(j){if(cb)cb(j);return j;},function(e){var j={ok:false,error:e.message};if(cb)cb(j);return j;});}
+async function _syncReadAll(code){
+  var j=await _syncRequest(code);if(!j.found)return j;
+  if(!j.data||!j.data.data)throw new Error('저장된 설정 형식 오류');
+  var d=j.data.data, refs=d._chunks, groups=[];
+  if(refs){
+    if(!Array.isArray(refs)||refs.length>1000)throw new Error('설정 조각 목록 오류');
+    for(var ref of refs){
+      if(!ref||!new RegExp('^'+code+'-P[0-9a-f]{32}$').test(ref.key)||!/^[0-9a-f]{64}$/.test(ref.hash))throw new Error('설정 조각 주소 오류');
+      var part=await _syncRequest(ref.key);
+      if(!part.found||!part.data||await VantorSync.hash(part.data)!==ref.hash)throw new Error('설정 조각 누락 또는 손상 — 다시 시도해 주세요');
+      groups.push(part.data.parts);
+    }
+  }else if(d._x){
+    if(!Number.isInteger(d._x)||d._x<1||d._x>1000)throw new Error('설정 조각 개수 오류');
+    for(var i=0;i<d._x;i++){var old=await _syncRequest(code+'-X'+i);if(!old.found||!old.data||!old.data.parts)throw new Error('기존 설정 조각 누락 — 원본 기기에서 다시 올려 주세요');groups.push(old.data.parts);}
+  }
+  j.data.data=VantorSync.assemble(d,groups);return j;
+}
+function syncPullAll(code,cb){return _syncReadAll(code||_syncCode()).then(function(j){if(cb)cb(j);return j;},function(e){var j={ok:false,partsBad:true,error:e.message};if(cb)cb(j);return j;});}
+function _syncMergeSettings(code,remote){
+  var base=_syncBase(code), d=remote.data||{};
+  _SYNC_KEYS.forEach(function(k){if(['huntLog','huntTpSl','huntResetAt'].includes(k))return;var local=localStorage.getItem(k);if(d[k]!=null&&_syncSum(local)===base[k])localStorage.setItem(k,d[k]);});
+}
+function _syncRender(){_huntLogRender();if($('#huntList'))_huntList();_huntPosRender();_huntChartLines();_huntSyncInfo();}
+async function _syncRun(code){
+  if(!code)return null;_syncBusy=true;_huntSyncInfo();
+  try{
+    // Read ALL chunks before changing local data or replacing the remote manifest.
+    var j=await _syncReadAll(code);if(code!==_syncCode())throw new Error('동기화 코드가 변경됐어요');
+    var remote=j.found?j.data:{data:{}};_huntSI.pullErr=false;_huntSI.at=Date.now();
+    _huntSI.rn=JSON.parse(remote.data.huntLog||'[]').filter(function(r){return r&&r.at>=_huntResetAt();}).length;
+    _syncMergeSettings(code,remote);_huntMerge(remote);window._syncRemote=remote;_syncRender();
+    var data=_syncCollect().data;
+    if(remote.ver===2&&_syncHash({data:data})===_syncHash(remote)){_syncLast=_syncHash({data:data});_syncRemember(code,data);localStorage.removeItem('aurSyncErr');return {ok:true,ts:remote.ts};}
+    var plan=await VantorSync.pack(code,data);
+    window._syncDrop=plan.removed;window._syncParts=plan.parts;
+    // Immutable chunks first, publish their manifest only after every write succeeds.
+    for(var part of plan.parts)await _syncRequest(part.key,part.body);
+    if(code!==_syncCode())throw new Error('동기화 코드가 변경됐어요');
+    var saved=await _syncRequest(code,plan.blob);
+    _syncLast=_syncHash({data:data});_syncRemember(code,data);
+    localStorage.setItem('aurSyncTs',String(saved.ts||Date.now()));localStorage.removeItem('aurSyncErr');
+    return saved;
+  }catch(e){_syncLast='';localStorage.setItem('aurSyncErr',e.message||'연결 실패');return {ok:false,error:e.message};}
+  finally{_syncBusy=false;_syncRender();}
+}
+function syncPush(cb){var code=_syncCode();_syncBase(code);var run=function(){return _syncRun(code);};var p=_syncQueue.then(run,run);_syncQueue=p.catch(function(){});return p.then(function(j){if(cb)cb(j);return j;});}
+function syncApply(blob){if(!blob||!blob.data)return 0;var n=0;_SYNC_KEYS.forEach(function(k){if(blob.data[k]!=null){localStorage.setItem(k,blob.data[k]);n++;}});return n;}
+function _newSyncCode(){var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';function seg(){var s='';for(var i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}return 'VANTOR-'+seg()+'-'+seg()+'-'+seg();}
+// Closing a tab never writes an old snapshot. Unsent edits remain in localStorage.
+setInterval(function(){if(_syncCode()&&!_syncBusy)_huntSync();},20000);
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&_syncCode())_huntSync();});
+window.addEventListener('online',function(){if(_syncCode())_huntSync();});
 window.openSync=function(){ var code=_syncCode(); var bg=document.createElement('div'); bg.className='modal-bg';
   var ts=''; try{var t=+localStorage.getItem('aurSyncTs');if(t)ts=new Date(t).toLocaleString('ko-KR');}catch(e){}
   var inCss='flex:1;font-family:monospace;font-size:14px;background:var(--panel2);border:1px solid var(--line2);border-radius:8px;padding:10px 12px;color:var(--ink);outline:none';
@@ -1222,8 +1257,8 @@ window.openSync=function(){ var code=_syncCode(); var bg=document.createElement(
   var Q=function(s){return bg.querySelector(s);}; Q('#syClose').onclick=close;
   var msg=Q('#syMsg'); function say(t,c){msg.innerHTML=t;msg.style.color=c||'var(--faint)';}
   var cp=Q('#syCopy'); if(cp)cp.onclick=function(){ try{navigator.clipboard.writeText(code);say('복사됐어요 ✓','var(--up)');}catch(e){var i=Q('#syCode');i.select();try{document.execCommand('copy');}catch(_){}say('복사됨');} };
-  var nw=Q('#syNew'); if(nw)nw.onclick=function(){ var c=_newSyncCode(); try{localStorage.setItem('aurSyncCode',c);}catch(e){} say('코드 생성 · 업로드 중…'); syncPush(function(j){ if(j&&j.ok){ close(); openSync(); } else say('업로드 실패 — 잠시 후 다시','var(--down)'); }); };
-  var ld=Q('#syLoad'); if(ld)ld.onclick=function(){ var c=(Q('#syIn').value||'').trim().toUpperCase(); if(!/^[A-Z0-9-]{8,64}$/.test(c)){say('코드 형식을 확인하세요','var(--down)');return;} say(c+' 불러오는 중…'); syncPullAll(c,function(j){ if(j&&j.ok&&j.found&&j.data){ var loc=_syncCollect(); var n=syncApply(j.data); try{localStorage.setItem('aurSyncCode',c);}catch(e){} _huntMerge(loc); say(n+'개 항목 불러옴 · 새로고침…','var(--up)'); syncPush(function(){ setTimeout(function(){location.reload();},300); }); } else if(j&&j.ok&&!j.found){ say('그 코드에 저장된 데이터가 없어요','var(--down)'); } else { say('불러오기 실패 — 코드를 확인하세요','var(--down)'); } }); };
+  var nw=Q('#syNew'); if(nw)nw.onclick=function(){ var c=_newSyncCode(); try{localStorage.setItem('aurSyncCode',c);}catch(e){} say('코드 생성 · 업로드 중…'); syncPush(function(j){ if(j&&j.ok){ close(); openSync(); } else say('업로드 실패: '+esc(j&&j.error||'잠시 후 다시 시도해 주세요'),'var(--down)'); }); };
+  var ld=Q('#syLoad'); if(ld)ld.onclick=function(){ var c=(Q('#syIn').value||'').trim().toUpperCase(); if(!/^[A-Z0-9-]{8,64}$/.test(c)){say('코드 형식을 확인하세요','var(--down)');return;} say(c+' 불러오는 중…'); syncPullAll(c,function(j){ if(j&&j.ok&&j.found&&j.data){ var loc=_syncCollect(); var n=syncApply(j.data); _syncRemember(c,j.data.data); try{localStorage.setItem('aurSyncCode',c);}catch(e){} _huntMerge(loc); say(n+'개 항목 불러옴 · 새로고침…','var(--up)'); syncPush(function(saved){ if(saved&&saved.ok)setTimeout(function(){location.reload();},300);else say('받았지만 올리기 실패: '+esc(saved&&saved.error||'연결 실패')+' · 이 기기 기록은 보존돼요','var(--down)'); }); } else if(j&&j.ok&&!j.found){ say('그 코드에 저장된 데이터가 없어요','var(--down)'); } else { say('불러오기 실패: '+esc(j&&j.error||'코드를 확인하세요'),'var(--down)'); } }); };
 };
 /* 캔들 클릭 → 그 봉의 속(몸통·꼬리) 구조 + 해석. 최근 봉이면 5분봉 전환 버튼. */
 function bigCandleSVG(o,h,l,c,ccy){
@@ -1292,9 +1327,10 @@ function liveRefresh(r){
   proxyJson('/candles?'+base+'&tf='+_chartTF+'&limit=120').then(function(j){
     if(!SEL||SEL.c!==r.c||!j||!j.candles||j.candles.length<2) return;
     r._candles=j.candles; var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
-    if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
+    if(px>0){ r.px=px; if(_chartTF==='D'&&prev>0)r._dayPrev=prev; if(r._dayPrev>0)r.ch=(px-r._dayPrev)/r._dayPrev*100; }
     var tip=$('#chartTip'); if(!tip||tip.style.display!=='block') drawStockChart($('#sChart'),r);
     var pe=$('#stkPx'); if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
+    renderWhy(r);
     [$('#liveDot'),$('#liveDotChart')].forEach(function(lv){ if(lv) lv.style.opacity=lv.style.opacity==='0.35'?'1':'0.35'; }); // 깜빡여 갱신 표시
   });
   if(!isUS) proxyJson('/flow?'+base).then(function(j){
@@ -1933,12 +1969,12 @@ async function enrichStock(r){
     if(!live()||!j||!Array.isArray(j.candles)||j.candles.length<2) return;
     r._candles=j.candles;
     var n=j.candles.length, px=+j.candles[n-1][4], prev=+j.candles[n-2][4];
-    if(px>0){ r.px=px; if(prev>0) r.ch=(px-prev)/prev*100; }
+    if(px>0){ r.px=px; if(_chartTF==='D'&&prev>0)r._dayPrev=prev; if(r._dayPrev>0)r.ch=(px-r._dayPrev)/r._dayPrev*100; }
     drawStockChart($('#sChart'),r);
     var cap=$('#chartCap'); if(cap) cap.textContent='일봉 '+n+'봉 (실시간 데이터) · 이평 MA5·20·60 · 하단 거래량 · 빨강 상승/파랑 하락';
     var pe=$('#stkPx');
     if(pe){ pe.className=cls(r.ch); pe.innerHTML=priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'; }
-    markReal('chart');
+    markReal('chart'); renderWhy(r);
   });
 
   /* 2) 종목정보 → 시총·거래량·PER/PBR·52주 위치 */
@@ -1946,7 +1982,7 @@ async function enrichStock(r){
     if(!live()||!j) return;
     var got=false;
     if(j.mcap!=null&&j.mcap>0){ setMet('m-mcap', j.mcapUnit==='억원'?fmtEok(j.mcap):('$'+fmtBig(j.mcap)), r.mk+' 상장', null); got=true; }
-    if(j.vol!=null&&j.vol>0){ setMet('m-value', (+j.vol).toLocaleString('en-US')+'주', '당일 누적 거래량', null); got=true; }
+    if(j.vol!=null&&j.vol>0){ addMet('m-volume','거래량',(+j.vol).toLocaleString('en-US')+'주','당일 누적 거래량',null); got=true; }
     if(j.per!=null&&j.per>0){ addMet('m-per','PER',(+j.per).toFixed(2),(j.pbr!=null&&j.pbr>0)?('PBR '+(+j.pbr).toFixed(2)):'',null); got=true; }
     if(j.h52!=null&&j.l52!=null&&j.h52>j.l52){
       var pos=Math.max(0,Math.min(100,Math.round((r.px-j.l52)/(j.h52-j.l52)*100)));
@@ -2085,6 +2121,7 @@ function openStock(code,opt){
   var el=$('#stockPanel'); if(!el)return;
   var isUS=r.ccy==='USD';
   var subs=stockSubs(r), grd=gradeTxt(r.score);
+  var tradedValue=!isUS&&(r.amount||((KBOARD||[]).find(function(x){return x.c===r.c;})||{}).amount);
   var mcap, value, mcapT, valueT;
   if(isUS){ mcap=r.px*(r.c==='NVDA'?4.75e9:r.c==='AAPL'?1.5e10:2.2e9); value=r.px*r.rvol*3e7; mcapT='$'+fmtBig(mcap); valueT='$'+fmtBig(value); }
   else { mcap=Math.round(r.px*(r.c==='005930'?5.97e9:r.c==='000660'?7.28e8:2.2e8)/1e8); value=Math.round(r.px*r.rvol*1.2e6/1e8); mcapT=fmtEok(mcap); valueT=fmtEok(value); }
@@ -2103,7 +2140,7 @@ function openStock(code,opt){
       +'<span style="margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--faint);font-weight:700">RADAR SCORE <span class="scorepill">'+r.score+'</span></span></div>'
     +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+(r.px>0?cls(r.ch):'')+'">'+(r.px>0?(priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'):(r.ccy!=='USD'&&/ETN/.test(r.n||'')?'<span style="font-size:14px;color:var(--faint);font-weight:700">ETN 은 실시간 시세를 받지 못해요 · <a href="https://m.stock.naver.com/domestic/stock/'+r.c+'/total" target="_blank" rel="noopener" style="color:#4a9eff">네이버 증권에서 보기 →</a></span>':'<span style="font-size:15px;color:var(--faint);font-weight:700">⏳ 시세 불러오는 중…</span>'))+'</div>'
     +'<div class="metrics" id="metGrid">'
-      +met('거래대금',valueT,'상위권',null,'m-value')
+      +met('거래대금',tradedValue>0?fmtEok(tradedValue/1e8):'—',tradedValue>0?'실제 거래대금':'실제 거래대금 미제공',null,'m-value')
       +met('시가총액',mcapT,r.mk+' 상위',null,'m-mcap')
       +met('체결강도',numOrDash(r.strength,function(v){return Math.round(v);}),hasNum(r.strength)?(r.strength>=100?'매수 우위':'매도 우위'):'데이터 없음',hasNum(r.strength)?(r.strength>=100?'up':'down'):'','m-str')
       +met('호가 압력',numOrDash(r.bidRatio,function(v){return (v>=55?'+':'')+Math.round(v)+'%';}),hasNum(r.bidRatio)?(r.bidRatio>=55?'매수 우위':'균형'):'데이터 없음',hasNum(r.bidRatio)&&r.bidRatio>=55?'up':'','m-bid')
@@ -2866,12 +2903,11 @@ function _huntMerge(remote){ if(!remote||!remote.data)return false; var ch=false
 var _huntSyncT=null, _huntSI={};
 /* 동기화 상태 (10/27 '동기화해도 안 나옴') — 코드 끝 4자리·마지막 받기·서버/이 기기 건수·올리기 실패 이유 */
 function _huntSyncInfo(){ var el=$('#huntSyncSt'); if(!el)return; var c=_syncCode(), err='', T=function(t){ return t?new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—'; }; try{ err=localStorage.getItem('aurSyncErr')||''; }catch(e){}
-  el.innerHTML='☁️ 동기화 중 (…'+esc(c.slice(-4))+') · 받기 '+T(_huntSI.at)+(_huntSI.rn!=null?' · 서버 '+_huntSI.rn+'건 / 이 기기 '+_huntLogs().length+'건':'')
+  el.innerHTML='☁️ '+(_syncBusy?'동기화 중':'마지막 동기화')+' (…'+esc(c.slice(-4))+') · 받기 '+T(_huntSI.at)+(_huntSI.rn!=null?' · 서버 '+_huntSI.rn+'건 / 이 기기 '+_huntLogs().length+'건':'')
     +(err?' · <b style="color:#f6465d">올리기 실패: '+esc(err)+'</b>':'')+(_huntSI.pullErr?' · <b style="color:#f6465d">받기 실패</b>':'')
-    +((window._syncParts||[]).length?' · <span style="color:var(--faint)">큰 설정 '+window._syncDrop.length+'개는 '+window._syncParts.length+'조각으로 나눠 올림</span>':''); }
-function _huntSyncSoon(){ if(!_syncCode())return; clearTimeout(_huntSyncT); _huntSyncT=setTimeout(function(){ _huntSync(); },1500); }
-function _huntSync(cb){ if(!_syncCode()||typeof syncPull!=='function'){ cb&&cb(); return; }
-  syncPull(null,function(j){ var blob=(j&&j.ok&&j.found&&j.data)?j.data:null; if(!blob&&j&&j.ok&&!j.found)blob={data:{}}; _huntSI.pullErr=!blob; if(!blob){ _huntSyncInfo(); cb&&cb(); return; } _huntSI.at=Date.now(); try{ var rt=_huntResetAt(); _huntSI.rn=JSON.parse((blob.data||{}).huntLog||'[]').filter(function(r){ return r&&r.at>=rt; }).length; }catch(e){ _huntSI.rn=0; } window._syncRemote=blob; var ch=_huntMerge(blob); if(ch){ _huntLogRender(); if($('#huntList'))_huntList(); _huntPosRender(); _huntChartLines(); } syncPush(); cb&&cb(); }); }
+    +((window._syncParts||[]).length?' · <span style="color:var(--faint)">큰 설정 '+window._syncDrop.length+'개는 '+window._syncParts.length+'조각'+(_syncBusy?' 올리는 중':' 저장')+'</span>':''); }
+function _huntSyncSoon(){ if(!_syncCode())return; clearTimeout(_huntSyncT); _huntSyncT=setTimeout(function(){ _huntSync(); },150); }
+function _huntSync(cb){return syncPush(cb);}
 function _huntFmt(v){ v=+v; if(!isFinite(v))return '—'; return v>=100?v.toLocaleString('en-US',{maximumFractionDigits:2}):v>=1?v.toFixed(4):v.toPrecision(4); }
 async function renderHunt(el){
   el.innerHTML='<div class="sec-title">🎯 Hoon TP/SL</div><p class="sec-sub">코인을 누르고 롱/숏·<b>진입가</b>(비우면 현재가)·<b>레버리지</b>·<b>비중</b>·<b>TP</b>·<b>SL</b>을 넣어 제출하세요. 진행 중 포지션은 <b>익절·약손절·물타기</b> 버튼으로 관리하고, 수익률은 가격%·레버리지 수익률·계좌%로 보여줘요. ☁️ 동기화 코드를 쓰면 PC·폰 기록이 합쳐져요.</p>'
@@ -5348,7 +5384,10 @@ window.closeChartFs=function(){ var fs=document.getElementById('chartFs'); if(!f
   var src=fs._srcCv; if(src&&typeof drawStockChart==='function'&&typeof CHART!=='undefined'&&CHART&&CHART.r){ drawStockChart(src,CHART.r); } };
 /* 부팅: 첫 방문 가이드(1회) + #selftest 자가진단 */
 (function(){ try{
-  if(location.hash==='#selftest'&&typeof _selftest==='function'){ setTimeout(function(){ var r=_selftest(); var b=document.createElement('div'); b.style.cssText='position:fixed;left:10px;bottom:10px;z-index:3000;background:'+(r.fail?'#3a1720':'#12261b')+';border:1px solid '+(r.fail?'#f6465d':'#2ebd85')+';color:#e8ecf3;font:12px/1.5 monospace;padding:10px 12px;border-radius:8px;max-width:280px;white-space:pre-wrap'; b.textContent='🧪 자가진단 '+r.ok+' 통과 · '+r.fail+' 실패\n'+r.details.join('\n'); b.onclick=function(){b.remove();}; document.body.appendChild(b); },1500); }
+  if(location.hash==='#selftest'&&typeof _selftest==='function'){ setTimeout(function(){ var r=_selftest(); var b=document.createElement('div'); b.style.cssText='position:fixed;left:10px;bottom:10px;z-index:3000;background:'+(r.fail?'#3a1720':'#12261b')+';border:1px solid '+(r.fail?'#f6465d':'#2ebd85')+';color:#e8ecf3;font:12px/1.5 monospace;padding:10px 12px;border-radius:8px;max-width:280px;white-space:pre-wrap'; b.textContent='🧪 자가진단 '+r.ok+' 통과 · '+r.fail+' 실패\n'+r.details.join('\n'); b.onclick=function(){b.remove();}; document.body.appendChild(b); },150); }
   var seen=false; try{seen=localStorage.getItem('aurSeenHelp')==='1';}catch(e){}
   if(!seen&&typeof openHelp==='function'){ setTimeout(function(){ if(document.querySelector('#splash')&&getComputedStyle(document.querySelector('#splash')).display!=='none')return; openHelp(); },900); }
 }catch(e){} })();
+
+// Resume durable local edits after a browser restart, even outside the Hoon screen.
+setTimeout(function(){if(_syncCode())_huntSync();},1000);

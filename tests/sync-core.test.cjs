@@ -1,0 +1,7 @@
+const test=require('node:test');const assert=require('node:assert/strict');const S=require('../sync-core.js');
+for(const [name,value] of [['ASCII','a'.repeat(650000)],['JSON',JSON.stringify(Array.from({length:55000},()=>({x:1})))],['Korean/emoji','한글😀'.repeat(150000)],['escapes','"\\\n\u0000'.repeat(100000)]]){
+ test(name+' round trip stays within actual JSON UTF-8 limit',async()=>{const data={aurDraw:value,huntLog:'[{"s":"BTC","at":1793376000000}]'};const plan=await S.pack('VANTOR-TEST-TEST-TEST',data);assert(S.bytes(plan.blob)<300000);for(const p of plan.parts){assert(S.bytes(p.body)<300000);assert.equal(await S.hash(p.body),p.hash);}assert.deepEqual(S.assemble(plan.blob.data,plan.parts.map(p=>p.body.parts)),data);});
+}
+test('every character changes content address',async()=>{const a={parts:[['aurDraw',0,1,'a'.repeat(100)]]};const b=structuredClone(a);b.parts[0][3]='b'+b.parts[0][3].slice(1);assert.notEqual(await S.hash(a),await S.hash(b));});
+test('missing, duplicate and contradictory pieces cannot be applied',()=>{for(const group of [[[['x',0,2,'a']]],[[['x',0,2,'a'],['x',0,2,'b']]],[[['x',0,2,'a'],['x',1,3,'b']]]])assert.throws(()=>S.assemble({},group));});
+test('old unchunked data and complete legacy parts still load',()=>{assert.deepEqual(S.assemble({huntLog:'[]'},[]),{huntLog:'[]'});assert.deepEqual(S.assemble({_x:1,_xh:'legacy'},[[['aurDraw',0,2,'a'],['aurDraw',1,2,'b']]]),{aurDraw:'ab'});});

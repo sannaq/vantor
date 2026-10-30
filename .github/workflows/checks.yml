@@ -1,0 +1,26 @@
+name: 동기화·자동화 회귀 검사
+on:
+  push:
+    paths: ['app.js', 'sync-core.js', 'tests/**', 'scripts/automation_schedule.py', 'scripts/kr_brief.py', 'scripts/us_brief.py', '.github/workflows/**']
+  pull_request:
+    paths: ['app.js', 'sync-core.js', 'tests/**', 'scripts/**', '.github/workflows/**']
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: node --check app.js && node --test tests/sync-core.test.cjs
+      - run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Browser sync regression
+        run: |
+          npm install --no-save --package-lock=false playwright@1.59.1
+          npx playwright install --with-deps chromium
+          node tests/browser-sync.cjs

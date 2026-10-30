@@ -53,18 +53,20 @@ def sg(v, d=2):
 def pick_slot(now_ny):
     if os.environ.get("SLOT"):
         return os.environ["SLOT"]
+    # A delayed runner still publishes the current session's latest due briefing.
+    # Do not invent an earlier intraday snapshot from current prices.
     m = now_ny.hour * 60 + now_ny.minute
-    for k, (_, a, b) in SLOTS.items():
-        if a[0] * 60 + a[1] <= m <= b[0] * 60 + b[1]:
-            return k
-    return None
+    if 9 * 60 + 30 <= m < 12 * 60 + 30:
+        return None  # Never label open-market prices as a premarket snapshot.
+    due = [("pre", 8 * 60 + 50), ("mid", 12 * 60 + 30), ("close", 17 * 60 + 30)]
+    return next((key for key, minute in reversed(due) if m >= minute), None)
 
 
 # ── 자료 ──
 def indices():
     out = {}
     for x in get(f"{B}/index/nation/USA") or []:
-        out[x.get("reutersCode")] = {"v": num(x.get("closePrice")), "c": num(x.get("fluctuationsRatio"))}
+        out[x.get("reutersCode")] = {"v": num(x.get("closePrice")), "c": num(x.get("fluctuationsRatio")), "at": x.get("localTradedAt")}
     return out
 
 
@@ -160,6 +162,12 @@ def mood(c):
 def build(slot, now_ny, now_kst):
     lab = SLOTS[slot][0]
     ix, fu, rows = indices(), futures(), big_stocks()
+    if not ix.get('.INX', {}).get('v') or not rows:
+        raise RuntimeError('미국 지수·종목 원본을 받지 못해 브리핑 생성을 중단합니다')
+    if slot in ('mid', 'close'):
+        source_time = ix['.INX'].get('at')
+        if not source_time or datetime.fromisoformat(source_time).astimezone(NY).date() != now_ny.date():
+            raise RuntimeError('미국 브리핑 대상 거래일과 원본 시세 날짜가 다릅니다')
     spx, ndq, dji, sox, vix = (ix.get(k, {}) for k in (".INX", ".IXIC", ".DJI", ".SOX", ".VIX"))
     es, nq = fu.get("EScv1", {}), fu.get("NQcv1", {})
     key = "om" if slot == "pre" and sum(1 for r in rows[:50] if r["om"] is not None) >= 10 else "ch"  # 장 전엔 프리마켓 등락(있으면)
@@ -283,6 +291,12 @@ def main():
     now = datetime.fromisoformat(os.environ["AS_OF"]) if os.environ.get("AS_OF") else datetime.now(timezone.utc)  # AS_OF = 시험·재작성용 (예: 2026-10-09T21:30:00+00:00)
     now_ny, now_kst = now.astimezone(NY), now.astimezone(KST)
     force = os.environ.get("FORCE") == "1"
+    # Close retries remain valid after midnight, until the next premarket slot.
+    if not os.environ.get("SLOT") and now_ny.hour * 60 + now_ny.minute < 8 * 60 + 50:
+        day = now_ny.date() - timedelta(days=1)
+        while day.weekday() >= 5 or day.isoformat() in HOLIDAYS:
+            day -= timedelta(days=1)
+        now_ny = now_ny.replace(year=day.year, month=day.month, day=day.day, hour=23, minute=59)
     slot = pick_slot(now_ny)
     if not slot:
         print(f"브리핑 시간이 아님 (미국 {now_ny:%H:%M})")
@@ -295,7 +309,14 @@ def main():
     if not force and os.path.exists(os.path.join(OUT, name)):
         print("이미 만듦", name)
         return
+    if '--check' in sys.argv:
+        if os.environ.get('GITHUB_OUTPUT'):
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write('needed=1\n')
+        print('missing', name)
+        return
     d = build(slot, now_ny, now_kst)
+    d["generatedAt"] = now.isoformat()
     json.dump(d, open(os.path.join(OUT, name), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     idx_p = os.path.join(OUT, "index.json")
     idx = json.load(open(idx_p, encoding="utf-8")) if os.path.exists(idx_p) else []

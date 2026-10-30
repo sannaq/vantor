@@ -5,6 +5,8 @@ name: 미장 종합 평점 → 사이트·디스코드
 # 미국 휴장일(오늘 거래 없음)엔 보내지 않는다.
 on:
   schedule:
+    - cron: "17 23 * * 1-5" # retry after the first scheduled run
+    - cron: "17 0-3 * * 2-6" # keep retrying across New York midnight
     - cron: "0 22 * * 1-5"   # 월~금 22:00 UTC = 화~토 07:00 KST (미국 동부 18:00, 장마감 2시간 뒤)
   workflow_dispatch:
     inputs:
@@ -36,12 +38,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: 오늘 이미 보냈는지
+      - name: 이미 발행한 거래일인지 확인
         id: dup
-        run: |
-          today=$(TZ=Asia/Seoul date +%F)
-          if [ "${{ github.event_name }}" = "schedule" ] && git log -20 --format=%s | grep -qE "^auto $today [0-9:]+ 미장 평점"; then
-            echo "오늘 미장 평점은 이미 보냄 → 건너뜀"; echo "skip=1" >> "$GITHUB_OUTPUT"; else echo "skip=0" >> "$GITHUB_OUTPUT"; fi
+        env:
+          FORCE: ${{ github.event.inputs.force || 'no' }}
+        run: python3 scripts/automation_schedule.py
       - name: 전 종목 채점
         if: steps.dup.outputs.skip != '1'
         run: node scripts/score_all.mjs
@@ -49,14 +50,14 @@ jobs:
         if: steps.dup.outputs.skip != '1'
         run: |
           d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks-us.json'))['date'])")
-          if [ "$d" = "$(TZ=America/New_York date +%Y%m%d)" ]; then node scripts/track.mjs record; fi
+          if [ "$d" = "${{ steps.dup.outputs.target }}" ]; then node scripts/track.mjs record; fi
           node scripts/track.mjs eval
       - name: 미국 장이 열렸는지
         id: day
         if: steps.dup.outputs.skip != '1'
         run: |
           d=$(python3 -c "import json;print(json.load(open('feeds/stock-picks-us.json'))['date'])")
-          today=$(TZ=America/New_York date +%Y%m%d)
+          today="${{ steps.dup.outputs.target }}"
           echo "채점 기준일 $d · 미국 오늘 $today"
           if [ "$d" = "$today" ] || [ "${{ github.event.inputs.force }}" = "yes" ]; then echo "open=1" >> "$GITHUB_OUTPUT"; else echo "open=0" >> "$GITHUB_OUTPUT"; fi
       - name: 결과 올리기

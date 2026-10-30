@@ -1,0 +1,34 @@
+name: 자동 데이터 사이트 반영
+on:
+  workflow_run:
+    workflows:
+      - "국내 브리핑 누락 복구"
+      - "미장 브리핑 (장 전·장 중·장 마감)"
+      - "종합 평점 → 사이트·디스코드"
+      - "미장 종합 평점 → 사이트·디스코드"
+      - "수급 데이터 갱신"
+      - "뉴스 모으기"
+      - "이번주 이벤트 자동 갱신"
+      - "시장 심리·전망 채점 (매일)"
+      - "종합 평점 백테스트 (매달)"
+    types: [completed]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  pages: write
+concurrency:
+  group: refresh-pages
+  cancel-in-progress: false
+jobs:
+  refresh:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 최신 main이 사이트에 반영됐는지 확인
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          current=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          deployed=$(gh api "repos/$GITHUB_REPOSITORY/pages/builds/latest" --jq .commit)
+          if [ "$current" = "$deployed" ]; then echo "Already published"; exit 0; fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/pages/builds"

@@ -1,0 +1,52 @@
+name: 국내 브리핑 누락 복구
+on:
+  schedule:
+    - cron: "23,53 * * * *"
+  workflow_dispatch:
+    inputs:
+      send:
+        description: "디스코드 전송 (yes/no)"
+        required: false
+        default: "no"
+permissions:
+  contents: write
+concurrency:
+  group: kr-brief-recovery
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 최신 브리핑 누락 확인
+        id: due
+        run: python3 scripts/kr_brief.py --check
+      - name: 날짜 확인한 원본으로 자동 요약
+        if: steps.due.outputs.needed == '1'
+        run: python3 scripts/kr_brief.py
+      - name: 사이트에 저장
+        if: steps.due.outputs.needed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git add briefs
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 국내 브리핑 복구"
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: 이미지 준비
+        if: steps.due.outputs.needed == '1' && (github.event_name == 'schedule' || inputs.send == 'yes')
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q fonts-noto-cjk fonts-noto-color-emoji
+          pip install -q playwright
+          python -m playwright install --with-deps chromium
+      - name: 기존 브리핑 채널에 전송
+        if: steps.due.outputs.needed == '1' && (github.event_name == 'schedule' || inputs.send == 'yes')
+        env:
+          DISCORD_BRIEF_WEBHOOK: ${{ secrets.DISCORD_BRIEF_WEBHOOK }}
+          BRIEF_FILE: ${{ steps.due.outputs.file }}
+        run: python3 scripts/brief_image.py "$BRIEF_FILE"
