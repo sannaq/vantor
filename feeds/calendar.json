@@ -145,8 +145,8 @@
     "FOMC 금리 결정",
     "연준 의장 기자회견",
     "GDP 성장률",
-    "빅테크 실적 (마이크로소프트·알파벳·아마존·일라이릴리)",
-    "국내 실적 (삼성전자·SK하이닉스·삼성전기·현대차)"
+    "빅테크 실적 (알파벳·마이크로소프트·아마존·일라이릴리)",
+    "국내 실적 (삼성전자·현대차·KB금융)"
    ],
    "days": {
     "2026-10-26": [
@@ -166,7 +166,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 19곳: 케이던스·뉴코어·퍼블릭스토리지·The Hartford·Celestica·Cincinnati Financial·Principal Financial·Brown &·POSCO HOLDINGS·Cemex S.A.B.·Sun Communities·Amkor Technology·Rambus·Gerdau·Brixmor Property·Simpson Manufacturing·Noble·Alexandria Real·PriceSmart"
+      "t": "미국 실적 17곳: 케이던스·뉴코어·퍼블릭스토리지·Celestica·The Hartford·Cincinnati Financial·Principal Financial·Brown &·Cemex S.A.B.·Sun Communities·Amkor Technology·Rambus·Gerdau·Brixmor Property·Simpson Manufacturing·Noble·Alexandria Real"
      }
     ],
     "2026-10-27": [
@@ -270,13 +270,13 @@
      },
      {
       "c": "earn",
-      "t": "비자·코카콜라·HSBC·노바티스·씨게이트·보잉 (시간 미정)",
-      "tk": "V,KO,HSBC,NVS,STX,BA"
+      "t": "비자·코카콜라·노바티스·HSBC·씨게이트·보잉 (시간 미정)",
+      "tk": "V,KO,NVS,HSBC,STX,BA"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 78곳: S&P글로벌·코닝·HCA헬스케어·프리포트맥모란·존슨컨트롤즈·웨이스트매니지먼트·UPS·아메리칸타워·로빈후드·에코랩·로열캐리비안·셔윈윌리엄즈·일리노이툴웍스·힐튼·NXP·원오크·Baker Hughes·PACCAR·Teradyne·페이팔 외 58곳"
+      "t": "미국 실적 75곳: S&P글로벌·코닝·HCA헬스케어·프리포트맥모란·존슨컨트롤즈·웨이스트매니지먼트·UPS·아메리칸타워·로빈후드·에코랩·로열캐리비안·일리노이툴웍스·힐튼·셔윈윌리엄즈·NXP·원오크·Baker Hughes·PACCAR·Teradyne·페이팔 외 55곳"
      }
     ],
     "2026-10-28": [
@@ -310,32 +310,6 @@
        "BOC"
       ],
       "sub": "한국시간 10/28 22:45"
-     },
-     {
-      "c": "earn",
-      "t": "SK하이닉스·삼성전기·HD현대중공업·LG전자·HD한국조선해양·HD현대 (국내)",
-      "kw": [
-       "SK하이닉스",
-       "삼성전기",
-       "HD현대중공업",
-       "LG전자",
-       "HD한국조선해양",
-       "HD현대"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 7곳: SKC·유한양행·한미사이언스·두산퓨얼셀·OCI·PI첨단소재·HK이노엔",
-      "kw": [
-       "SKC",
-       "유한양행",
-       "한미사이언스",
-       "두산퓨얼셀",
-       "OCI",
-       "PI첨단소재",
-       "HK이노엔"
-      ]
      },
      {
       "c": "data",
@@ -375,19 +349,18 @@
      },
      {
       "c": "earn",
-      "t": "GE버노바·암페놀·산탄데르·UBS·ADP·필립스66 (장 전)",
-      "tk": "GEV,APH,SAN,UBS,ADP,PSX",
-      "when": "B"
+      "t": "BBVA (장 마감 후)",
+      "tk": "BBVA"
      },
      {
       "c": "earn",
-      "t": "마이크로소프트·알파벳·KLA·서비스나우·T모바일·BBVA (장 마감 후)",
-      "tk": "MSFT,GOOGL,KLAC,NOW,TMUS,BBVA"
+      "t": "알파벳·마이크로소프트·SK hynix·GE버노바·KLA·암페놀 (시간 미정)",
+      "tk": "GOOGL,MSFT,SKHY,GEV,KLAC,APH"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 99곳: 포티넷(후)·GSK(전)·Equinix(후)·Agnico Eagle(후)·Canadian Pacific(후)·버티브(전)·페덱스(후)·O'Reilly Automotive(후)·American Electric(전)·Boston Scientific(전)·TE Connectivity(전)·Carvana(후)·Aon(전)·Garmin(전)·Honeywell Aerospace(후)·eBay(후)·United Microelectronics(전)·Ford Motor(후)·Fomento Economico(전)·Old Dominion(전) 외 79곳"
+      "t": "미국 실적 111곳: 산탄데르·T모바일·서비스나우·UBS·포티넷·Equinor ASA·ADP·필립스66·GSK·Equinix·버티브·Agnico Eagle·Canadian Pacific·O'Reilly Automotive·페덱스·American Electric·Aon·Carvana·TE Connectivity·Deutsche Bank 외 91곳"
      }
     ],
     "2026-10-29": [
@@ -553,13 +526,13 @@
      },
      {
       "c": "earn",
-      "t": "아마존·인텔·길리어드·샌디스크·스타벅스·스트라이커 (장 마감 후)",
-      "tk": "AMZN,INTC,GILD,SNDK,SBUX,SYK"
+      "t": "아마존·인텔·샌디스크·길리어드·스타벅스·스트라이커 (장 마감 후)",
+      "tk": "AMZN,INTC,SNDK,GILD,SBUX,SYK"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 135곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ING(전)·ASE Technology(전)·ICE(전)·Quanta Services(전)·Lloyds Banking(전)·Enterprise Products(전)·몬델리즈(후)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Digital Realty(후)·Takeda Pharmaceutical(전)·Cheniere Energy(전)·스트래티지(후)·Monolithic Power(후) 외 115곳"
+      "t": "미국 실적 134곳: 토탈에너지스(전)·Anheuser-Busch Inbev(전)·BMS(전)·알트리아(전)·Trane Technologies(전)·ASE Technology(전)·ING(전)·Quanta Services(전)·ICE(전)·Enterprise Products(전)·Lloyds Banking(전)·몬델리즈(후)·Howmet Aerospace(전)·Republic Services(후)·Arthur J.(후)·Digital Realty(후)·Takeda Pharmaceutical(전)·Cheniere Energy(전)·스트래티지(후)·Monolithic Power(후) 외 114곳"
      }
     ],
     "2026-10-30": [
@@ -662,7 +635,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·Canadian National(전)·콜게이트(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·LyondellBasell Industries(전)·nVent Electric(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·Cboe Global(전)·BrightSpring Health(전) 외 8곳"
+      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·Canadian National(전)·콜게이트(전)·NatWest(전)·Imperial Oil(전)·세노버스·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·nVent Electric(전)·LyondellBasell Industries(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·BrightSpring Health(전)·Cboe Global(전) 외 8곳"
      }
     ]
    }
