@@ -1,5 +1,6 @@
 import { snapshotHash } from './gemini-review.mjs';
 import { createSecClient } from './paper-sec.mjs';
+import { createIrClient, createFilingCollector } from './paper-ir.mjs';
 const UA = { 'User-Agent': 'Mozilla/5.0' };
 async function get(url, json = true) {
   const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(20000), redirect: 'error' });
@@ -63,14 +64,14 @@ export async function collectEvidence(market, candidate, newsRows = []) {
   return documents;
 }
 
-const secClient = createSecClient();
+const usFilings = createFilingCollector(createSecClient(), createIrClient());
 export async function collectFilingResult(market, candidate) {
-  if (market === 'US') return secClient(candidate, plainText);
+  if (market === 'US') return usFilings(candidate, plainText);
   const documents = await collectFilings(market, candidate);
   return { documents, reason: documents.length ? 'ok' : 'waiting_evidence' };
 }
 export async function collectFilings(market, candidate) {
-  if (market === 'US') return (await secClient(candidate, plainText)).documents;
+  if (market === 'US') return (await usFilings(candidate, plainText)).documents;
   try {
     const out = [];
     if (market === 'KR') {

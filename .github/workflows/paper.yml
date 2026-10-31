@@ -28,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: 공식 IR PDF 원문 추출 도구
+        run: sudo apt-get update -qq && sudo apt-get install -y poppler-utils
       - name: 무료 AI 검토와 일봉 모의운용
         env:
           SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
@@ -41,9 +43,9 @@ jobs:
         run: |
           node --input-type=module - <<'JS'
           import { collectFilingResult } from './scripts/paper-data.mjs';
-          for (const [market,c] of [['KR','005930'],['US','AAPL']]) {
+          for (const [market,c] of [['KR','005930'],['US','SNDK'],['US','MRVL'],['US','WDC']]) {
             const d = await collectFilingResult(market,{c});
-            console.log(market+' verified filings: '+d.documents.length+'; status='+d.reason);
+            console.log(market+' '+c+' verified filings: '+d.documents.length+'; status='+d.reason);
           }
           JS
       - name: 모의계좌 상태 보존

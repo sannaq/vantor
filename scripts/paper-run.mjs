@@ -21,7 +21,7 @@ const messages = {
   feed_stale: '최신 장마감 추천 자료 대기',
   quota_wait: '무료 호출 한도 도달 · 신규 검토와 매수 대기',
   daily_review_limit: '오늘 검토 한도 완료 · 다음 실행 대기',
-  waiting_evidence: '기사 본문 확보 대기',
+  waiting_evidence: '공시 원문·기사 본문 확보 대기',
   waiting_sec_contact: '미국 공시 수집 연락 이메일 등록 대기',
   sec_access_denied: 'SEC 공시 서버 접근 거부 · 신규 모의매수 대기',
   sec_rate_limited: 'SEC 요청 제한 · 신규 모의매수 대기',
@@ -32,6 +32,7 @@ for (const market of ['KR', 'US']) {
   let state;
   try { state = read(file); } catch { state = { account: newAccount(market), reviews: [], attempts: {} }; }
   delete state.filingStatus;
+  state.filingCoverage = { checked: 0, verified: 0, officialIr: 0, held: 0 };
   state.model = GEMINI_MODEL; state.updatedAt = new Date().toISOString();
   state.mode = 'paper'; state.execution = 'daily-bars';
   state.notice = '가상 자금 · 장마감 일봉 모의체결 · 수수료·세금·체결차이 합산 가정: 매수/매도 각각 ' + (state.account.costRate * 100) + '% · 실제 체결과 다름';
@@ -74,16 +75,20 @@ for (const market of ['KR', 'US']) {
               row.tv20 >= (market === 'US' ? .1 : 50) && (market === 'US' || !(row.ref || []).includes('하락 추세')) };
           if (!candidate.qualified || !candidate.rc) continue;
           const filingResult = await collectFilingResult(market, candidate);
-          if (market === 'US' && filingResult.reason !== 'ok') {
+          state.filingCoverage.checked++;
+          if (!filingResult.documents.length) {
+            state.filingCoverage.held++;
             state.filingStatus = filingResult.reason;
-            if (['waiting_sec_contact','sec_access_denied','sec_rate_limited'].includes(filingResult.reason)) {
-              state.status = filingResult.reason; break;
-            }
+            state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day,
+              status: 'waiting_evidence', evidenceReason: filingResult.reason, secReason: filingResult.secReason });
+            continue; // one unsupported issuer must not block later verified IR candidates
           }
-          const documents = [...await collectEvidence(market, candidate, news.items[row.c] || []),
-            ...filingResult.documents];
+          state.filingCoverage.verified++;
+          if (filingResult.provider === 'official_ir') state.filingCoverage.officialIr++;
+          const articles = await collectEvidence(market, candidate, news.items[row.c] || []).catch(() => []);
+          const documents = [...articles, ...filingResult.documents];
           if (!documents.some(d => d.type === 'filing') || !documents.some(d => d.type === 'news')) {
-            state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence' }); continue;
+            state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence', evidenceReason: 'news_missing' }); continue;
           }
           // Persist attempt before request. No retry storm or paid-model fallback.
           state.attempts[day] = ++calls; persist(file, state);
@@ -99,12 +104,17 @@ for (const market of ['KR', 'US']) {
           if (result.status === 'quota_wait' || result.status === 'api_error') { state.status = result.status; break; }
           await new Promise(resolve => setTimeout(resolve, 13000));
         }
+        if (state.status === 'ready' && state.filingCoverage.held && !state.filingCoverage.verified) state.status = 'waiting_evidence';
       }
     }
   } catch {
     state.status = 'price_data_missing';
   }
   state.message = messages[state.status] || 'AI 검토 오류 · 신규 매수 대기';
+  if (market === 'US' && state.filingCoverage.checked) {
+    const c = state.filingCoverage;
+    state.message += ` · 이번 실행 공시 확인 ${c.verified}/${c.checked}종목(공식 IR ${c.officialIr}), 미확보 ${c.held}종목 보류`;
+  }
   persist(file, state);
   console.log(`${market}: ${state.status}, positions=${state.account.positions.length}, pending=${state.account.pending.length}`);
 }
