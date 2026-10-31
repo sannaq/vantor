@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newAccount, advanceDay, queueCandidate } from './paper-engine.mjs';
 import { reviewCandidate, GEMINI_MODEL } from './gemini-review.mjs';
-import { candles, collectEvidence, collectFilings } from './paper-data.mjs';
+import { candles, collectEvidence, collectFilingResult } from './paper-data.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = name => JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
@@ -22,12 +22,16 @@ const messages = {
   quota_wait: '무료 호출 한도 도달 · 신규 검토와 매수 대기',
   daily_review_limit: '오늘 검토 한도 완료 · 다음 실행 대기',
   waiting_evidence: '기사 본문 확보 대기',
+  waiting_sec_contact: '미국 공시 수집 연락 이메일 등록 대기',
+  sec_access_denied: 'SEC 공시 서버 접근 거부 · 신규 모의매수 대기',
+  sec_rate_limited: 'SEC 요청 제한 · 신규 모의매수 대기',
   ready: '장마감 모의운용 · 다음 거래일 주문 준비',
 };
 for (const market of ['KR', 'US']) {
   const suffix = market === 'US' ? '-us' : '', file = `feeds/paper-${market.toLowerCase()}.json`;
   let state;
   try { state = read(file); } catch { state = { account: newAccount(market), reviews: [], attempts: {} }; }
+  delete state.filingStatus;
   state.model = GEMINI_MODEL; state.updatedAt = new Date().toISOString();
   state.mode = 'paper'; state.execution = 'daily-bars';
   state.notice = '가상 자금 · 장마감 일봉 모의체결 · 수수료·세금·체결차이 합산 가정: 매수/매도 각각 ' + (state.account.costRate * 100) + '% · 실제 체결과 다름';
@@ -69,8 +73,15 @@ for (const market of ['KR', 'US']) {
             qualified: row.view === '추천' && Number.isFinite(row.per) && row.per > 0 &&
               row.tv20 >= (market === 'US' ? .1 : 50) && (market === 'US' || !(row.ref || []).includes('하락 추세')) };
           if (!candidate.qualified || !candidate.rc) continue;
+          const filingResult = await collectFilingResult(market, candidate);
+          if (market === 'US' && filingResult.reason !== 'ok') {
+            state.filingStatus = filingResult.reason;
+            if (['waiting_sec_contact','sec_access_denied','sec_rate_limited'].includes(filingResult.reason)) {
+              state.status = filingResult.reason; break;
+            }
+          }
           const documents = [...await collectEvidence(market, candidate, news.items[row.c] || []),
-            ...await collectFilings(market, candidate)];
+            ...filingResult.documents];
           if (!documents.some(d => d.type === 'filing') || !documents.some(d => d.type === 'news')) {
             state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence' }); continue;
           }

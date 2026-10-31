@@ -30,17 +30,20 @@ jobs:
           node-version: '22'
       - name: 무료 AI 검토와 일봉 모의운용
         env:
+          SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_FREE_TIER_CONFIRMED: ${{ vars.GEMINI_FREE_TIER_CONFIRMED }}
         run: node scripts/paper-run.mjs
       - name: 공시 연결 확인
         if: github.event.inputs.source_check == 'true'
+        env:
+          SEC_CONTACT_EMAIL: ${{ secrets.SEC_CONTACT_EMAIL }}
         run: |
           node --input-type=module - <<'JS'
-          import { collectFilings } from './scripts/paper-data.mjs';
+          import { collectFilingResult } from './scripts/paper-data.mjs';
           for (const [market,c] of [['KR','005930'],['US','AAPL']]) {
-            const d = await collectFilings(market,{c});
-            console.log(market+' verified filings: '+d.length);
+            const d = await collectFilingResult(market,{c});
+            console.log(market+' verified filings: '+d.documents.length+'; status='+d.reason);
           }
           JS
       - name: 모의계좌 상태 보존

@@ -8,6 +8,9 @@ on:
     - cron: "17 23 * * 1-5" # retry after the first scheduled run
     - cron: "17 0-3 * * 2-6" # keep retrying across New York midnight
     - cron: "0 22 * * 1-5"   # 월~금 22:00 UTC = 화~토 07:00 KST (미국 동부 18:00, 장마감 2시간 뒤)
+  workflow_run:
+    workflows: ['미장 브리핑 (장 전·장 중·장 마감)']
+    types: [completed]
   workflow_dispatch:
     inputs:
       send:
@@ -28,6 +31,7 @@ concurrency:
 
 jobs:
   score:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     env:
       MKT: US
@@ -35,6 +39,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 30
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: "20"

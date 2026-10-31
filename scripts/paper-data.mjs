@@ -1,4 +1,5 @@
 import { snapshotHash } from './gemini-review.mjs';
+import { createSecClient } from './paper-sec.mjs';
 const UA = { 'User-Agent': 'Mozilla/5.0' };
 async function get(url, json = true) {
   const r = await fetch(url, { headers: UA, signal: AbortSignal.timeout(20000), redirect: 'error' });
@@ -62,14 +63,14 @@ export async function collectEvidence(market, candidate, newsRows = []) {
   return documents;
 }
 
-let secTickers;
-async function secGet(url, json = true) {
-  const r = await fetch(url, { headers: { 'User-Agent': 'VantorPaperResearch contact https://github.com/sannaq/vantor',
-    Accept: json ? 'application/json' : 'text/html' }, signal: AbortSignal.timeout(20000), redirect: 'error' });
-  if (!r.ok) throw new Error('filing_unavailable');
-  return json ? r.json() : r.text();
+const secClient = createSecClient();
+export async function collectFilingResult(market, candidate) {
+  if (market === 'US') return secClient(candidate, plainText);
+  const documents = await collectFilings(market, candidate);
+  return { documents, reason: documents.length ? 'ok' : 'waiting_evidence' };
 }
 export async function collectFilings(market, candidate) {
+  if (market === 'US') return (await secClient(candidate, plainText)).documents;
   try {
     const out = [];
     if (market === 'KR') {
@@ -84,18 +85,6 @@ export async function collectFilings(market, candidate) {
         out.push({ id: snapshotHash({ url, text }), type: 'filing', title: row.title, text: text.slice(0,10000),
           url, publishedAt, fetchedAt: new Date().toISOString(), verified: true });
       }
-    } else {
-      secTickers ||= await secGet('https://www.sec.gov/files/company_tickers.json');
-      const issuer = Object.values(secTickers).find(s => s.ticker === candidate.c);
-      if (!issuer) return [];
-      const cik = String(issuer.cik_str), data = await secGet(`https://data.sec.gov/submissions/CIK${cik.padStart(10,'0')}.json`);
-      const r = data.filings?.recent, i = r?.form?.findIndex(f => ['10-K','10-Q','8-K','20-F','6-K'].includes(f));
-      if (i == null || i < 0) return [];
-      const url = `https://www.sec.gov/Archives/edgar/data/${cik}/${r.accessionNumber[i].replaceAll('-','')}/${r.primaryDocument[i]}`;
-      const text = plainText(await secGet(url, false)), publishedAt = new Date(r.acceptanceDateTime[i]).toISOString();
-      if (text.length >= 160 && Date.parse(publishedAt) <= Date.now()) out.push({ id: snapshotHash({ url, text }), type: 'filing',
-        title: `${issuer.title} ${r.form[i]}`, text: text.slice(0,10000), url, publishedAt,
-        fetchedAt: new Date().toISOString(), verified: true });
     }
     return out;
   } catch { return []; }
