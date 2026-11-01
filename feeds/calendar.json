@@ -601,14 +601,13 @@
      },
      {
       "c": "earn",
-      "t": "엑슨모빌·애브비·셰브런·아스트라제네카·BP·사노피 (장 전)",
-      "tk": "XOM,ABBV,CVX,AZN,BP,SNY",
-      "when": "B"
+      "t": "엑슨모빌·애브비·셰브런·아스트라제네카·BP·사노피 (시간 미정)",
+      "tk": "XOM,ABBV,CVX,AZN,BP,SNY"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 28곳: 제너럴다이내믹스(전)·Regeneron Pharmaceuticals(전)·Canadian National(전)·콜게이트(전)·NatWest(전)·Imperial Oil(전)·Dominion Energy(전)·Exelon(전)·Kenvue(전)·Cameco(전)·Church &(전)·nVent Electric(전)·LyondellBasell Industries(전)·Banco De(전)·Magna International(전)·RBC Bearings(전)·Banco Santander(전)·BrightSpring Health(전)·Cboe Global(전)·Federal Realty(전) 외 8곳"
+      "t": "미국 실적 28곳: 제너럴다이내믹스·Regeneron Pharmaceuticals·Canadian National·콜게이트·NatWest·Imperial Oil·Dominion Energy·Exelon·Kenvue·Cameco·Church &·nVent Electric·LyondellBasell Industries·Banco De·Magna International·RBC Bearings·Banco Santander·BrightSpring Health·Cboe Global·Federal Realty 외 8곳"
      }
     ]
    }
