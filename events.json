@@ -1,18 +1,20 @@
 {
-  "week": "2026년 10월 5주차",
-  "range": "10/26~10/30",
-  "updated": "2026-10-31",
-  "intro": "이번 주 핵심: **FOMC 금리 결정**, **연준 의장 기자회견**, **GDP 성장률** (★★★ = 매우 중요)",
+  "week": "2026년 11월 1주차",
+  "range": "11/2~11/6",
+  "updated": "2026-11-02",
+  "intro": "이번 주 핵심: **Congressional Elections**, **시간당 임금**, **고용보고서 (비농업 고용)** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-10-27", "time": "23:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 80.5 · 직전 81.9)", "src": "ff:CB Consumer Confidence", "rx": {"day": "2026-10-27", "mk": "US", "items": [["S&P500", 0.6, "pct"], ["나스닥", 1.18, "pct"], ["미 10년물", 1, "bp"], ["달러지수", 0.37, "pct"]]}},
-    {"date": "2026-10-29", "time": "03:00", "market": "US", "type": "policy", "imp": 3, "title": "FOMC 금리 결정", "note": "금리 결정과 성명 문구. 주 최대 이벤트. (예상 4.00% · 직전 4.00%)", "src": "ff:Federal Funds Rate", "rx": {"day": "2026-10-28", "mk": "US", "items": [["S&P500", 0.28, "pct"], ["나스닥", 0.27, "pct"], ["미 10년물", 5, "bp"], ["달러지수", -0.04, "pct"]]}},
-    {"date": "2026-10-29", "time": "03:30", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 기자회견", "note": "향후 경로 힌트.", "src": "ff:FOMC Press Conference", "rx": {"day": "2026-10-28", "mk": "US", "items": [["S&P500", 0.28, "pct"], ["나스닥", 0.27, "pct"], ["미 10년물", 5, "bp"], ["달러지수", -0.04, "pct"]]}},
-    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 전체 성적표. (예상 3.2% · 직전 1.5%)", "src": "ff:Advance GDP q/q", "fc": {"Advance GDP q/q": "3.2%"}, "rx": {"day": "2026-10-29", "mk": "US", "items": [["S&P500", -0.3, "pct"], ["나스닥", -1.38, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.34, "pct"]]}},
-    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑. (예상 0.3% · 직전 0.2%)", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}, "rx": {"day": "2026-10-29", "mk": "US", "items": [["S&P500", -0.3, "pct"], ["나스닥", -1.38, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.34, "pct"]]}},
-    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "GDP 물가지수", "note": "성장 속 물가 압력. (예상 3.5% · 직전 6.2%)", "src": "ff:Advance GDP Price Index q/q", "rx": {"day": "2026-10-29", "mk": "US", "items": [["S&P500", -0.3, "pct"], ["나스닥", -1.38, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.34, "pct"]]}},
-    {"date": "2026-10-29", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 198K · 직전 194K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "198K"}, "rx": {"day": "2026-10-29", "mk": "US", "items": [["S&P500", -0.3, "pct"], ["나스닥", -1.38, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.34, "pct"]]}},
-    {"date": "2026-10-30", "time": "21:30", "market": "US", "type": "data", "imp": 2, "title": "고용비용지수(ECI)", "note": "임금발 물가 압력. (예상 0.8% · 직전 0.9%)", "src": "ff:Employment Cost Index q/q", "rx": {"day": "2026-10-30", "mk": "US", "items": [["S&P500", -1.82, "pct"], ["나스닥", -2.86, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.07, "pct"]]}}
+    {"date": "2026-11-03", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "ISM 제조업 PMI", "note": "제조업 체감 경기. 반도체·수출주 심리에 영향. (예상 54.5 · 직전 54.5)", "src": "ff:ISM Manufacturing PMI"},
+    {"date": "2026-11-04", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "JOLTS 구인·이직", "note": "고용시장 열기 확인. (예상 7.11M · 직전 7.08M)", "src": "ff:JOLTS Job Openings", "fc": {"JOLTS Job Openings": "7.11M"}},
+    {"date": "2026-11-04", "time": "00:16", "market": "US", "type": "data", "imp": 3, "title": "Congressional Elections", "note": "", "src": "ff:Congressional Elections"},
+    {"date": "2026-11-05", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "ISM 서비스업 PMI", "note": "미국 경제의 몸통(서비스) 체감 경기. 50 위·아래와 가격지수 확인. (예상 54.9 · 직전 54.9)", "src": "ff:ISM Services PMI"},
+    {"date": "2026-11-05", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 197K · 직전 194K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "197K"}},
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "시간당 임금", "note": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)", "src": "ff:Average Hourly Earnings m/m", "fc": {"Average Hourly Earnings m/m": "0.3%"}},
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "고용보고서 (비농업 고용)", "note": "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차. (예상 63K · 직전 29K)", "src": "ff:Non-Farm Employment Change", "fc": {"Non-Farm Employment Change": "63K"}},
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "실업률", "note": "고용보고서와 함께 발표. 상승 시 경기 둔화 신호. (예상 4.2% · 직전 4.2%)", "src": "ff:Unemployment Rate", "fc": {"Unemployment Rate": "4.2%"}},
+    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 47.8 · 직전 46.3)", "src": "ff:Prelim UoM Consumer Sentiment"},
+    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Prelim UoM Inflation Expectations"}
   ],
-  "keys": [{"t": "FOMC 금리 결정 (10/29 03:00)", "b": "금리 결정과 성명 문구. 주 최대 이벤트. (예상 4.00% · 직전 4.00%)"}, {"t": "연준 의장 기자회견 (10/29 03:30)", "b": "향후 경로 힌트."}, {"t": "GDP 성장률 (10/29 21:30)", "b": "경기 전체 성적표. (예상 3.2% · 직전 1.5%)"}]
+  "keys": [{"t": "시간당 임금 (11/6 22:30)", "b": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)"}, {"t": "고용보고서 (비농업 고용) (11/6 22:30)", "b": "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차. (예상 63K · 직전 29K)"}]
 }
