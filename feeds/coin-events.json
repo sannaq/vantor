@@ -1,11 +1,11 @@
 {
   "week": "2026년 11월 1주차",
   "range": "11/2~11/6",
-  "updated": "2026-11-02",
+  "updated": "2026-11-03",
   "events": [
     {"date": "2026-11-04", "time": "00:16", "market": "COIN", "type": "data", "imp": 3, "title": "Congressional Elections", "note": "", "src": "ff:Congressional Elections"},
     {"date": "2026-11-06", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "시간당 임금", "note": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)", "src": "ff:Average Hourly Earnings m/m", "fc": {"Average Hourly Earnings m/m": "0.3%"}},
-    {"date": "2026-11-06", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "고용보고서 (비농업 고용)", "note": "고용 강/약이 금리 경로를 흔들어 변동성 확대.", "src": "ff:Non-Farm Employment Change", "fc": {"Non-Farm Employment Change": "63K"}},
+    {"date": "2026-11-06", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "고용보고서 (비농업 고용)", "note": "고용 강/약이 금리 경로를 흔들어 변동성 확대.", "src": "ff:Non-Farm Employment Change", "fc": {"Non-Farm Employment Change": "65K"}},
     {"date": "2026-11-06", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "실업률", "note": "고용보고서와 함께 발표. 상승 시 경기 둔화 신호. (예상 4.2% · 직전 4.2%)", "src": "ff:Unemployment Rate", "fc": {"Unemployment Rate": "4.2%"}}
   ]
 }
