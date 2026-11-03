@@ -38,6 +38,11 @@ function quantReview(r){
     +'<p class="qt-muted">검토 '+esc(quantTime(v.createdAt))+' · 근거 유효기한 '+esc(quantTime(v.expiresAt))+' (한국시간)</p>'
     +'<ul>'+(r.sources||[]).filter(function(s){try{return new URL(s.url).protocol==='https:';}catch(e){return false;}}).map(function(s){return '<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a> · '+esc(s.provider==='official_ir'?'공식 IR':s.type==='filing'?'공시':'기사')+' · '+esc(quantTime(s.publishedAt))+'</li>';}).join('')+'</ul></details>';
 }
+function quantPositionPnl(x){
+  if(![x.quantity,x.lastPrice,x.costBasis].every(Number.isFinite)||x.quantity<=0||x.costBasis<=0||x.lastPrice<=0)return null;
+  var unit=x.lastPrice-x.costBasis;if(Math.abs(unit)<1e-9)unit=0;
+  return {unit:unit,total:unit*x.quantity,rate:unit/x.costBasis*100,state:unit>0?'수익':unit<0?'손실':'보합',tone:unit>0?'qt-profit':unit<0?'qt-loss':'qt-flat'};
+}
 function quantChart(a,money){
   var rows=a.history.filter(function(x){return Number.isFinite(x.equity);});
   if(!rows.length)return '<p class="qt-empty">평가 기록이 쌓이면 수익 추이가 표시돼요.</p>';
@@ -68,7 +73,15 @@ function renderQuant(load){
       h+='<section class="card qt-box"><h2>운용 규칙</h2><p>거래대금·재무·가격 조건 → 기사·공시 확보 → AI 위험 검토 → 다음 거래일 모의주문 → 보유 관리</p><p>20~60거래일 중기 검증 · 종목당 최대 15% · 손절 계획 손실 1% · 최고 평가액 대비 15% 하락 시 신규 매수 중단</p><p>Gemini 무료 한도 · 시장별 UTC 날짜당 최대 3회 검토 · 자료 부족·AI 오류·한도 소진 시 신규 검토와 매수 대기</p><p class="qt-muted">일봉 기반 모의 체결이에요. 가격 급변 시 계획 손실을 넘을 수 있어요. GitHub Actions에서 자동 실행되며 이 화면의 새로고침은 자료만 다시 읽어요.</p></section>';
     }
     var name=function(x){return '<b>'+esc(x.name||x.symbol)+'</b><br><small>'+esc(x.symbol)+'</small>';};
-    if(_quantTab==='positions')h+='<section class="card qt-box"><h2>보유 종목</h2>'+quantTable(['종목','수량·보유일','비용 포함 매입단가','평가 기준 종가','평가손익','계좌 비중','손절가','1차 / 최종 목표','매수일'],a.positions.map(function(x){return [name(x),x.quantity+'주 / '+x.heldDays+'거래일',money(x.costBasis),money(x.lastPrice),money(x.quantity*(x.lastPrice-x.costBasis)),pct(x.quantity*x.lastPrice/a.equity*100),money(x.stop),money(x.target1)+' / '+money(x.target)+(x.firstTargetDone?'<br>1차 매도 완료':''),quantDate(x.entryDate)];}),'현재 보유 종목이 없어요.')+'</section>';
+    if(_quantTab==='positions'){
+      var signed=function(n,percent){return (n>0?'+':n<0?'−':'')+(percent?pct(Math.abs(n)):money(Math.abs(n)));};
+      var gain=function(n,tone,percent){return '<b class="qt-pnl '+tone+'">'+signed(n,percent)+'</b>';};
+      var basis=a.positions.reduce(function(sum,x){return sum+x.quantity*x.costBasis;},0), value=a.positions.reduce(function(sum,x){return sum+x.quantity*x.lastPrice;},0), totalTone=unreal>0?'qt-profit':unreal<0?'qt-loss':'qt-flat';
+      h+='<section class="card qt-box"><h2>보유 종목</h2>';
+      if(a.positions.length)h+='<div class="qt-position-summary"><div><span class="qt-muted">현재 보유 손익</span><strong>'+gain(unreal,totalTone,false)+'</strong></div><div><span class="qt-muted">보유 수익률</span><strong>'+(basis>0?gain(unreal/basis*100,totalTone,true):'—')+'</strong></div><div><span class="qt-muted">매입 금액 → 평가 금액</span><strong>'+money(basis)+' → '+money(value)+'</strong></div></div>';
+      h+='<p class="qt-muted">'+quantDate(p.valuationDate||a.lastDate)+' 평가 종가 기준 · 실시간 시세가 아니에요. 주당 손익 = 평가 기준가 − 비용 포함 매입단가, 총 손익 = 주당 손익 × 보유 수량. 향후 매도 비용은 제외돼요.</p><p class="qt-table-hint">표를 좌우로 밀면 매입단가·평가 기준가·손절가도 확인할 수 있어요.</p>'
+        +quantTable(['종목','손익 상태','현재 평가손익','수익률','주당 손익','비용 포함 매입단가','평가 기준가','수량·보유일','계좌 비중','손절가','1차 / 최종 목표','매수일'],a.positions.map(function(x){var g=quantPositionPnl(x);return [name(x),g?'<span class="qt-pnl-state '+g.tone+'">'+g.state+'</span>':'확인 대기',g?gain(g.total,g.tone,false):'—',g?gain(g.rate,g.tone,true):'—',g?gain(g.unit,g.tone,false):'—',money(x.costBasis),money(x.lastPrice),x.quantity+'주 / '+x.heldDays+'거래일',pct(x.quantity*x.lastPrice/a.equity*100),money(x.stop),money(x.target1)+' / '+money(x.target)+(x.firstTargetDone?'<br>1차 매도 완료':''),quantDate(x.entryDate)];}),'현재 보유 종목이 없어요.')+'</section>';
+    }
     if(_quantTab==='orders')h+='<section class="card qt-box"><h2>다음 거래일 대기 주문</h2><p class="qt-muted">검토 통과가 체결을 보장하지는 않아요. 다음 관측 거래일의 가격·유효기한·계좌 한도를 다시 검사하고, 조건이 맞지 않으면 주문을 제거해요.</p>'+quantTable(['종목','예정 수량','지정 매수가','손절가','예약액','계획 손실·비중','추천 기준일','AI 근거 유효기한 (한국시간)'],a.pending.map(function(x){var risk=x.quantity*(x.entry-x.stop+(x.entry+x.stop)*a.costRate);return [name(x),x.quantity+'주',money(x.entry),money(x.stop),money(x.reserved),money(risk)+' / '+pct(risk/a.equity*100),quantDate(x.signalDate),esc(quantTime(x.reviewExpiresAt))];}),'대기 중인 모의주문이 없어요.')+'</section>';
     if(_quantTab==='trades'){
       var reasons={reviewed_limit_entry:'AI 검토 후 지정가 매수',stop:'손절',target:'최종 목표가',first_target:'1차 목표가 분할 매도',max_holding:'최대 보유기간 도달'};
