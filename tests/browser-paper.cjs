@@ -6,10 +6,10 @@ const root = path.resolve(__dirname, '..');
   try {
     for (const width of [1440, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 1000 } });
-      if (!process.env.VANTOR_LIVE) for (const file of ['index.html','app.js','sync-core.js']) {
+      if (!process.env.VANTOR_LIVE) for (const file of ['index.html','app.js','sync-core.js','quant.js','quant.css']) {
         await context.route(file === 'index.html' ? 'https://sannaq.github.io/vantor/' :
           new RegExp('/vantor/' + file.replace('.', '\\.') + '(?:\\?|$)'), r => r.fulfill({
-          contentType: file.endsWith('.html') ? 'text/html' : 'application/javascript',
+          contentType: file.endsWith('.html') ? 'text/html' : file.endsWith('.css') ? 'text/css' : 'application/javascript',
           body: fs.readFileSync(path.join(root,file),'utf8') }));
       }
       if (!process.env.VANTOR_LIVE) await context.route(/\/feeds\/paper-(kr|us)\.json/, r => {

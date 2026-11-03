@@ -706,6 +706,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 #vtGate input{width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1px solid #2b3647;background:#0b0f16;color:#e8ecf3;font-size:16px;text-align:center;letter-spacing:3px;outline:none}
 #vtGate input:focus{border-color:#d4a73a}#vtGate button{width:100%;margin-top:10px;padding:11px;border:none;border-radius:10px;background:#d4a73a;color:#0b0f16;font-weight:800;font-size:14px;cursor:pointer}
 #vtGate .er{color:#f6465d;font-size:12px;min-height:16px;margin-top:8px}</style>
+<link rel="stylesheet" href="quant.css?v=1">
 </head>
 <body>
 <div id="vtGate"><form class="bx" onsubmit="return vtGateTry(event)"><h1>⚡ VANTOR</h1><p>비밀번호를 입력해 주세요</p>
@@ -753,6 +754,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
     <a data-v="events"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></svg><span class="lbl">이벤트</span></a>
     <a data-v="learn"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2z"/><path d="M18 3v18"/></svg><span class="lbl">스터디</span></a>
     <a data-v="watch"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9L6.3 20l1.1-6L3 9.8l6-.8z"/></svg><span class="lbl">관심</span></a>
+    <a data-v="quant"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16V9M10 16V5M15 16v-6M20 16V3"/></svg><span class="lbl">퀀트 트레이딩</span></a>
   </div>
   <div class="side-promo"><div class="m">🐿️</div><p>좋은 사람들과<br><b>더 좋은 투자를!</b></p><button onclick="showView('brief')">브리핑 보기 →</button></div>
 </aside>
@@ -888,7 +890,8 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <!-- ===== STOCK ===== -->
   <div class="view" id="v-stock"><div class="card"><div class="pad" id="stockPanel"></div></div></div>
   <div class="view" id="v-reco"><div id="recoBoard"></div></div>
-  <div class="view" id="v-recohist"><div id="recoHist"></div></div>
+  <div class="view" id="v-quant"><div id="quantBoard"></div></div>
+<div class="view" id="v-recohist"><div id="recoHist"></div></div>
   <div class="view" id="v-watch">
     <div class="card"><div class="ch"><h2>⭐ 관심종목</h2><div class="r"><span id="watchupd">–</span></div></div>
       <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><div id="watchPanel"></div></div></div>
@@ -993,7 +996,8 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=10"></script>
 <script src="sync-core.js?v=1"></script>
-<script src="app.js?v=170"></script>
+<script src="quant.js?v=1"></script>
+<script src="app.js?v=171"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;

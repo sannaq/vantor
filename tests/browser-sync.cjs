@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..');
 try{
 for(let i=0;i<2;i++){
  const ctx=await browser.newContext(i?devices['iPhone 13']:{viewport:{width:1440,height:1000}});
- if(!process.env.VANTOR_LIVE)for(const file of ['index.html','app.js','sync-core.js'])await ctx.route(file==='index.html'?'https://sannaq.github.io/vantor/':new RegExp('/vantor/'+file.replace('.','\\.')+'(?:\\?|$)'),r=>r.fulfill({contentType:file.endsWith('.html')?'text/html':'application/javascript',body:fs.readFileSync(path.join(root,file),'utf8')}));
+ if(!process.env.VANTOR_LIVE)for(const file of ['index.html','app.js','sync-core.js','quant.js','quant.css'])await ctx.route(file==='index.html'?'https://sannaq.github.io/vantor/':new RegExp('/vantor/'+file.replace('.','\\.')+'(?:\\?|$)'),r=>r.fulfill({contentType:file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':'application/javascript',body:fs.readFileSync(path.join(root,file),'utf8')}));
  await ctx.route(/discord(?:app)?\.com\/api\/webhooks/,r=>r.fulfill({status:204,body:''}));
  await ctx.route('**/sync?*',async r=>{const key=new URL(r.request().url()).searchParams.get('key');if(r.request().method()==='POST'){
   const body=r.request().postDataJSON();posts.push({key,body});if(body.parts){if(delayParts)await new Promise(resolve=>setTimeout(resolve,delayParts));if(failParts)return r.fulfill({status:503,json:{ok:false,error:'test chunk failure'}});}

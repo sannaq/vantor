@@ -1528,7 +1528,7 @@ var _PAPER={};
 function _paperPanel(US){
   var key=US?'US':'KR', p=_PAPER[key];
   if(p===undefined){ _PAPER[key]=null; _loadJ('feeds/paper-'+key.toLowerCase()+'.json').then(function(j){_PAPER[key]=j||false;if(_recoUS()===US)renderReco();}); }
-  var h='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>AI·퀀트 모의계좌 · '+(US?'미국':'국내')+'</h2></div><div class="pad" style="padding-top:6px;font-size:13px;line-height:1.7">';
+  var h='<div class="card" style="margin-bottom:14px"><div class="ch"><h2>AI·퀀트 모의계좌 · '+(US?'미국':'국내')+'</h2><button class="qt-btn qt-short" onclick="quantOpen(\''+key+'\')">자세히 보기 →</button></div><div class="pad" style="padding-top:6px;font-size:13px;line-height:1.7">';
   if(!p)return h+'모의계좌 자료 '+(p===false?'확인 대기':'불러오는 중…')+'</div></div>';
   var a=p.account, money=function(n){return (US?'$':'₩')+Number(n||0).toLocaleString('ko-KR',{maximumFractionDigits:US?2:0});};
   var statuses={review_pass:'AI 검토 통과',risk_hold:'AI 위험 보류',waiting_evidence:'기사·공시 본문 확인 대기',quota_wait:'무료 한도 대기',api_error:'AI 연결 오류',api_or_parse_error:'AI 응답 확인 대기',review_invalid:'AI 근거 검증 실패',review_incomplete:'AI 응답 미완료'};
@@ -2330,7 +2330,7 @@ function _renderTabbar(v){ var tb=$('#tabbar'); if(!tb)return;
     tb.innerHTML=CTAB.map(function(x){ return '<a class="'+(x[0]===c?'on':'')+'" onclick="coinNav(\''+x[0]+'\')"><b style="font-size:19px;line-height:21px">'+x[2]+'</b><span>'+x[1]+'</span></a>'; }).join('')
       +'<a class="'+(inC?'':'on')+'" onclick="_openMore()">'+_MORE_SVG+'<span>더보기</span></a>'; return; }
   var g=NAV_OF[v]||v, inBar=TABBAR.some(function(x){return x[0]===g;});
-  if(!tb._svg||!tb._svg.home){ tb._svg={}; ['home','market','macro','reco','stock','brief','events','learn','watch'].forEach(function(k){ tb._svg[k]=_menuSvg(k); }); }
+  if(!tb._svg||!tb._svg.home){ tb._svg={}; ['home','market','macro','reco','stock','brief','events','learn','watch','quant'].forEach(function(k){ tb._svg[k]=_menuSvg(k); }); }
   if(!tb._svg.home)return;
   tb.innerHTML=TABBAR.map(function(x){ return '<a class="'+(x[0]===g?'on':'')+'" onclick="showView(\''+x[0]+'\')">'+tb._svg[x[0]]+'<span>'+x[1]+'</span></a>'; }).join('')
     +'<a class="'+(inBar?'':'on')+'" onclick="_openMore()">'+_MORE_SVG+'<span>더보기</span></a>';
@@ -2339,7 +2339,7 @@ function _closeSheet(){ var sh=$('#moreSheet'); if(sh)sh.classList.remove('on');
 function _openMore(){ var sh=$('#moreSheet'), tb=$('#tabbar'); if(!sh||!tb)return; var box=sh.querySelector('.ms-box');
   if(typeof coinMode!=='undefined'&&coinMode){ box.innerHTML=CMORE.map(function(x){ return '<a class="'+(x[0]===_ctabCur?'on':'')+'" onclick="_closeSheet();coinNav(\''+x[0]+'\')"><b style="font-size:22px">'+x[2]+'</b><span>'+x[1]+'</span></a>'; }).join(''); sh.classList.add('on'); return; }
   if(!tb._svg)return;
-  var L=[['home','홈'],['market','시장'],['macro','시장지표'],['reco','추천'],['stock','종목'],['brief','브리핑·뉴스'],['events','이벤트'],['learn','스터디'],['watch','관심']];
+  var L=[['home','홈'],['market','시장'],['macro','시장지표'],['reco','추천'],['stock','종목'],['brief','브리핑·뉴스'],['events','이벤트'],['learn','스터디'],['watch','관심'],['quant','퀀트 트레이딩']];
   box.innerHTML=L.map(function(x){ return '<a class="'+(x[0]===tb._cur?'on':'')+'" onclick="_closeSheet();showView(\''+x[0]+'\')">'+tb._svg[x[0]]+'<span>'+x[1]+'</span></a>'; }).join('');
   sh.classList.add('on'); }
 /* 폰 ⋯ 버튼 — 숨긴 아이콘 줄(테마·이미지 저장·화면 편집·관심·동기화·도움말·글자 크기)을 시트로 */
@@ -2401,6 +2401,7 @@ function showView(v,noScroll){
   var _ecl=$('#econCal'); if(_ecl)_ecl.style.display=(!coinMode&&v==='home')?'':'none'; // 경제 일정도 HOME에서만
   if(!coinMode){ var _is=$('#idxstrip'); if(_is)_is.style.display=''; var _db=$('#demoban'); if(_db&&!useReal&&!useRealMkt)_db.style.display=''; }
   var _g=NAV_OF[v]||v; $$('#menu a').forEach(function(a){a.classList.toggle('on',a.dataset.v===_g);}); _renderSubtabs(v); _renderTabbar(v);
+  if(v==='quant')renderQuant();
   if(v==='macro')renderMacro();
   if(v!=='stock')stopDetailLive(); // 상세를 벗어나면 라이브 폴링 중단
   if(typeof initCards==='function')setTimeout(initCards,0); // 새로 보이는 카드에 접기 버튼 부여
@@ -5376,7 +5377,7 @@ window.enterMode=function(m){ try{ var r=document.getElementById('spRemember'); 
   var sp=document.getElementById('splash'); if(sp){ setTimeout(function(){ sp.classList.add('hide'); },220); setTimeout(function(){ sp.style.display='none'; if(card)card.classList.remove('sp-picked'); _spCanvasStop(); },800); } };
 window.showSplash=function(){ var sp=document.getElementById('splash'); if(sp){ sp.style.display=''; void sp.offsetWidth; sp.classList.remove('hide'); _spCanvasStart(); } };
 (function(){ var sp=document.getElementById('splash'); if(!sp)return; var pre=null; try{pre=localStorage.getItem('aurEntry');}catch(e){}
-  var hm=(location.hash||'').replace('#',''); if(hm==='coin'||hm==='stock')pre=hm; // 주소 #coin/#stock 로 바로 진입 (옛 coin.html 이 여기로 넘김)
+  var hm=(location.hash||'').replace('#',''); if(hm==='quant')pre='stock'; if(hm==='coin'||hm==='stock')pre=hm; // 주소 #coin/#stock 로 바로 진입 (옛 coin.html 이 여기로 넘김)
   if(pre==='stock'||pre==='coin'){ if(typeof setMode==='function')setMode(pre); sp.classList.add('hide'); sp.style.display='none'; }
   else { _spCanvasStart(); }
   var lg=document.querySelector('.nav .logo'); if(lg){ lg.style.cursor='pointer'; lg.title='시작 화면 다시 열기 (주식/코인 선택)'; lg.addEventListener('click',function(){ window.showSplash(); }); }
