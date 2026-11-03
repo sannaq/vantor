@@ -45,6 +45,13 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   await board.locator('[data-qt-tab="reviews"]').click();assert((await board.locator('.qt-review-summary').innerText()).includes('모의매수 1건 · 주문 대기 0건 · 미매수 2건'));assert(await board.locator('.qt-review-excerpt').first().isVisible());await board.locator('[data-qt-filter="pass"]').click();assert.equal(await board.locator('details').count(),1);await board.locator('summary').click();
   assert((await board.innerText()).includes('₩89 × 5주'));assert((await board.innerText()).includes('현재 3주 보유'));assert((await board.innerText()).includes('<img src=x'));assert.equal(await board.locator('img').count(),0);assert.equal(await board.locator('a').count(),1);assert.equal(await page.evaluate(()=>window.qtInjected),undefined);
   await page.screenshot({path:'/tmp/vantor-quant-review-'+width+'.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await board.locator('[data-qt-filter="evidence"]').click();assert((await board.innerText()).includes('자료 없는 종목'));assert.equal(await board.locator('details').count(),1);
+  await board.locator('[data-qt-tab="trainer"]').click();assert((await board.innerText()).includes('첫 비교 계좌 생성 대기'));
+  await page.evaluate(()=>{
+    const p=_quantData.KR;p.trainer={version:1,startedAt:'2026-11-02T09:00:00Z',valuationDate:'20261103',accounts:['기존 전략','상승추세','저변동'].map((name,i)=>({id:['baseline','trend','lowvol'][i],name,rule:'시험 전략 조건',account:JSON.parse(JSON.stringify(p.account)),reviews:JSON.parse(JSON.stringify(p.reviews))}))};renderQuant();
+  });
+  assert.equal(await board.locator('.qt-trainer-account').count(),3);assert((await board.innerText()).includes('운용 전략은 자동으로 바뀌지 않아요.'));assert((await board.innerText()).includes('5.00%'));
+  await board.locator('.qt-trainer-account').first().locator('details>summary').first().click();assert((await board.locator('.qt-trainer-account').first().innerText()).includes('₩89 × 5주'));
+  await page.screenshot({path:'/tmp/vantor-trainer-'+width+'.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await board.locator('[data-qt-market="US"]').click();await board.locator('[data-qt-tab="overview"]').waitFor();await board.locator('[data-qt-tab="overview"]').click();assert((await board.innerText()).includes('$1,050'));
   await board.locator('[data-qt-tab="positions"]').click();assert((await board.locator('tbody').innerText()).includes('+$10'));assert((await board.locator('tbody').innerText()).includes('+11.11%'));await board.locator('[data-qt-tab="overview"]').click();
   await page.screenshot({path:'/tmp/vantor-quant-'+width+'.png',fullPage:true});

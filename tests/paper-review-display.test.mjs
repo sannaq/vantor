@@ -26,3 +26,9 @@ test('terminal cancellation and rejection show recorded reasons without guessing
  assert(outcome({...review,status:'waiting_evidence',evidenceReason:'ir_unsupported'},{}).text.includes('아직 지원하지'));
  assert(outcome({...review,entryStatus:'wait',entryReason:'drawdown_pause'},{}).text.includes('계좌 하락 한도'));
 });
+
+test('trainer statistics exclude partial exits and include observed peak drawdown',()=>{
+ const a={initialCapital:1000,equity:1080,history:[{equity:1000},{equity:1200},{equity:900},{equity:1080}],trades:[{side:'buy',reviewId:'A',quantity:10},{side:'sell',reviewId:'A',quantity:5,pnl:20}]};
+ let m=ctx.quantTrainerMetrics(a);assert.equal(m.closed,0);assert.equal(m.mdd,25);assert.equal(m.days,3);assert.equal(m.pnl,80);
+ a.trades.push({side:'sell',reviewId:'A',quantity:5,pnl:-25});m=ctx.quantTrainerMetrics(a);assert.equal(m.closed,1);assert.equal(m.wins,0);
+});

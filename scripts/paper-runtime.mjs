@@ -11,11 +11,11 @@ export function completedBars(rows, market, now = Date.now()) {
   const settled = +parts.hour >= (market === 'KR' ? 17 : 18);
   return rows.filter(b => b[0] < today || (b[0] === today && settled)).sort((a,b)=>a[0].localeCompare(b[0]));
 }
-export async function advancePortfolio(account, market, load, now = Date.now()) {
+export async function advancePortfolio(account, market, load, now = Date.now(), {recordEmpty = false} = {}) {
   const reference = completedBars(await load(market, market === 'KR' ? '005930' : 'AAPL.O'), market, now);
   if (!reference.length || !validBar(reference.at(-1))) throw Error('price_data_missing');
   const latestDate = reference.at(-1)[0];
-  if (!account.positions.length && !account.pending.length) return { account, latestDate };
+  if (!recordEmpty && !account.positions.length && !account.pending.length) return { account, latestDate };
   const needed = [...new Map([...account.positions,...account.pending].map(p=>[p.symbol,p])).values()];
   const histories = new Map();
   for (const p of needed) histories.set(p.symbol, await load(market, market === 'US' ? p.rc : p.symbol));

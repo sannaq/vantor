@@ -6,6 +6,7 @@ import { newAccount, queueCandidate } from './paper-engine.mjs';
 import { reviewCandidate, GEMINI_MODEL } from './gemini-review.mjs';
 import { candles, collectEvidence, collectFilingResult } from './paper-data.mjs';
 
+import {newTrainer, advanceTrainer, recordTrainerReview, candidateFor, trainerUniverse} from './paper-trainer.mjs';
 import { advancePortfolio, evidenceCoverage } from './paper-runtime.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,10 +43,21 @@ for (const market of ['KR', 'US']) {
   state.model = GEMINI_MODEL; state.updatedAt = new Date().toISOString();
   state.mode = 'paper'; state.execution = 'daily-bars';
   state.notice = '가상 자금 · 장마감 일봉 모의체결 · 수수료·세금·체결차이 합산 가정: 매수/매도 각각 ' + (state.account.costRate * 100) + '% · 실제 체결과 다름';
+  const priceCache = new Map();
+  const prices = (m,c) => {const k=m+':'+c;if(!priceCache.has(k))priceCache.set(k,candles(m,c));return priceCache.get(k);};
+  let trainerReady=false;
   try {
-    const advanced = await advancePortfolio(state.account, market, candles);
+    const advanced = await advancePortfolio(state.account, market, prices);
     state.account = advanced.account;
     state.valuationDate = advanced.latestDate;
+    try {
+      if(!state.trainer)state.trainer=newTrainer(market,advanced.latestDate);
+      state.trainer=await advanceTrainer(state.trainer,market,prices);
+      trainerReady=true;
+    }catch(error){
+      state.trainerStatus=error.message==='trainer_invalid'?'trainer_invalid':'price_data_missing';
+    }
+    if(trainerReady)delete state.trainerStatus;
     let picks, scores, news;
     try {
       picks = read(`feeds/stock-picks${suffix}.json`); scores = read(`feeds/stock-scores${suffix}.json`);
@@ -61,24 +73,30 @@ for (const market of ['KR', 'US']) {
       } else {
         const day = new Date().toISOString().slice(0,10), used = state.attempts[day] || 0;
         let calls = used;
+        const candidates=(picks.top||[]).map(row=>candidateFor(row,market,scores,picks.date));
+        const universe=trainerUniverse(candidates);
+        const record=(report,candidate,result) => {
+          state.reviews.push(report);
+          if(trainerReady) {
+            try {recordTrainerReview(state.trainer,candidate,universe,report,result);}
+            catch {trainerReady=false;state.trainerStatus='trainer_invalid';}
+          }
+        };
         for (const row of picks.top || []) {
           if (state.account.paused) break;
           if (state.reviews.some(r => r.sourceDate === picks.date && r.symbol === row.c &&
                 (['review_pass','risk_hold'].includes(r.status) || r.checkedDate === day)) ||
               [...state.account.positions, ...state.account.pending].some(p => p.symbol === row.c)) continue;
           if (calls >= 3) { state.status = 'daily_review_limit'; break; }
-          const candidate = { ...row, date: picks.date,
-            rc: market === 'US' ? scores.items[row.c]?.[14] : row.c,
-            qualified: row.view === '추천' && Number.isFinite(row.per) && row.per > 0 &&
-              row.tv20 >= (market === 'US' ? .1 : 50) && (market === 'US' || !(row.ref || []).includes('하락 추세')) };
+          const candidate = candidates.find(c=>c.c===row.c);
           if (!candidate.qualified || !candidate.rc) continue;
           const filingResult = await collectFilingResult(market, candidate);
           state.filingCoverage.checked++;
           if (!filingResult.documents.length) {
             state.filingCoverage.held++;
             state.filingStatus = filingResult.reason;
-            state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day,
-              status: 'waiting_evidence', evidenceReason: filingResult.reason, secReason: filingResult.secReason });
+            record({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day,
+              status: 'waiting_evidence', evidenceReason: filingResult.reason, secReason: filingResult.secReason },candidate);
             continue; // one unsupported issuer must not block later verified IR candidates
           }
           state.filingCoverage.verified++;
@@ -86,7 +104,7 @@ for (const market of ['KR', 'US']) {
           const articles = await collectEvidence(market, candidate, news.items[row.c] || []).catch(() => []);
           const documents = [...articles, ...filingResult.documents];
           if (!documents.some(d => d.type === 'filing') || !documents.some(d => d.type === 'news')) {
-            state.reviews.push({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence', evidenceReason: 'news_missing' }); continue;
+            record({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence', evidenceReason: 'news_missing' },candidate); continue;
           }
           // Persist attempt before request. No retry storm or paid-model fallback.
           state.attempts[day] = ++calls; persist(file, state);
@@ -98,7 +116,7 @@ for (const market of ['KR', 'US']) {
             const plan = queueCandidate(state.account, candidate, result.review, result.evidence, result.snapshotId, Date.now());
             report.entryStatus = plan.status; report.entryReason = plan.reason || null;
           }
-          state.reviews.push(report); persist(file, state);
+          record(report,candidate,result); persist(file, state);
           if (result.status === 'quota_wait' || result.status === 'api_error') { state.status = result.status; break; }
           await new Promise(resolve => setTimeout(resolve, 13000));
         }

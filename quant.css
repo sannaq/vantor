@@ -8,3 +8,5 @@
 .qt-entry{margin-top:8px;line-height:1.7}.qt-entry b{font-size:13px}.qt-entry .qt-muted{font-size:11px}
 
 .qt-review summary .qt-review-outcome{display:block;font-weight:700;color:var(--ink);font-size:14px;margin-top:8px}.qt-review summary .qt-review-excerpt{display:block;color:var(--ink);font-size:13px;margin:6px 0}.qt-review-detail{background:var(--panel2);padding:14px;border-radius:10px;margin-top:12px}.qt-review-detail h3{font-size:13px;margin:16px 0 6px}.qt-review-detail h3:first-child{margin-top:0}.qt-reason{white-space:pre-wrap}.qt-review-summary{border-left:3px solid var(--gold)}
+
+.qt-trainer-account h3{font-size:14px;margin:22px 0 10px}.qt-trainer-account>details>summary{font-weight:700;color:var(--gold);padding:10px 0}
