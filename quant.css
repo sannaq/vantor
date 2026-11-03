@@ -4,3 +4,5 @@
 
 .qt-profit{color:var(--up)}.qt-loss{color:var(--down)}.qt-flat{color:var(--sub)}.qt-pnl{font-variant-numeric:tabular-nums}.qt-pnl-state{display:inline-block;border:1px solid currentColor;border-radius:6px;padding:3px 8px;font-weight:700}.qt-position-summary{display:grid;grid-template-columns:1fr 1fr 1.6fr;gap:14px;padding:16px;background:var(--panel2);border-radius:10px;margin-bottom:12px}.qt-position-summary strong{font-size:19px}.qt-table-hint{font-size:12px;color:var(--sub)}@media(max-width:700px){.qt-position-summary{grid-template-columns:1fr 1fr;gap:12px;padding:12px}.qt-position-summary>div:last-child{grid-column:1/-1}.qt-position-summary strong{font-size:17px}}
 #quantBoard .qt-scroll th,#quantBoard .qt-scroll td,#quantBoard .qt-scroll td *{white-space:nowrap!important}#quantBoard .qt-scroll th,#quantBoard .qt-scroll td{padding:10px!important}
+
+.qt-entry{margin-top:8px;line-height:1.7}.qt-entry b{font-size:13px}.qt-entry .qt-muted{font-size:11px}

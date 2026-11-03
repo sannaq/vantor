@@ -38,6 +38,12 @@ function quantReview(r){
     +'<p class="qt-muted">검토 '+esc(quantTime(v.createdAt))+' · 근거 유효기한 '+esc(quantTime(v.expiresAt))+' (한국시간)</p>'
     +'<ul>'+(r.sources||[]).filter(function(s){try{return new URL(s.url).protocol==='https:';}catch(e){return false;}}).map(function(s){return '<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a> · '+esc(s.provider==='official_ir'?'공식 IR':s.type==='filing'?'공시':'기사')+' · '+esc(quantTime(s.publishedAt))+'</li>';}).join('')+'</ul></details>';
 }
+function quantPurchase(account,position){
+  var buys=account.trades.filter(function(t){return t.side==='buy'&&t.symbol===position.symbol&&t.date===position.entryDate&&Number.isFinite(t.price)&&t.price>0&&Number.isFinite(t.quantity)&&t.quantity>0&&Number.isFinite(t.cost);});
+  if(!buys.length)return null;
+  var quantity=buys.reduce(function(s,t){return s+t.quantity;},0),amount=buys.reduce(function(s,t){return s+t.price*t.quantity;},0),cost=buys.reduce(function(s,t){return s+t.cost;},0);
+  return {quantity:quantity,price:amount/quantity,amount:amount,cost:cost};
+}
 function quantPositionPnl(x){
   if(![x.quantity,x.lastPrice,x.costBasis].every(Number.isFinite)||x.quantity<=0||x.costBasis<=0||x.lastPrice<=0)return null;
   var unit=x.lastPrice-x.costBasis;if(Math.abs(unit)<1e-9)unit=0;
@@ -74,13 +80,14 @@ function renderQuant(load){
     }
     var name=function(x){return '<b>'+esc(x.name||x.symbol)+'</b><br><small>'+esc(x.symbol)+'</small>';};
     if(_quantTab==='positions'){
+      var purchaseCell=function(x){var b=quantPurchase(a,x);return name(x)+(b?'<div class="qt-entry"><b>매수가 '+money(b.price)+' × '+b.quantity+'주</b><br>매수 금액 '+money(b.amount)+'<br><span class="qt-muted">매수 비용 '+money(b.cost)+' · 총 차감 '+money(b.amount+b.cost)+'</span></div>':'<div class="qt-muted">매수 체결 기록 확인 대기</div>');};
       var signed=function(n,percent){return (n>0?'+':n<0?'−':'')+(percent?pct(Math.abs(n)):money(Math.abs(n)));};
       var gain=function(n,tone,percent){return '<b class="qt-pnl '+tone+'">'+signed(n,percent)+'</b>';};
       var basis=a.positions.reduce(function(sum,x){return sum+x.quantity*x.costBasis;},0), value=a.positions.reduce(function(sum,x){return sum+x.quantity*x.lastPrice;},0), totalTone=unreal>0?'qt-profit':unreal<0?'qt-loss':'qt-flat';
       h+='<section class="card qt-box"><h2>보유 종목</h2>';
-      if(a.positions.length)h+='<div class="qt-position-summary"><div><span class="qt-muted">현재 보유 손익</span><strong>'+gain(unreal,totalTone,false)+'</strong></div><div><span class="qt-muted">보유 수익률</span><strong>'+(basis>0?gain(unreal/basis*100,totalTone,true):'—')+'</strong></div><div><span class="qt-muted">매입 금액 → 평가 금액</span><strong>'+money(basis)+' → '+money(value)+'</strong></div></div>';
-      h+='<p class="qt-muted">'+quantDate(p.valuationDate||a.lastDate)+' 평가 종가 기준 · 실시간 시세가 아니에요. 주당 손익 = 평가 기준가 − 비용 포함 매입단가, 총 손익 = 주당 손익 × 보유 수량. 향후 매도 비용은 제외돼요.</p><p class="qt-table-hint">표를 좌우로 밀면 매입단가·평가 기준가·손절가도 확인할 수 있어요.</p>'
-        +quantTable(['종목','손익 상태','현재 평가손익','수익률','주당 손익','비용 포함 매입단가','평가 기준가','수량·보유일','계좌 비중','손절가','1차 / 최종 목표','매수일'],a.positions.map(function(x){var g=quantPositionPnl(x);return [name(x),g?'<span class="qt-pnl-state '+g.tone+'">'+g.state+'</span>':'확인 대기',g?gain(g.total,g.tone,false):'—',g?gain(g.rate,g.tone,true):'—',g?gain(g.unit,g.tone,false):'—',money(x.costBasis),money(x.lastPrice),x.quantity+'주 / '+x.heldDays+'거래일',pct(x.quantity*x.lastPrice/a.equity*100),money(x.stop),money(x.target1)+' / '+money(x.target)+(x.firstTargetDone?'<br>1차 매도 완료':''),quantDate(x.entryDate)];}),'현재 보유 종목이 없어요.')+'</section>';
+      if(a.positions.length)h+='<div class="qt-position-summary"><div><span class="qt-muted">현재 보유 손익</span><strong>'+gain(unreal,totalTone,false)+'</strong></div><div><span class="qt-muted">보유 수익률</span><strong>'+(basis>0?gain(unreal/basis*100,totalTone,true):'—')+'</strong></div><div><span class="qt-muted">현재 보유분 원가 → 평가 금액</span><strong>'+money(basis)+' → '+money(value)+'</strong></div></div>';
+      h+='<p class="qt-muted">'+quantDate(p.valuationDate||a.lastDate)+' 평가 종가 기준 · 실시간 시세가 아니에요. 주당 손익 = 평가 기준가 − 비용 포함 매입단가, 총 손익 = 주당 손익 × 보유 수량. 향후 매도 비용은 제외돼요. 매수가는 모의 체결 기록 기준이고, 분할 매도 후에는 매수 수량과 현재 보유 수량이 달라질 수 있어요.</p><p class="qt-table-hint">표를 좌우로 밀면 매입단가·평가 기준가·손절가도 확인할 수 있어요.</p>'
+        +quantTable(['종목·매수 내역','현재 보유 수량','손익 상태','현재 평가손익','수익률','주당 손익','비용 포함 매입단가','평가 기준가','보유일','계좌 비중','손절가','1차 / 최종 목표','매수일'],a.positions.map(function(x){var g=quantPositionPnl(x);return [purchaseCell(x),x.quantity+'주',g?'<span class="qt-pnl-state '+g.tone+'">'+g.state+'</span>':'확인 대기',g?gain(g.total,g.tone,false):'—',g?gain(g.rate,g.tone,true):'—',g?gain(g.unit,g.tone,false):'—',money(x.costBasis),money(x.lastPrice),x.heldDays+'거래일',pct(x.quantity*x.lastPrice/a.equity*100),money(x.stop),money(x.target1)+' / '+money(x.target)+(x.firstTargetDone?'<br>1차 매도 완료':''),quantDate(x.entryDate)];}),'현재 보유 종목이 없어요.')+'</section>';
     }
     if(_quantTab==='orders')h+='<section class="card qt-box"><h2>다음 거래일 대기 주문</h2><p class="qt-muted">검토 통과가 체결을 보장하지는 않아요. 다음 관측 거래일의 가격·유효기한·계좌 한도를 다시 검사하고, 조건이 맞지 않으면 주문을 제거해요.</p>'+quantTable(['종목','예정 수량','지정 매수가','손절가','예약액','계획 손실·비중','추천 기준일','AI 근거 유효기한 (한국시간)'],a.pending.map(function(x){var risk=x.quantity*(x.entry-x.stop+(x.entry+x.stop)*a.costRate);return [name(x),x.quantity+'주',money(x.entry),money(x.stop),money(x.reserved),money(risk)+' / '+pct(risk/a.equity*100),quantDate(x.signalDate),esc(quantTime(x.reviewExpiresAt))];}),'대기 중인 모의주문이 없어요.')+'</section>';
     if(_quantTab==='trades'){
