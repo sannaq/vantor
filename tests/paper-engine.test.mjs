@@ -69,3 +69,30 @@ test('model output must cite supplied evidence, private fields never sent', asyn
   assert.equal((await reviewCandidate(p)).status, 'review_pass');
   sourceIds = ['fabricated']; assert.equal((await reviewCandidate(p)).status, 'review_invalid');
 });
+
+test('cancelled orders retain exact reasons and review identity without changing cash', () => {
+  const date='20261030', bar=['20261030',100,105,95,100,1000];
+  const order={...position(),signalDate:'20261029',reviewId:'review-1',reviewCreatedAt:'2026-10-29T12:00:00Z',reviewExpiresAt:'2026-11-01T12:00:00Z'};
+  for(const [patch,paused,reason] of [
+    [{reviewExpiresAt:'bad'},false,'review_time_invalid'],
+    [{},true,'drawdown_pause'],
+    [{reviewExpiresAt:'2026-10-30T10:00:00Z'},false,'review_expired'],
+    [{stop:100},false,'open_below_stop'],
+    [{entry:94},false,'limit_not_reached'],
+    [{quantity:0},false,'entry_capacity_insufficient']
+  ]){
+    const a=newAccount('US');a.pending=[{...order,...patch}];a.paused=paused;
+    const b=advanceDay(a,date,{TEST:bar});
+    assert.equal(b.cash,a.cash);assert.equal(b.trades.length,0);assert.equal(b.pending.length,0);
+    assert.equal(b.orderEvents.length,1);assert.equal(b.orderEvents[0].reason,reason);assert.equal(b.orderEvents[0].reviewId,'review-1');
+    assert.deepEqual(advanceDay(b,date,{TEST:bar}),b);assert.equal(a.orderEvents,undefined);
+  }
+});
+test('fill and exit retain review identity; later-session orders are not cancelled',()=>{
+ const a=newAccount('US');a.pending=[{...position(),signalDate:'20261029',reviewId:'review-1',reviewCreatedAt:'2026-10-30T12:00:00Z',reviewExpiresAt:'2026-11-01T12:00:00Z'}];
+ const b=advanceDay(a,'20261030',{TEST:['20261030',100,105,85,95,1000]});
+ assert.equal(b.trades.length,2);assert(b.trades.every(t=>t.reviewId==='review-1'));assert.equal(b.positions.length,0);
+ a.pending[0].reviewCreatedAt='2026-10-30T14:00:00Z';
+ const c=advanceDay(a,'20261030',{TEST:['20261030',100,105,95,100,1000]});
+ assert.equal(c.pending.length,1);assert.equal(c.orderEvents,undefined);
+});

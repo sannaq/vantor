@@ -27,16 +27,61 @@ function quantTable(headers,rows,empty){
   if(!rows.length)return '<p class="qt-empty">'+esc(empty)+'</p>';
   return '<div class="qt-scroll" tabindex="0"><table><thead><tr>'+headers.map(function(x){return '<th>'+esc(x)+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(x){return '<td>'+x+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
 }
-function quantReview(r){
-  var labels={review_pass:'AI 검토 통과',risk_hold:'AI 위험 보류',waiting_evidence:'자료 부족',quota_wait:'무료 한도 대기',api_error:'AI 연결 오류',api_or_parse_error:'AI 응답 확인 대기',review_invalid:'근거 검증 실패',review_incomplete:'AI 응답 미완료'};
-  var reasons={ir_unsupported:'공식 IR 수집 미지원',sec_access_denied:'SEC 접근 거부',already_pending:'이미 주문 대기 중',position_already_allocated:'이미 보유 중',drawdown_pause:'계좌 하락 한도 도달',budget_below_one_share:'배정 금액 부족',quant_conditions_not_met:'선정 조건 미충족',quote_or_costs_invalid:'가격·비용 확인 필요'};
-  var v=r.review||{};
-  return '<details class="qt-review"><summary><b>'+esc(r.name||r.symbol)+'</b> <span>'+esc(r.symbol)+' · '+esc(labels[r.status]||'검토 대기')+' · 추천 '+quantDate(r.sourceDate)+'</span></summary>'
-    +'<p>'+esc(v.company||'회사 설명 미확보')+'</p><p>'+esc(v.reason||reasons[r.evidenceReason]||'충분한 근거를 확보하지 못해 검토를 보류했어요.')+'</p>'
-    +(r.secReason?'<p>'+esc(reasons[r.secReason]||'SEC 자료 확인 대기')+'</p>':'')
-    +(r.entryStatus?'<p>검토 당시 주문 판단: '+esc(r.entryStatus==='ready'?'모의주문 준비':reasons[r.entryReason]||'매수 조건 확인 대기')+' · 현재 상태는 보유·주문 탭에서 확인하세요.</p>':'')
-    +'<p class="qt-muted">검토 '+esc(quantTime(v.createdAt))+' · 근거 유효기한 '+esc(quantTime(v.expiresAt))+' (한국시간)</p>'
-    +'<ul>'+(r.sources||[]).filter(function(s){try{return new URL(s.url).protocol==='https:';}catch(e){return false;}}).map(function(s){return '<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a> · '+esc(s.provider==='official_ir'?'공식 IR':s.type==='filing'?'공시':'기사')+' · '+esc(quantTime(s.publishedAt))+'</li>';}).join('')+'</ul></details>';
+var _quantReviewLabels={review_pass:'AI 검토 통과',risk_hold:'AI 위험 보류',waiting_evidence:'자료 부족',quota_wait:'무료 한도 대기',api_error:'AI 연결 오류',api_or_parse_error:'AI 응답 확인 대기',review_invalid:'근거 검증 실패',review_incomplete:'AI 응답 미완료'};
+var _quantReasons={
+  ir_unsupported:'이 기업의 공식 IR 원문 수집을 아직 지원하지 않아요.',sec_access_denied:'SEC가 자료 요청을 거부했어요.',
+  already_pending:'같은 종목의 주문이 이미 대기 중이에요.',position_already_allocated:'같은 종목을 이미 보유하고 있어요.',
+  drawdown_pause:'계좌 하락 한도에 도달해 신규 매수를 중단했어요.',budget_below_one_share:'현금·종목 비중·계획 손실 한도 안에서 1주를 배정할 수 없어요.',
+  entry_capacity_insufficient:'체결 시점의 현금·비중·위험 한도에서 유효한 매수 수량을 확보하지 못했어요.',
+  quant_conditions_not_met:'퀀트 선정 조건을 충족하지 못했어요.',quote_or_costs_invalid:'가격 또는 모의 비용 정보를 확인할 수 없어요.',
+  review_time_invalid:'AI 검토 시각 또는 유효기한이 유효하지 않아요.',review_expired:'거래 시작 전에 AI 근거 유효기한이 지났어요.',
+  open_below_stop:'시가가 손절가 이하라 매수하지 않았어요.',limit_not_reached:'다음 관측 거래일의 저가가 지정 매수가보다 높아 체결되지 않았어요.',
+  news_missing:'검토에 필요한 기사를 확보하지 못했어요.',waiting_sec_contact:'SEC 요청용 연락처 설정을 확인해야 해요.',
+  sec_issuer_missing:'SEC 기업 식별 정보를 찾지 못했어요.',sec_issuer_mismatch:'SEC 자료의 기업 정보가 일치하지 않아요.',
+  sec_filing_missing:'검토에 쓸 SEC 공시를 확보하지 못했어요.',sec_document_invalid:'SEC 원문 검증을 통과하지 못했어요.',sec_rate_limited:'SEC 요청 한도에 도달했어요.',
+  ir_source_mismatch:'공식 IR 출처가 해당 기업과 일치하지 않아요.',ir_unavailable:'공식 IR 자료에 접근하지 못했어요.',
+  ir_document_too_large:'공식 IR 원문이 수집 크기 한도를 초과했어요.',ir_issuer_mismatch:'공식 IR 원문의 기업 정보가 일치하지 않아요.',
+  ir_filing_stale:'공식 IR 공시가 검토에 필요한 최신성 기준을 충족하지 못했어요.',ir_document_invalid:'공식 IR 원문 검증을 통과하지 못했어요.',ir_document_unavailable:'공식 IR 원문을 가져오지 못했어요.',
+  ai_risk_hold:'AI가 위험 요인을 확인해 매수를 보류했어요.',review_missing_or_mismatched:'해당 종목·추천 자료와 일치하는 AI 검토가 없어요.',
+  review_expired_or_invalid:'AI 검토가 만료됐거나 유효하지 않아요.',review_invalid:'AI 근거 검증을 통과하지 못했어요.',
+  evidence_missing:'필수 근거 자료가 없어요.',evidence_unverified:'근거 자료 검증을 통과하지 못했어요.',evidence_date_invalid:'근거 자료의 날짜가 유효하지 않아요.',evidence_url_invalid:'근거 자료의 주소가 유효하지 않아요.'
+};
+function quantReason(code){return _quantReasons[code]||'구체적인 사유 기록을 확인해야 해요.';}
+// Review identity is essential: another recommendation cycle for the same ticker is not proof of a fill.
+function quantOutcome(r,a,money){
+  var id=r.review&&r.review.id, same=function(x){return !!id&&x.reviewId===id&&x.symbol===r.symbol;};
+  var pos=a.positions.find(same), pending=a.pending.find(same), buys=a.trades.filter(function(t){return same(t)&&t.side==='buy';});
+  var purchase=buys.length?{quantity:buys.reduce(function(s,t){return s+t.quantity;},0),amount:buys.reduce(function(s,t){return s+t.price*t.quantity;},0)}:pos?quantPurchase(a,pos):null;
+  if(purchase)return {kind:'bought',label:'모의매수 체결',text:quantDate(buys.length?buys[0].date:pos.entryDate)+' · '+money(purchase.amount/purchase.quantity)+' × '+purchase.quantity+'주 · 매수 금액 '+money(purchase.amount)+' (비용 별도). '+(pos?'현재 '+pos.quantity+'주 보유 중이에요.':'현재 이 검토로 매수한 보유분은 없어요.')};
+  if(pos)return {kind:'bought',label:'모의매수·보유 확인',text:'현재 '+pos.quantity+'주 보유 중이며, 원래 체결 가격·수량 기록은 확인이 필요해요.'};
+  if(pending)return {kind:'pending',label:'모의주문 대기',text:'지정 매수가 '+money(pending.entry)+' × '+pending.quantity+'주 예정. 다음 관측 거래일의 가격·유효기한·계좌 한도를 확인한 뒤 체결 여부가 정해져요.'};
+  var event=(a.orderEvents||[]).slice().reverse().find(same);
+  if(event)return {kind:'not_bought',label:'미매수 · 주문 종료',text:quantDate(event.date)+' · '+quantReason(event.reason)};
+  if(r.status==='risk_hold')return {kind:'not_bought',label:'미매수 · AI 위험 보류',text:'이 검토에서는 AI 위험 판단으로 신규 주문을 만들지 않았어요.'};
+  if(r.status==='waiting_evidence')return {kind:'not_bought',label:'미매수 · 자료 부족',text:quantReason(r.evidenceReason)};
+  if(r.entryStatus&&r.entryStatus!=='ready')return {kind:'not_bought',label:'미매수 · 주문 조건 미충족',text:quantReason(r.entryReason)};
+  if(r.status==='review_pass')return {kind:'unknown',label:'체결 결과 확인 필요',text:'AI 검토는 통과했지만 이 검토에 연결된 체결·대기·종료 기록을 찾지 못했어요. 과거 주문의 종료 사유는 추측하지 않아요.'};
+  return {kind:'not_bought',label:'미매수 · 검토 미완료',text:(_quantReviewLabels[r.status]||'검토 상태 확인 필요')+' 상태라 이 검토를 근거로 매수하지 않았어요.'};
+}
+function quantReview(r,a,money){
+  var v=r.review||{}, o=quantOutcome(r,a,money), reason=v.reason||quantReason(r.evidenceReason||r.entryReason);
+  var excerpt=reason.length>160?reason.slice(0,160)+'…':reason;
+  return '<details class="qt-review"><summary><b>'+esc(r.name||r.symbol)+'</b> <span>'+esc(r.symbol)+' · '+esc(_quantReviewLabels[r.status]||'검토 대기')+' · 추천 '+quantDate(r.sourceDate)+'</span>'
+    +'<span class="qt-review-outcome">'+esc(o.label)+'</span><span class="qt-review-excerpt">'+esc(v.reason?'AI 근거 발췌: ':'보류 사유: ')+esc(excerpt)+'</span><span>상세 근거·주문 결과 펼치기</span></summary>'
+    +'<div class="qt-review-detail"><h3>주문 결과 · 왜 샀거나 사지 않았나요?</h3><p><b>'+esc(o.label)+'</b> · '+esc(o.text)+'</p>'
+    +(r.entryStatus?'<p>검토 당시 주문 판단: '+esc(r.entryStatus==='ready'?'AI 검토와 주문 생성 조건을 통과해 모의주문을 준비했어요.':quantReason(r.entryReason))+'</p>':'')
+    +'<h3>AI 검토 근거 전문</h3><p class="qt-reason">'+esc(reason)+'</p><p class="qt-muted">'+esc(v.reason?'검토 당시 저장된 AI 판단이에요. 위 발췌는 원문 앞부분이며, 체결 여부는 주문 결과에 따로 표시해요.':'AI 판단을 생성하기 전 자료 확보 또는 검증 단계에서 보류된 기록이에요.')+'</p>'
+    +(v.company?'<p>기업 설명: '+esc(v.company)+'</p>':'')+(r.secReason?'<p>SEC 수집 상태: '+esc(quantReason(r.secReason))+'</p>':'')
+    +'<h3>확인한 자료와 검토 시각</h3><p class="qt-muted">검토 '+esc(quantTime(v.createdAt))+' · 근거 유효기한 '+esc(quantTime(v.expiresAt))+' (한국시간)</p>'
+    +'<ul>'+(r.sources||[]).filter(function(s){try{return new URL(s.url).protocol==='https:';}catch(e){return false;}}).map(function(s){return '<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a> · '+esc(s.provider==='official_ir'?'공식 IR':s.type==='filing'?'공시':'기사')+' · '+esc(quantTime(s.publishedAt))+'</li>';}).join('')+'</ul>'+(!(r.sources||[]).length?'<p class="qt-muted">저장된 검토 출처가 없어요.</p>':'')+'</div></details>';
+}
+function quantReviewSummary(reviews,a,money){
+  var counts={bought:0,pending:0,not_bought:0,unknown:0},reasons={},bought=[];
+  reviews.forEach(function(r){var o=quantOutcome(r,a,money);counts[o.kind]++;if(o.kind==='bought')bought.push(r.name||r.symbol);if(o.kind==='not_bought')reasons[o.label]=(reasons[o.label]||0)+1;});
+  return '<section class="card qt-box qt-review-summary"><h2>검토·매매 요약</h2><p>저장된 검토 '+reviews.length+'건 중 모의매수 '+counts.bought+'건 · 주문 대기 '+counts.pending+'건 · 미매수 '+counts.not_bought+'건 · 결과 확인 필요 '+counts.unknown+'건</p>'
+    +(bought.length?'<p><b>매수 확인:</b> '+bought.map(esc).join(', ')+'</p>':'<p>이 검토 이력에 연결된 모의매수는 아직 없어요.</p>')
+    +(Object.keys(reasons).length?'<p><b>미매수 사유:</b> '+Object.keys(reasons).map(function(k){return esc(k.replace('미매수 · ',''))+' '+reasons[k]+'건';}).join(' · ')+'</p>':'')
+    +'<p class="qt-muted">현재 시장의 전체 저장 이력 기준이며 아래 필터와 무관해요. 종목 수가 아닌 검토 건수로, 같은 종목의 다른 날짜 검토도 포함해요. AI 통과와 모의매수 체결을 구분하며 연결 기록이 없는 과거 결과는 확인 필요로 표시해요.</p></section>';
 }
 function quantPurchase(account,position){
   var buys=account.trades.filter(function(t){return t.side==='buy'&&t.symbol===position.symbol&&t.date===position.entryDate&&Number.isFinite(t.price)&&t.price>0&&Number.isFinite(t.quantity)&&t.quantity>0&&Number.isFinite(t.cost);});
@@ -96,9 +141,10 @@ function renderQuant(load){
     }
     if(_quantTab==='reviews'){
       var reviews=(p.reviews||[]).slice().reverse(), filters=[['all','전체 이력'],['pass','검토 통과'],['hold','위험 보류'],['evidence','자료 부족']];
-      h+='<section class="card qt-box"><h2>AI 검토 이력</h2><p class="qt-muted">이전 추천일의 판단도 포함돼요. 통과 후에도 계좌·가격 조건으로 주문이 보류될 수 있어요.</p><div class="qt-controls">'+filters.map(function(x){return btn('filter',x[0],x[1],_quantFilter===x[0]);}).join('')+'</div>';
+      h+=quantReviewSummary(reviews,a,money);
+      h+='<section class="card qt-box"><h2>종목별 상세 검토 이력</h2><p class="qt-muted">이전 추천일의 판단도 포함돼요. 통과 후에도 계좌·가격 조건으로 주문이 보류될 수 있어요.</p><div class="qt-controls">'+filters.map(function(x){return btn('filter',x[0],x[1],_quantFilter===x[0]);}).join('')+'</div>';
       reviews=reviews.filter(function(r){return _quantFilter==='all'||r.status===({pass:'review_pass',hold:'risk_hold',evidence:'waiting_evidence'})[_quantFilter];});
-      h+='<p>'+reviews.length+'건 · 종목을 펼치면 이유와 출처를 볼 수 있어요.</p>'+reviews.map(quantReview).join('')+(!reviews.length?'<p class="qt-empty">해당 검토 이력이 없어요.</p>':'')+'</section>';
+      h+='<p>'+reviews.length+'건 · 종목을 펼치면 이유와 출처를 볼 수 있어요.</p>'+reviews.map(function(r){return quantReview(r,a,money);}).join('')+(!reviews.length?'<p class="qt-empty">해당 검토 이력이 없어요.</p>':'')+'</section>';
     }
   }
   el.innerHTML=h;

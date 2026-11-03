@@ -34,13 +34,17 @@ export function advanceDay(original, date, bars) {
     const proceeds = quantity * price * (1 - fee);
     a.cash += proceeds; p.quantity -= quantity;
     a.trades.push({ date, symbol: p.symbol, name: p.name, side: 'sell', quantity,
-      price, cost: quantity * price * fee, reason, pnl: proceeds - quantity * p.costBasis });
+      reviewId: p.reviewId || null, price, cost: quantity * price * fee, reason, pnl: proceeds - quantity * p.costBasis });
   };
   // Accepted orders are valid for the next observed exchange session only.
   // Recheck accepted risk limits against opening equity before filling orders.
   const openingEquity = () => a.cash + a.positions.reduce((sum,p) => sum + p.quantity * bars[p.symbol][1], 0);
   if (openingEquity() <= a.peakEquity * .85) a.paused = true;
   const pending = a.pending; a.pending = [];
+  const cancel = (p, reason) => {
+    (a.orderEvents ||= []).push({ date, symbol: p.symbol, name: p.name,
+      reviewId: p.reviewId || null, signalDate: p.signalDate, status: 'cancelled', reason });
+  };
   for (const p of pending) {
     if (p.signalDate >= date) { a.pending.push(p); continue; }
     const [, open, , low] = bars[p.symbol];
@@ -49,21 +53,28 @@ export function advanceDay(original, date, bars) {
     const nyHour = +new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(refMs);
     const openMs = a.market === 'KR' ? Date.parse(iso + 'T09:00:00+09:00') : refMs - (nyHour - 9) * 3600000;
     const created = Date.parse(p.reviewCreatedAt), expires = Date.parse(p.reviewExpiresAt);
-    if (!Number.isFinite(created) || !Number.isFinite(expires) || expires <= created) continue;
+    if (!Number.isFinite(created) || !Number.isFinite(expires) || expires <= created) { cancel(p, 'review_time_invalid'); continue; }
     if (created >= openMs) { a.pending.push(p); continue; } // review belongs to a later session
-    if (a.paused || expires <= openMs || open <= p.stop || low > p.entry) continue;
+    if (a.paused || expires <= openMs || open <= p.stop || low > p.entry) {
+      cancel(p, a.paused ? 'drawdown_pause' : expires <= openMs ? 'review_expired' :
+        open <= p.stop ? 'open_below_stop' : 'limit_not_reached');
+      continue;
+    }
     const price = Math.min(open, p.entry), equity = openingEquity();
     const quantity = Math.min(p.quantity, Math.floor(Math.min(
       a.cash / (price * (1 + fee)), equity * PAPER_POLICY.maxPositionFraction / (price * (1 + fee)),
       equity * PAPER_POLICY.maxPlannedLossFraction / (price - p.stop + (price + p.stop) * fee))));
-    if (!Number.isSafeInteger(quantity) || quantity < 1 || a.positions.some(x => x.symbol === p.symbol)) continue;
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || a.positions.some(x => x.symbol === p.symbol)) {
+      cancel(p, !Number.isSafeInteger(quantity) || quantity < 1 ? 'entry_capacity_insufficient' : 'position_already_allocated');
+      continue;
+    }
     p.quantity = quantity;
     const debit = quantity * price * (1 + fee);
     a.cash -= debit;
     a.positions.push({ ...p, entryDate: date, heldDays: 0, costBasis: price * (1 + fee),
       lastPrice: price, firstTargetDone: false });
     a.trades.push({ date, symbol: p.symbol, name: p.name, side: 'buy', quantity: p.quantity,
-      price, cost: p.quantity * price * fee, reason: 'reviewed_limit_entry' });
+      reviewId: p.reviewId || null, price, cost: p.quantity * price * fee, reason: 'reviewed_limit_entry' });
   }
   for (const p of a.positions) {
     const [, open, high, low, close] = bars[p.symbol]; p.heldDays++; p.lastPrice = close;
