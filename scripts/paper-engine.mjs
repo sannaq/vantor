@@ -11,7 +11,7 @@ export function newAccount(market) {
 }
 
 export function validBar(b) {
-  return Array.isArray(b) && /^\d{8}$/.test(b[0]) && b.slice(1, 6).every(Number.isFinite) &&
+  return Array.isArray(b) && b.length >= 6 && /^\d{8}$/.test(b[0]) && b.slice(1, 6).every(Number.isFinite) &&
     b.slice(1, 5).every(n => n > 0) && b[5] > 0 &&
     b[2] >= Math.max(b[1], b[4]) && b[3] <= Math.min(b[1], b[4]) && b[2] >= b[3];
 }
@@ -37,6 +37,9 @@ export function advanceDay(original, date, bars) {
       price, cost: quantity * price * fee, reason, pnl: proceeds - quantity * p.costBasis });
   };
   // Accepted orders are valid for the next observed exchange session only.
+  // Recheck accepted risk limits against opening equity before filling orders.
+  const openingEquity = () => a.cash + a.positions.reduce((sum,p) => sum + p.quantity * bars[p.symbol][1], 0);
+  if (openingEquity() <= a.peakEquity * .85) a.paused = true;
   const pending = a.pending; a.pending = [];
   for (const p of pending) {
     if (p.signalDate >= date) { a.pending.push(p); continue; }
@@ -45,10 +48,17 @@ export function advanceDay(original, date, bars) {
     const refMs = Date.parse(iso + 'T14:30:00Z');
     const nyHour = +new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: 'numeric', hourCycle: 'h23' }).format(refMs);
     const openMs = a.market === 'KR' ? Date.parse(iso + 'T09:00:00+09:00') : refMs - (nyHour - 9) * 3600000;
-    if (a.paused || Date.parse(p.reviewCreatedAt) >= openMs ||
-        Date.parse(p.reviewExpiresAt) <= openMs || open <= p.stop || low > p.entry) continue;
-    const price = Math.min(open, p.entry), debit = p.quantity * price * (1 + fee);
-    if (debit > a.cash || a.positions.some(x => x.symbol === p.symbol)) continue;
+    const created = Date.parse(p.reviewCreatedAt), expires = Date.parse(p.reviewExpiresAt);
+    if (!Number.isFinite(created) || !Number.isFinite(expires) || expires <= created) continue;
+    if (created >= openMs) { a.pending.push(p); continue; } // review belongs to a later session
+    if (a.paused || expires <= openMs || open <= p.stop || low > p.entry) continue;
+    const price = Math.min(open, p.entry), equity = openingEquity();
+    const quantity = Math.min(p.quantity, Math.floor(Math.min(
+      a.cash / (price * (1 + fee)), equity * PAPER_POLICY.maxPositionFraction / (price * (1 + fee)),
+      equity * PAPER_POLICY.maxPlannedLossFraction / (price - p.stop + (price + p.stop) * fee))));
+    if (!Number.isSafeInteger(quantity) || quantity < 1 || a.positions.some(x => x.symbol === p.symbol)) continue;
+    p.quantity = quantity;
+    const debit = quantity * price * (1 + fee);
     a.cash -= debit;
     a.positions.push({ ...p, entryDate: date, heldDays: 0, costBasis: price * (1 + fee),
       lastPrice: price, firstTargetDone: false });

@@ -2,9 +2,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { newAccount, advanceDay, queueCandidate } from './paper-engine.mjs';
+import { newAccount, queueCandidate } from './paper-engine.mjs';
 import { reviewCandidate, GEMINI_MODEL } from './gemini-review.mjs';
 import { candles, collectEvidence, collectFilingResult } from './paper-data.mjs';
+
+import { advancePortfolio, evidenceCoverage } from './paper-runtime.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = name => JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
@@ -25,39 +27,35 @@ const messages = {
   waiting_sec_contact: '미국 공시 수집 연락 이메일 등록 대기',
   sec_access_denied: 'SEC 공시 서버 접근 거부 · 신규 모의매수 대기',
   sec_rate_limited: 'SEC 요청 제한 · 신규 모의매수 대기',
+  drawdown_pause: '계좌 하락 한도 도달 · 신규 매수 중단, 보유 종목 관리 계속',
   ready: '장마감 모의운용 · 다음 거래일 주문 준비',
 };
 for (const market of ['KR', 'US']) {
   const suffix = market === 'US' ? '-us' : '', file = `feeds/paper-${market.toLowerCase()}.json`;
   let state;
-  try { state = read(file); } catch { state = { account: newAccount(market), reviews: [], attempts: {} }; }
+  try { state = read(file); } catch (error) {
+    if (error.code !== 'ENOENT') throw error; // never reset a damaged account to fresh capital
+    state = { account: newAccount(market), reviews: [], attempts: {} };
+  }
   delete state.filingStatus;
   state.filingCoverage = { checked: 0, verified: 0, officialIr: 0, held: 0 };
   state.model = GEMINI_MODEL; state.updatedAt = new Date().toISOString();
   state.mode = 'paper'; state.execution = 'daily-bars';
   state.notice = '가상 자금 · 장마감 일봉 모의체결 · 수수료·세금·체결차이 합산 가정: 매수/매도 각각 ' + (state.account.costRate * 100) + '% · 실제 체결과 다름';
   try {
-    const picks = read(`feeds/stock-picks${suffix}.json`), scores = read(`feeds/stock-scores${suffix}.json`);
-    const news = read(`feeds/stock-news${suffix}.json`);
+    const advanced = await advancePortfolio(state.account, market, candles);
+    state.account = advanced.account;
+    state.valuationDate = advanced.latestDate;
+    let picks, scores, news;
+    try {
+      picks = read(`feeds/stock-picks${suffix}.json`); scores = read(`feeds/stock-scores${suffix}.json`);
+      news = read(`feeds/stock-news${suffix}.json`);
+    } catch { throw Error('feed_stale'); }
     state.sourceDate = picks.date;
-    const a = state.account;
-    // No key does not stop managing existing paper holdings.
-    if (a.positions.length || a.pending.length) {
-      const needed = [...new Map([...a.positions, ...a.pending].map(p => [p.symbol, p])).values()];
-      const histories = new Map();
-      for (const p of needed) histories.set(p.symbol, await candles(market, market === 'US' ? p.rc : p.symbol));
-      const ref = await candles(market, market === 'US' ? 'AAPL.O' : '005930');
-      const days = ref.filter(b => b[0] > (a.lastDate || picks.date) && b[0] <= picks.date).map(b => b[0]);
-      for (const date of days) {
-        const bars = Object.fromEntries([...histories].map(([symbol, rows]) => [symbol, rows.find(b => b[0] === date)]));
-        state.account = advanceDay(state.account, date, bars);
-      }
-    }
-    if (!state.account.lastDate) state.account.lastDate = picks.date;
+    if (!state.account.lastDate) state.account.lastDate = advanced.latestDate;
     state.status = !key ? 'waiting_key' : !freeConfirmed ? 'waiting_free_tier_confirmation' : 'ready';
     if (state.status === 'ready') {
-      const ref = await candles(market, market === 'US' ? 'AAPL.O' : '005930');
-      if (ref.at(-1)?.[0] !== picks.date || scores.date !== picks.date || news.date !== picks.date ||
+      if (advanced.latestDate !== picks.date || scores.date !== picks.date || news.date !== picks.date ||
           Date.now() - Date.parse(`${picks.date.slice(0,4)}-${picks.date.slice(4,6)}-${picks.date.slice(6)}T00:00:00Z`) > 7 * 864e5) {
         state.status = 'feed_stale';
       } else {
@@ -107,13 +105,16 @@ for (const market of ['KR', 'US']) {
         if (state.status === 'ready' && state.filingCoverage.held && !state.filingCoverage.verified) state.status = 'waiting_evidence';
       }
     }
-  } catch {
-    state.status = 'price_data_missing';
+  } catch (error) {
+    state.status = error.message === 'feed_stale' ? 'feed_stale' : 'price_data_missing';
   }
+  state.filingCoverage = evidenceCoverage(state.reviews, state.sourceDate);
+  if (state.status === 'ready' && state.filingCoverage.held) state.status = 'waiting_evidence';
+  if (state.account.paused) state.status = 'drawdown_pause';
   state.message = messages[state.status] || 'AI 검토 오류 · 신규 매수 대기';
   if (market === 'US' && state.filingCoverage.checked) {
     const c = state.filingCoverage;
-    state.message += ` · 이번 실행 공시 확인 ${c.verified}/${c.checked}종목(공식 IR ${c.officialIr}), 미확보 ${c.held}종목 보류`;
+    state.message += ` · 추천 기준일 검토 공시 확인 ${c.verified}/${c.checked}종목(공식 IR ${c.officialIr}), 자료 미확보 ${c.held}종목 보류`;
   }
   persist(file, state);
   console.log(`${market}: ${state.status}, positions=${state.account.positions.length}, pending=${state.account.pending.length}`);
