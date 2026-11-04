@@ -17,6 +17,11 @@ const persist = (file, state) => {
 };
 const key = process.env.GEMINI_API_KEY;
 const freeConfirmed = process.env.GEMINI_FREE_TIER_CONFIRMED === 'true';
+// 시장별 하루 AI 검토 횟수. 3 → 10 (2026-11-04 사용자 결정, 두 시장 합계 20회 · 무료 한도 안).
+// 429 가 오면 그날 검토는 바로 멈춘다(quota_wait).
+const DAILY_REVIEW_LIMIT = 10;
+const EARN_WINDOW_DAYS = 10; // 추천일부터 이 기간 안에 실적 발표가 있으면 절반 비중
+const ymdMs = d => Date.parse(`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T00:00:00Z`);
 const messages = {
   waiting_key: 'Gemini 무료 API 키 등록 대기',
   waiting_free_tier_confirmation: '결제가 연결되지 않은 무료 프로젝트인지 확인 필요',
@@ -74,8 +79,16 @@ for (const market of ['KR', 'US']) {
         const day = new Date().toISOString().slice(0,10), used = state.attempts[day] || 0;
         let calls = used;
         const candidates=(picks.top||[]).map(row=>candidateFor(row,market,scores,picks.date));
+        let earn={}; try { earn=read(`feeds/earn${suffix}.json`).items||{}; } catch {}
+        for (const c of candidates) {
+          const d = Array.isArray(earn[c.c]) ? String(earn[c.c][0]||'') : '';
+          if (/^\d{8}$/.test(d) && d >= picks.date && ymdMs(d) - ymdMs(picks.date) <= EARN_WINDOW_DAYS * 864e5) c.earnSoon = d;
+        }
         const universe=trainerUniverse(candidates);
         const record=(report,candidate,result) => {
+          // 같은 날 다시 본 자료 대기 기록은 하나만 남긴다
+          state.reviews=state.reviews.filter(r=>!(r.status==='waiting_evidence'&&r.symbol===report.symbol&&
+            r.sourceDate===report.sourceDate&&r.checkedDate===report.checkedDate));
           state.reviews.push(report);
           if(trainerReady) {
             try {recordTrainerReview(state.trainer,candidate,universe,report,result);}
@@ -85,9 +98,11 @@ for (const market of ['KR', 'US']) {
         for (const row of picks.top || []) {
           if (state.account.paused) break;
           if (state.reviews.some(r => r.sourceDate === picks.date && r.symbol === row.c &&
-                (['review_pass','risk_hold'].includes(r.status) || r.checkedDate === day)) ||
+                (['review_pass','risk_hold'].includes(r.status) ||
+                 // 자료 대기는 같은 날 다시 본다 — 회사 맥 SEC 캐시가 뒤늦게 올라올 수 있다 (AI 호출 없음)
+                 (r.checkedDate === day && r.status !== 'waiting_evidence'))) ||
               [...state.account.positions, ...state.account.pending].some(p => p.symbol === row.c)) continue;
-          if (calls >= 3) { state.status = 'daily_review_limit'; break; }
+          if (calls >= DAILY_REVIEW_LIMIT) { state.status = 'daily_review_limit'; break; }
           const candidate = candidates.find(c=>c.c===row.c);
           if (!candidate.qualified || !candidate.rc) continue;
           const filingResult = await collectFilingResult(market, candidate);
@@ -115,6 +130,7 @@ for (const market of ['KR', 'US']) {
             report.sources = result.evidence.map(({ text, ...meta }) => meta); // never publish article bodies
             const plan = queueCandidate(state.account, candidate, result.review, result.evidence, result.snapshotId, Date.now());
             report.entryStatus = plan.status; report.entryReason = plan.reason || null;
+            if (plan.sizeReason) { report.sizeReason = plan.sizeReason; report.earnDate = plan.earnDate; }
           }
           record(report,candidate,result); persist(file, state);
           if (result.status === 'quota_wait' || result.status === 'api_error') { state.status = result.status; break; }

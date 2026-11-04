@@ -55,7 +55,7 @@ function quantOutcome(r,a,money){
   var purchase=buys.length?{quantity:buys.reduce(function(s,t){return s+t.quantity;},0),amount:buys.reduce(function(s,t){return s+t.price*t.quantity;},0)}:pos?quantPurchase(a,pos):null;
   if(purchase)return {kind:'bought',label:'모의매수 체결',text:quantDate(buys.length?buys[0].date:pos.entryDate)+' · '+money(purchase.amount/purchase.quantity)+' × '+purchase.quantity+'주 · 매수 금액 '+money(purchase.amount)+' (비용 별도). '+(pos?'현재 '+pos.quantity+'주 보유 중이에요.':'현재 이 검토로 매수한 보유분은 없어요.')};
   if(pos)return {kind:'bought',label:'모의매수·보유 확인',text:'현재 '+pos.quantity+'주 보유 중이며, 원래 체결 가격·수량 기록은 확인이 필요해요.'};
-  if(pending)return {kind:'pending',label:'모의주문 대기',text:'지정 매수가 '+money(pending.entry)+' × '+pending.quantity+'주 예정. 다음 관측 거래일의 가격·유효기한·계좌 한도를 확인한 뒤 체결 여부가 정해져요.'};
+  if(pending)return {kind:'pending',label:'모의주문 대기',text:'지정 매수가 '+money(pending.entry)+' × '+pending.quantity+'주 예정'+(pending.sizeReason==='earnings_soon'?'(실적 발표 전 절반 비중)':'')+'. 다음 관측 거래일의 가격·유효기한·계좌 한도를 확인한 뒤 체결 여부가 정해져요.'};
   var event=(a.orderEvents||[]).slice().reverse().find(same);
   if(event)return {kind:'not_bought',label:'미매수 · 주문 종료',text:quantDate(event.date)+' · '+quantReason(event.reason)};
   if(r.status==='risk_hold')return {kind:'not_bought',label:'미매수 · AI 위험 보류',text:'이 검토에서는 AI 위험 판단으로 신규 주문을 만들지 않았어요.'};
@@ -70,6 +70,7 @@ function quantReview(r,a,money){
   return '<details class="qt-review"><summary><b>'+esc(r.name||r.symbol)+'</b> <span>'+esc(r.symbol)+' · '+esc(_quantReviewLabels[r.status]||'검토 대기')+' · 추천 '+quantDate(r.sourceDate)+'</span>'
     +'<span class="qt-review-outcome">'+esc(o.label)+'</span><span class="qt-review-excerpt">'+esc(v.reason?'AI 근거 발췌: ':'보류 사유: ')+esc(excerpt)+'</span><span>상세 근거·주문 결과 펼치기</span></summary>'
     +'<div class="qt-review-detail"><h3>주문 결과 · 왜 샀거나 사지 않았나요?</h3><p><b>'+esc(o.label)+'</b> · '+esc(o.text)+'</p>'
+    +(r.sizeReason==='earnings_soon'?'<p><b>실적 발표 전 · 절반 비중</b> · '+(r.earnDate?quantDate(r.earnDate)+' 실적 발표 예정이라 ':'실적 발표를 앞두고 있어 ')+'평소 배정의 절반만 매수해요.</p>':'')
     +(r.entryStatus?'<p>검토 당시 주문 판단: '+esc(r.entryStatus==='ready'?'AI 검토와 주문 생성 조건을 통과해 모의주문을 준비했어요.':quantReason(r.entryReason))+'</p>':'')
     +(r.signal?'<p class="qt-muted">전략 판단 당시: 20거래일 수익률 '+(Number.isFinite(r.signal.ret20)?r.signal.ret20.toFixed(2)+'%':'자료 없음')+' · 변동성 '+(Number.isFinite(r.signal.vol)?(r.signal.vol*100).toFixed(2)+'%':'자료 없음')+' · 저변동 선정 '+esc(r.signal.lowVolCount)+'/'+esc(r.signal.universeSize)+'종목</p>':'')
     +'<h3>AI 검토 근거 전문</h3><p class="qt-reason">'+esc(reason)+'</p><p class="qt-muted">'+esc(v.reason?'검토 당시 저장된 AI 판단이에요. 위 발췌는 원문 앞부분이며, 체결 여부는 주문 결과에 따로 표시해요.':'AI 판단을 생성하기 전 자료 확보 또는 검증 단계에서 보류된 기록이에요.')+'</p>'

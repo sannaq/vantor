@@ -53,7 +53,8 @@ export function reviewGate({ review, evidence, market, symbol, snapshotId, now }
 // quote.buyCostPerShare / sellCostPerShare include conservative fee+slippage
 // assumptions supplied by the execution simulator. Zero must be explicit.
 // Planned loss is not a guaranteed loss ceiling: gaps can fill below the stop.
-export function planEntry({ account, candidate, quote, review, evidence, snapshotId, now }) {
+// sizeFactor (0~1] shrinks BOTH budgets, e.g. 0.5 before a scheduled earnings release.
+export function planEntry({ account, candidate, quote, review, evidence, snapshotId, now, sizeFactor = 1 }) {
   if (!account || !candidate || !quote) return wait('input_missing');
   const { market, symbol } = candidate;
   if (!PAPER_POLICY.markets.includes(market) || account.market !== market ||
@@ -74,13 +75,14 @@ export function planEntry({ account, candidate, quote, review, evidence, snapsho
       !nonnegative(buyCostPerShare) || !nonnegative(sellCostPerShare)) return wait('quote_or_costs_invalid');
   const cashPerShare = entry + buyCostPerShare;
   const lossPerShare = entry - stop + buyCostPerShare + sellCostPerShare;
-  const positionBudget = account.equity * PAPER_POLICY.maxPositionFraction;
-  const lossBudget = account.equity * PAPER_POLICY.maxPlannedLossFraction;
+  const factor = Number.isFinite(sizeFactor) && sizeFactor > 0 ? Math.min(1, sizeFactor) : 1;
+  const positionBudget = account.equity * PAPER_POLICY.maxPositionFraction * factor;
+  const lossBudget = account.equity * PAPER_POLICY.maxPlannedLossFraction * factor;
   const quantity = Math.floor(Math.min(account.cash / cashPerShare,
     positionBudget / cashPerShare, lossBudget / lossPerShare));
   if (!Number.isSafeInteger(quantity) || quantity < 1) return wait('budget_below_one_share');
   return { status: 'ready', mode: 'paper', policyVersion: PAPER_POLICY.version,
     market, symbol, quantity, entry, stop, plannedCost: quantity * cashPerShare,
-    plannedLoss: quantity * lossPerShare, positionBudget, lossBudget,
+    plannedLoss: quantity * lossPerShare, positionBudget, lossBudget, sizeFactor: factor,
     snapshotId, reviewId: review.id || null };
 }

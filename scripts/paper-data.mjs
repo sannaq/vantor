@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { snapshotHash } from './gemini-review.mjs';
 import { createSecClient } from './paper-sec.mjs';
 import { createIrClient, createFilingCollector } from './paper-ir.mjs';
@@ -64,7 +65,9 @@ export async function collectEvidence(market, candidate, newsRows = []) {
   return documents;
 }
 
-const usFilings = createFilingCollector(createSecClient(), createIrClient());
+let secCache = null;
+try { secCache = JSON.parse(readFileSync(new URL('../feeds/sec-cache-us.json', import.meta.url), 'utf8')); } catch {}
+const usFilings = createFilingCollector(createSecClient({ cache: secCache }), createIrClient());
 export async function collectFilingResult(market, candidate) {
   if (market === 'US') return usFilings(candidate, plainText);
   const documents = await collectFilings(market, candidate);

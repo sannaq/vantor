@@ -2,8 +2,10 @@ import { createHash } from 'node:crypto';
 
 // SEC asks automated clients to identify their application and contact address.
 // The contact stays in GitHub Secrets and request headers, never published feeds.
+// `cache` = feeds/sec-cache-us.json. GitHub Actions 서버는 SEC 가 403 으로 막는다(2026-11 실측) →
+// 회사 맥(scripts/sec_cache.mjs)이 같은 방식으로 받아 둔 공시를 먼저 쓴다. 4일 지난 것은 쓰지 않는다.
 export function createSecClient({ email = process.env.SEC_CONTACT_EMAIL || '', fetcher = fetch,
-  wait = ms => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now } = {}) {
+  wait = ms => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now, cache = null } = {}) {
   const contact = email.trim();
   const validContact = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(contact);
   let tickers, blocked = null;
@@ -23,6 +25,13 @@ export function createSecClient({ email = process.env.SEC_CONTACT_EMAIL || '', f
     return json ? response.json() : response.text();
   }
   return async function collect(candidate, plainText) {
+    const hit = cache?.items?.[candidate.c];
+    if (hit && Array.isArray(hit.documents) && hit.documents.length) {
+      const docs = hit.documents.filter(d => d && d.type === 'filing' && d.verified === true &&
+        typeof d.text === 'string' && d.text.length >= 160 && Date.parse(d.fetchedAt) <= now() &&
+        now() - Date.parse(d.fetchedAt) <= 4 * 864e5 && Date.parse(d.publishedAt) <= Date.parse(d.fetchedAt));
+      if (docs.length) return { reason: 'ok', documents: docs, provider: 'sec_cache' };
+    }
     if (!validContact) return { documents: [], reason: 'waiting_sec_contact' };
     try {
       tickers ||= await get('https://www.sec.gov/files/company_tickers.json');

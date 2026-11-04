@@ -69,3 +69,11 @@ test('AI cannot change immutable accepted risk limits', () => {
   assert.equal(planEntry(x).quantity, 98);
   assert.throws(() => { PAPER_POLICY.maxPositionFraction = 1; });
 });
+
+test('sizeFactor 0.5 (실적 발표 전) halves position and loss budgets', () => {
+  const full = planEntry(fixture()), half = planEntry({ ...fixture(), sizeFactor: 0.5 });
+  assert.equal(half.status, 'ready'); assert.equal(half.sizeFactor, 0.5);
+  assert.equal(half.quantity, Math.floor(full.quantity / 2));
+  assert(half.plannedLoss <= 100000 * .005);
+  for (const bad of [0, -1, NaN, 3]) assert(planEntry({ ...fixture(), sizeFactor: bad }).quantity <= full.quantity);
+});

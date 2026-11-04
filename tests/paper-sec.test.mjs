@@ -51,3 +51,15 @@ test('future filing cannot become current evidence',async()=>{
   const {collect}=client([tickers,future,'Public issuer facts. '.repeat(20)]);
   assert.equal((await collect({c:'AAPL'},plainText)).reason,'sec_document_invalid');
 });
+
+test('회사 맥 SEC 캐시가 있으면 SEC 에 접속하지 않고, 4일 지난 캐시는 버린다', async () => {
+  const doc = fetchedAt => ({ id:'d1', type:'filing', verified:true, title:'Apple 10-Q', url:'https://www.sec.gov/x.htm',
+    text:'x'.repeat(200), publishedAt:'2026-10-29T12:00:00Z', fetchedAt });
+  const fresh = createSecClient({ email:'', now, cache:{ items:{ AAPL:{ documents:[doc(new Date(now()-864e5).toISOString())] } } },
+    fetcher:()=>{ throw Error('must not call'); } });
+  const r = await fresh({ c:'AAPL' }, plainText);
+  assert.equal(r.reason,'ok'); assert.equal(r.provider,'sec_cache'); assert.equal(r.documents.length,1);
+  const stale = createSecClient({ email:'', now, cache:{ items:{ AAPL:{ documents:[doc(new Date(now()-5*864e5).toISOString())] } } },
+    fetcher:()=>{ throw Error('must not call'); } });
+  assert.equal((await stale({ c:'AAPL' }, plainText)).reason,'waiting_sec_contact');
+});

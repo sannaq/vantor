@@ -100,7 +100,9 @@ export function queueCandidate(a, candidate, review, evidence, snapshotId, now) 
   if (a.pending.some(p => p.symbol === candidate.c)) return { status: 'wait', reason: 'already_pending' };
   const lv = candidate.lv || {}, reserved = a.pending.reduce((s, p) => s + p.reserved, 0);
   const available = { ...a, cash: Math.max(0, a.cash - reserved) };
-  const plan = planEntry({ account: available,
+  // 실적 발표 전 종목은 막지 않고 절반 비중으로 (2026-11-04 사용자 결정)
+  const earningsSoon = !!(candidate.earnSoon || review?.earningsSoon);
+  const plan = planEntry({ account: available, sizeFactor: earningsSoon ? 0.5 : 1,
     candidate: { market: a.market, symbol: candidate.c, qualified: candidate.qualified },
     quote: { entry: lv.b1, stop: lv.st, buyCostPerShare: lv.b1 * a.costRate,
       sellCostPerShare: lv.st * a.costRate }, review, evidence, snapshotId, now });
@@ -109,6 +111,8 @@ export function queueCandidate(a, candidate, review, evidence, snapshotId, now) 
     target: lv.tg > lv.b1 ? lv.tg : null, target1: lv.tg1 > lv.b1 ? lv.tg1 : null,
     breakeven: /\|be$/.test(lv.rule || ''), reserved: plan.plannedCost,
     signalDate: candidate.date, reviewCreatedAt: review.createdAt,
-    reviewExpiresAt: review.expiresAt, snapshotId, reviewId: review.id });
+    reviewExpiresAt: review.expiresAt, snapshotId, reviewId: review.id,
+    ...(earningsSoon ? { sizeFactor: 0.5, sizeReason: 'earnings_soon', earnDate: candidate.earnSoon || null } : {}) });
+  if (plan.status === 'ready' && earningsSoon) { plan.sizeReason = 'earnings_soon'; plan.earnDate = candidate.earnSoon || null; }
   return plan;
 }
