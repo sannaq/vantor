@@ -1,13 +1,13 @@
 {
   "week": "2026년 11월 1주차",
   "range": "11/2~11/6",
-  "updated": "2026-11-03",
+  "updated": "2026-11-04",
   "intro": "이번 주 핵심: **Congressional Elections**, **시간당 임금**, **고용보고서 (비농업 고용)** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
     {"date": "2026-11-03", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "ISM 제조업 PMI", "note": "제조업 체감 경기. 반도체·수출주 심리에 영향. (예상 54.5 · 직전 54.5)", "src": "ff:ISM Manufacturing PMI", "rx": {"day": "2026-11-02", "mk": "US", "items": [["S&P500", -0.51, "pct"], ["나스닥", -1.07, "pct"], ["미 10년물", -3, "bp"], ["달러지수", -0.01, "pct"]]}},
-    {"date": "2026-11-04", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "JOLTS 구인·이직", "note": "고용시장 열기 확인. (예상 7.11M · 직전 7.08M)", "src": "ff:JOLTS Job Openings", "fc": {"JOLTS Job Openings": "7.15M"}},
-    {"date": "2026-11-04", "time": "00:16", "market": "US", "type": "data", "imp": 3, "title": "Congressional Elections", "note": "", "src": "ff:Congressional Elections"},
+    {"date": "2026-11-04", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "JOLTS 구인·이직", "note": "고용시장 열기 확인. (예상 7.11M · 직전 7.08M)", "src": "ff:JOLTS Job Openings", "fc": {"JOLTS Job Openings": "7.15M"}, "rx": {"day": "2026-11-03", "mk": "US", "items": [["S&P500", 0.36, "pct"], ["나스닥", 0.83, "pct"], ["미 10년물", 6, "bp"], ["달러지수", -0.06, "pct"]]}},
+    {"date": "2026-11-04", "time": "00:16", "market": "US", "type": "data", "imp": 3, "title": "Congressional Elections", "note": "", "src": "ff:Congressional Elections", "rx": {"day": "2026-11-03", "mk": "US", "items": [["S&P500", 0.36, "pct"], ["나스닥", 0.83, "pct"], ["미 10년물", 6, "bp"], ["달러지수", -0.06, "pct"]]}},
     {"date": "2026-11-05", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "ISM 서비스업 PMI", "note": "미국 경제의 몸통(서비스) 체감 경기. 50 위·아래와 가격지수 확인. (예상 54.9 · 직전 54.9)", "src": "ff:ISM Services PMI"},
     {"date": "2026-11-05", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 197K · 직전 194K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "197K"}},
     {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "시간당 임금", "note": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)", "src": "ff:Average Hourly Earnings m/m", "fc": {"Average Hourly Earnings m/m": "0.3%"}},
