@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 
 // SEC asks automated clients to identify their application and contact address.
 // The contact stays in GitHub Secrets and request headers, never published feeds.
-// `cache` = feeds/sec-cache-us.json. GitHub Actions 서버는 SEC 가 403 으로 막는다(2026-11 실측) →
-// 회사 맥(scripts/sec_cache.mjs)이 같은 방식으로 받아 둔 공시를 먼저 쓴다. 4일 지난 것은 쓰지 않는다.
+// `cache` = feeds/sec-cache-us.json (11/4 한 번 받아 둔 공시, 4일 지나면 자동으로 안 씀).
+// ⚠ SEC 403 의 진짜 원인 = 연락처가 naver.com 주소(SEC 가 거부). Actions 서버 자체는 정상(11/4 진단).
 export function createSecClient({ email = process.env.SEC_CONTACT_EMAIL || '', fetcher = fetch,
   wait = ms => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now, cache = null } = {}) {
   const contact = email.trim();

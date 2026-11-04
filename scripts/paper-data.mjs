@@ -44,7 +44,9 @@ export async function collectEvidence(market, candidate, newsRows = []) {
   for (const row of newsRows.slice(0, 3)) {
     try {
       const publishedAt = kstTime(row.date), published = Date.parse(publishedAt);
-      if (!Number.isFinite(published) || published > Date.now() || Date.now() - published > 7 * 864e5) continue;
+      // 미장은 기사 14일, 국장 7일 (2026-11-04 사용자 결정 — 미장 소형주는 기사가 드물다)
+      const maxAge = (market === 'US' ? 14 : 7) * 864e5;
+      if (!Number.isFinite(published) || published > Date.now() || Date.now() - published > maxAge) continue;
       let html, url;
       if (market === 'US') {
         const params = new URLSearchParams({ officeId: row.office, articleId: row.article, reutersCode: candidate.rc });
