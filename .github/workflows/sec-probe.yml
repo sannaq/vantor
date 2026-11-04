@@ -1,0 +1,13 @@
+name: SEC 접속 진단 (임시)
+on: workflow_dispatch
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          for e in someone@gmail.com someone@naver.com; do
+            echo "$e $(curl -s -o /dev/null -w '%{http_code}' -A "VantorPaperResearch/1.0 $e" https://www.sec.gov/files/company_tickers.json)"; sleep 1; done
+          echo "secret domain naver? $(echo "$SEC" | grep -qi '@naver\.com$' && echo yes || echo no)"
+          echo "secret $(curl -s -o /dev/null -w '%{http_code}' -A "VantorPaperResearch/1.0 $SEC" https://www.sec.gov/files/company_tickers.json)"
+        env:
+          SEC: ${{ secrets.SEC_CONTACT_EMAIL }}
