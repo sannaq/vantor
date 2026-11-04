@@ -11,7 +11,8 @@ financial, dilution, audit, delisting, litigation or news risk justifies deferri
 a new entry. Do NOT hold merely because an earnings release, IR event or
 preliminary result is scheduled soon: the system automatically halves the
 position size before earnings. In that case return pass (if nothing else is
-wrong) and set earningsSoon true. Already-published weak results, guidance cuts
+wrong) and set earningsSoon true. If you still choose hold and the ONLY reason is
+an upcoming scheduled earnings/IR event, set earningsOnlyHold true. Already-published weak results, guidance cuts
 or other concrete negatives may still justify hold. A pass does NOT mean a stock is safe or profitable.
 Use only provided facts. Never invent a filing, citation, business description or
 claim comprehensive disclosure review. Explain limitations. Write concise Korean.
@@ -41,6 +42,7 @@ export async function reviewCandidate({ market, candidate, documents, apiKey,
           responseSchema: { type: 'OBJECT', required: ['decision', 'reason', 'company', 'sourceIds'],
             properties: { decision: { type: 'STRING', enum: ['pass', 'hold'] },
               earningsSoon: { type: 'BOOLEAN' },
+              earningsOnlyHold: { type: 'BOOLEAN' },
               reason: { type: 'STRING' }, company: { type: 'STRING' },
               sourceIds: { type: 'ARRAY', items: { type: 'STRING' } } } } } }),
     });
@@ -50,7 +52,12 @@ export async function reviewCandidate({ market, candidate, documents, apiKey,
     if (result?.finishReason !== 'STOP') return { status: 'review_incomplete' };
     const parsed = JSON.parse(result.content.parts.map(p => p.text || '').join(''));
     if (typeof parsed.company !== 'string' || parsed.company.length > 500 ||
-        typeof parsed.reason !== 'string' || parsed.reason.length > 1500) return { status: 'review_invalid' };
+        typeof parsed.reason !== 'string' || parsed.reason.length > 1600) return { status: 'review_invalid' };
+    // 실적 발표 예정만을 이유로 한 보류 → 절반 비중 매수로 전환 (2026-11-04 사용자 결정)
+    if (parsed.decision === 'hold' && parsed.earningsOnlyHold === true) {
+      parsed.decision = 'pass'; parsed.earningsSoon = true;
+      parsed.reason = '[실적 발표 전이라 보류 대신 절반 비중] ' + parsed.reason;
+    }
     const time = now();
     const review = { id: snapshotHash({ snapshotId, parsed }), market, symbol: candidate.c,
       snapshotId, model: GEMINI_MODEL, createdAt: new Date(time).toISOString(),
