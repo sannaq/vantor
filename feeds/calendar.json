@@ -621,8 +621,7 @@
     "Congressional Elections",
     "시간당 임금",
     "고용보고서 (비농업 고용)",
-    "빅테크 실적 (애플·버크셔·AMD·팔란티어)",
-    "국내 실적 (LG에너지솔루션)"
+    "빅테크 실적 (애플·버크셔·AMD·팔란티어)"
    ],
    "days": {
     "2026-11-02": [
@@ -682,13 +681,13 @@
      },
      {
       "c": "earn",
-      "t": "애플·팔란티어·Vertex Pharmaceuticals·Marriott International (시간 미정)",
-      "tk": "AAPL,PLTR,VRTX,MAR"
+      "t": "애플·팔란티어·Williams Companies·Vertex Pharmaceuticals·Marriott International (시간 미정)",
+      "tk": "AAPL,PLTR,WMB,VRTX,MAR"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 55곳: Williams Companies·Lumentum·Diamondback Energy·Realty Income·IDEXX Laboratories·Entergy·Estee Lauder·Public Service·Ryanair·ON Semiconductor·Fox·Fox·Roku·Loews·SBA Communications·Pershing Square·Tower Semiconductor·POSCO HOLDINGS·Viper Energy·Corebridge Financial 외 35곳"
+      "t": "미국 실적 53곳: Lumentum·Realty Income·Diamondback Energy·IDEXX Laboratories·Entergy·Estee Lauder·Public Service·ON Semiconductor·Ryanair·Fox·Fox·Roku·Loews·SBA Communications·Pershing Square·Tower Semiconductor·Neurocrine Biosciences·POSCO HOLDINGS·Corebridge Financial·Viper Energy 외 33곳"
      }
     ],
     "2026-11-03": [
@@ -719,38 +718,6 @@
       ],
       "sub": "한국시간 11/4 03:00",
       "imp": 2
-     },
-     {
-      "c": "ev",
-      "t": "미국 중간선거",
-      "kw": [
-       "미국",
-       "중간선거"
-      ]
-     },
-     {
-      "c": "earn",
-      "t": "LG에너지솔루션·한국항공우주·하이브 (국내)",
-      "kw": [
-       "LG에너지솔루션",
-       "한국항공우주",
-       "하이브"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 8곳: 카카오페이·LG생활건강·풍산·해성디에스·DL·KG스틸·풍산홀딩스·지누스",
-      "kw": [
-       "카카오페이",
-       "LG생활건강",
-       "풍산",
-       "해성디에스",
-       "DL",
-       "KG스틸",
-       "풍산홀딩스",
-       "지누스"
-      ]
      },
      {
       "c": "data",
@@ -796,19 +763,13 @@
      },
      {
       "c": "earn",
-      "t": "쇼피파이·화이자·이튼·Marathon Petroleum·Ferrari·Apollo Global (장 전)",
-      "tk": "SHOP,PFE,ETN,MPC,RACE,APO",
-      "when": "B"
-     },
-     {
-      "c": "earn",
-      "t": "AMD·암젠·아리스타·부킹홀딩스·Suncor Energy·Itau Unibanco (장 마감 후)",
-      "tk": "AMD,AMGN,ANET,BKNG,SU,ITUB"
+      "t": "AMD·암젠·아리스타·쇼피파이·화이자·이튼 (시간 미정)",
+      "tk": "AMD,AMGN,ANET,SHOP,PFE,ETN"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 90곳: MPLX LP(전)·AMTEK(전)·Thomson Reuters(전)·Keurig Dr(전)·Teva Pharmaceutical(전)·Block(후)·Waters(전)·American International(후)·Yum! Brands(전)·Prudential Financial(후)·Sysco(전)·Astera Labs(후)·Archer-Daniels-Midland(전)·Fortis(전)·Fiserv(전)·Koninklijke Philips(전)·Coupang(후)·Expeditors International(전)·International Flavors(후)·BioNTech SE(전) 외 70곳"
+      "t": "미국 실적 97곳: Marathon Petroleum·부킹홀딩스·Ferrari·Suncor Energy·Itau Unibanco·Apollo Global·MPLX LP·AMTEK·Teva Pharmaceutical·Thomson Reuters·Keurig Dr·Block·Waters·Yum! Brands·American International·Prudential Financial·Astera Labs·Sysco·Archer-Daniels-Midland·Fiserv 외 77곳"
      }
     ],
     "2026-11-04": [
@@ -829,37 +790,6 @@
        "재무부",
        "QRA",
        "국채"
-      ]
-     },
-     {
-      "c": "earn",
-      "t": "효성중공업·SK텔레콤·카카오뱅크·대덕전자 (국내)",
-      "kw": [
-       "효성중공업",
-       "SK텔레콤",
-       "카카오뱅크",
-       "대덕전자"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 14곳: LG유플러스·한화·효성·현대백화점·세아베스틸지주·효성티앤씨·넥센타이어·KG모빌리티·효성화학·롯데하이마트·휴젤·에스엠·카카오게임즈·녹십자웰빙",
-      "kw": [
-       "LG유플러스",
-       "한화",
-       "효성",
-       "현대백화점",
-       "세아베스틸지주",
-       "효성티앤씨",
-       "넥센타이어",
-       "KG모빌리티",
-       "효성화학",
-       "롯데하이마트",
-       "휴젤",
-       "에스엠",
-       "카카오게임즈",
-       "녹십자웰빙"
       ]
      },
      {
@@ -932,8 +862,8 @@
      },
      {
       "c": "earn",
-      "t": "ARM·퀄컴·McKesson·메르카도리브레·Motorola Solutions·앱러빈 (장 마감 후)",
-      "tk": "ARM,QCOM,MCK,MELI,MSI,APP"
+      "t": "ARM·퀄컴·McKesson·메르카도리브레·앱러빈·Motorola Solutions (장 마감 후)",
+      "tk": "ARM,QCOM,MCK,MELI,APP,MSI"
      },
      {
       "c": "earn",
@@ -943,7 +873,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 133곳: Manulife Financial(후)·Allstate (후)·W.W. Grainger(전)·Cencora(전)·MetLife(후)·Aflac Incorporated(후)·세노버스(전)·Edwards Lifesciences(후)·Vivmark Residential(후)·Sun Life(후)·Medline(전)·Revolution Medicines(후)·Coherent(후)·Martin Marietta(전)·Royalty Pharma(전)·Chunghwa Telecom(전)·TKO(후)·Expedia(후)·Nutrien(후)·Tenaris(후) 외 113곳"
+      "t": "미국 실적 131곳: Manulife Financial(후)·Allstate (후)·W.W. Grainger(전)·Cencora(전)·MetLife(후)·Aflac Incorporated(후)·세노버스(전)·Edwards Lifesciences(후)·Vivmark Residential(후)·Sun Life(후)·Revolution Medicines(후)·Coherent(후)·Martin Marietta(전)·Royalty Pharma(전)·Chunghwa Telecom(전)·TKO(후)·Nutrien(후)·Expedia(후)·Tenaris(후)·SharkNinja(전) 외 111곳"
      }
     ],
     "2026-11-05": [
@@ -1029,7 +959,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 15곳: SK바이오팜·엘앤에프·한온시스템·SK바이오사이언스·롯데에너지머티리얼즈·넷마블·에코프로머티·LX인터내셔널·에코프로·에코프로비엠·CJ ENM·스튜디오드래곤·에코프로에이치엔·CJ프레시웨이·KG파이낸셜",
+      "t": "국내 실적 17곳: SK바이오팜·엘앤에프·한온시스템·SK바이오사이언스·롯데에너지머티리얼즈·넷마블·에코프로머티·SK가스·GS리테일·LX인터내셔널·에코프로·에코프로비엠·CJ ENM·스튜디오드래곤·에코프로에이치엔·CJ프레시웨이·KG파이낸셜",
       "kw": [
        "SK바이오팜",
        "엘앤에프",
@@ -1038,6 +968,8 @@
        "롯데에너지머티리얼즈",
        "넷마블",
        "에코프로머티",
+       "SK가스",
+       "GS리테일",
        "LX인터내셔널",
        "에코프로",
        "에코프로비엠",
@@ -1096,7 +1028,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 118곳: The Cigna(전)·Air Products(전)·Cummins(전)·TC Energy(전)·Targa Resources(전)·Cardinal Health(전)·Sempra(전)·Wheaton Precious(후)·Becton Dickinson(전)·Devon Energy(후)·Rockwell Automation(전)·Atlassian(후)·ArcelorMittal(전)·Consolidated Edison(후)·Live Nation(후)·AngloGold Ashanti(전)·Microchip Technology(후)·BeOne Medicines(전)·Kimberly-Clark(전)·Axon Enterprise(후) 외 98곳"
+      "t": "미국 실적 119곳: The Cigna(전)·Air Products(전)·Cummins(전)·Kimberly-Clark(전)·Targa Resources(전)·TC Energy(전)·Cardinal Health(전)·Sempra(전)·Becton Dickinson(전)·Wheaton Precious(후)·Devon Energy(후)·Rockwell Automation(전)·Atlassian(후)·ArcelorMittal(전)·Consolidated Edison(후)·Microchip Technology(후)·Live Nation(후)·AngloGold Ashanti(전)·BeOne Medicines(전)·Iron Mountain(전) 외 99곳"
      }
     ],
     "2026-11-06": [
@@ -1242,7 +1174,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 19곳: Honda Motor·Ubiquiti·PPL(전)·Plains All(전)·Brookfield Infrastructure(전)·Franklin Templeton(전)·Emera Incorporated(전)·TELUS·Charter Communications(전)·Elanco Animal(전)·Freedom Holding·KT·MSG Knickerbockers(전)·Fluor(전)·Essent(전)·VEON(전)·TeraWulf(전)·Plains GP(전)·Cogent Biosciences"
+      "t": "미국 실적 19곳: Honda Motor·Ubiquiti·PPL(전)·Plains All(전)·Brookfield Infrastructure(전)·Franklin Templeton(전)·Emera Incorporated(전)·TELUS(전)·Charter Communications(전)·Elanco Animal(전)·Freedom Holding·KT·MSG Knickerbockers(전)·Fluor(전)·TeraWulf(전)·Essent(전)·Plains GP(전)·Cogent Biosciences·VEON(전)"
      }
     ]
    }
@@ -1386,11 +1318,6 @@
  ],
  "earningsNote": "장 전 / 장 마감 후는 미국 시간 기준 → 장 마감 후 발표는 다음 거래일에 반응",
  "upcoming": [
-  {
-   "d": "2026-11-04",
-   "c": "pol",
-   "t": "미 재무부 QRA (국채 발행 계획)"
-  },
   {
    "d": "2026-11-15",
    "c": "ev",
