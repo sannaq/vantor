@@ -687,7 +687,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 53곳: Lumentum·Realty Income·Diamondback Energy·IDEXX Laboratories·Entergy·Estee Lauder·Public Service·ON Semiconductor·Ryanair·Fox·Fox·Roku·Loews·SBA Communications·Pershing Square·Tower Semiconductor·Neurocrine Biosciences·POSCO HOLDINGS·Corebridge Financial·Viper Energy 외 33곳"
+      "t": "미국 실적 54곳: Lumentum·Realty Income·IDEXX Laboratories·Entergy·Diamondback Energy·Estee Lauder·Public Service·Ryanair·ON Semiconductor·Fox·Fox·Roku·Loews·Pershing Square·SBA Communications·Tower Semiconductor·Neurocrine Biosciences·POSCO HOLDINGS·Corebridge Financial·Equitable 외 34곳"
      }
     ],
     "2026-11-03": [
@@ -769,7 +769,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 97곳: Marathon Petroleum·부킹홀딩스·Ferrari·Suncor Energy·Itau Unibanco·Apollo Global·MPLX LP·AMTEK·Teva Pharmaceutical·Thomson Reuters·Keurig Dr·Block·Waters·Yum! Brands·American International·Prudential Financial·Astera Labs·Sysco·Archer-Daniels-Midland·Fiserv 외 77곳"
+      "t": "미국 실적 95곳: 부킹홀딩스·Marathon Petroleum·Ferrari·Suncor Energy·Itau Unibanco·Apollo Global·MPLX LP·AMTEK·Block·Thomson Reuters·Keurig Dr·Teva Pharmaceutical·Waters·Yum! Brands·Prudential Financial·American International·Astera Labs·Sysco·Archer-Daniels-Midland·Fiserv 외 75곳"
      }
     ],
     "2026-11-04": [
@@ -781,15 +781,6 @@
        "ISM",
        "서비스업",
        "PMI"
-      ]
-     },
-     {
-      "c": "pol",
-      "t": "미 재무부 QRA (국채 발행 계획)",
-      "kw": [
-       "재무부",
-       "QRA",
-       "국채"
       ]
      },
      {
@@ -856,24 +847,18 @@
      },
      {
       "c": "earn",
-      "t": "맥도날드·노보노디스크·우버·CVS Health·Emerson Electric·Datadog (장 전)",
-      "tk": "MCD,NVO,UBER,CVS,EMR,DDOG",
-      "when": "B"
+      "t": "Vivmark Residential (장 마감 후)",
+      "tk": "VMRK"
      },
      {
       "c": "earn",
-      "t": "ARM·퀄컴·McKesson·메르카도리브레·앱러빈·Motorola Solutions (장 마감 후)",
-      "tk": "ARM,QCOM,MCK,MELI,APP,MSI"
-     },
-     {
-      "c": "earn",
-      "t": "도요타 (시간 미정)",
-      "tk": "TM"
+      "t": "도요타·ARM·맥도날드·노보노디스크·퀄컴·우버 (시간 미정)",
+      "tk": "TM,ARM,MCD,NVO,QCOM,UBER"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 131곳: Manulife Financial(후)·Allstate (후)·W.W. Grainger(전)·Cencora(전)·MetLife(후)·Aflac Incorporated(후)·세노버스(전)·Edwards Lifesciences(후)·Vivmark Residential(후)·Sun Life(후)·Revolution Medicines(후)·Coherent(후)·Martin Marietta(전)·Royalty Pharma(전)·Chunghwa Telecom(전)·TKO(후)·Nutrien(후)·Expedia(후)·Tenaris(후)·SharkNinja(전) 외 111곳"
+      "t": "미국 실적 143곳: McKesson·CVS Health·Emerson Electric·앱러빈·메르카도리브레·Motorola Solutions·Manulife Financial·W.W. Grainger·Allstate ·Datadog·Cencora·MetLife·Aflac Incorporated·Edwards Lifesciences·세노버스·Medline·Sun Life·Revolution Medicines·Martin Marietta·Royalty Pharma 외 123곳"
      }
     ],
     "2026-11-05": [
@@ -945,42 +930,6 @@
       "imp": 2
      },
      {
-      "c": "earn",
-      "t": "한미반도체·고려아연·LG화학·KT&G·카카오·GS (국내)",
-      "kw": [
-       "한미반도체",
-       "고려아연",
-       "LG화학",
-       "KT&G",
-       "카카오",
-       "GS"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 17곳: SK바이오팜·엘앤에프·한온시스템·SK바이오사이언스·롯데에너지머티리얼즈·넷마블·에코프로머티·SK가스·GS리테일·LX인터내셔널·에코프로·에코프로비엠·CJ ENM·스튜디오드래곤·에코프로에이치엔·CJ프레시웨이·KG파이낸셜",
-      "kw": [
-       "SK바이오팜",
-       "엘앤에프",
-       "한온시스템",
-       "SK바이오사이언스",
-       "롯데에너지머티리얼즈",
-       "넷마블",
-       "에코프로머티",
-       "SK가스",
-       "GS리테일",
-       "LX인터내셔널",
-       "에코프로",
-       "에코프로비엠",
-       "CJ ENM",
-       "스튜디오드래곤",
-       "에코프로에이치엔",
-       "CJ프레시웨이",
-       "KG파이낸셜"
-      ]
-     },
-     {
       "c": "data",
       "lo": 1,
       "t": "美 챌린저 감원",
@@ -1016,19 +965,19 @@
      },
      {
       "c": "earn",
-      "t": "코노코필립스·소니·Parker-Hannifin·Canadian Natural·Southern ·Duke Energy (장 전)",
-      "tk": "COP,SONY,PH,CNQ,SO,DUK",
+      "t": "코노코필립스·소니·Parker-Hannifin·Southern ·Canadian Natural·Duke Energy (장 전)",
+      "tk": "COP,SONY,PH,SO,CNQ,DUK",
       "when": "B"
      },
      {
       "c": "earn",
-      "t": "Monster Beverage·에어비앤비·클라우드플레어·EOG Resources·Simon Property·Natera (장 마감 후)",
-      "tk": "MNST,ABNB,NET,EOG,SPG,NTRA"
+      "t": "Monster Beverage·에어비앤비·클라우드플레어·EOG Resources·Simon Property·Wheaton Precious (장 마감 후)",
+      "tk": "MNST,ABNB,NET,EOG,SPG,WPM"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 119곳: The Cigna(전)·Air Products(전)·Cummins(전)·Kimberly-Clark(전)·Targa Resources(전)·TC Energy(전)·Cardinal Health(전)·Sempra(전)·Becton Dickinson(전)·Wheaton Precious(후)·Devon Energy(후)·Rockwell Automation(전)·Atlassian(후)·ArcelorMittal(전)·Consolidated Edison(후)·Microchip Technology(후)·Live Nation(후)·AngloGold Ashanti(전)·BeOne Medicines(전)·Iron Mountain(전) 외 99곳"
+      "t": "미국 실적 116곳: The Cigna(전)·Air Products(전)·Kimberly-Clark(전)·Cummins(전)·TC Energy(전)·Targa Resources(전)·Cardinal Health(전)·Becton Dickinson(전)·Natera(후)·Sempra(전)·Rockwell Automation(전)·Devon Energy(후)·Atlassian(후)·ArcelorMittal(전)·Consolidated Edison(후)·AngloGold Ashanti(전)·Live Nation(후)·BeOne Medicines(전)·Microchip Technology(후)·Zoetis(전) 외 96곳"
      }
     ],
     "2026-11-06": [
@@ -1174,7 +1123,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 19곳: Honda Motor·Ubiquiti·PPL(전)·Plains All(전)·Brookfield Infrastructure(전)·Franklin Templeton(전)·Emera Incorporated(전)·TELUS(전)·Charter Communications(전)·Elanco Animal(전)·Freedom Holding·KT·MSG Knickerbockers(전)·Fluor(전)·TeraWulf(전)·Essent(전)·Plains GP(전)·Cogent Biosciences·VEON(전)"
+      "t": "미국 실적 20곳: Honda Motor·Ubiquiti·EchoStar(전)·PPL(전)·Plains All(전)·Brookfield Infrastructure(전)·Franklin Templeton(전)·Emera Incorporated(전)·TELUS(전)·Charter Communications(전)·Elanco Animal(전)·Freedom Holding·KT·MSG Knickerbockers(전)·Fluor(전)·Essent(전)·TeraWulf(전)·Cogent Biosciences·VEON(전)·Plains GP(전)"
      }
     ]
    }
@@ -1297,10 +1246,11 @@
    "auto": true
   },
   {
-   "d": "2026-11-11",
+   "d": "2026-11-12",
    "n": "시스코",
    "tk": "CSCO",
-   "auto": true
+   "auto": true,
+   "when": "A"
   },
   {
    "d": "2026-11-17",
