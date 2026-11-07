@@ -1,7 +1,7 @@
 {
   "week": "2026년 11월 1주차",
   "range": "11/2~11/6",
-  "updated": "2026-11-06",
+  "updated": "2026-11-07",
   "intro": "이번 주 핵심: **Congressional Elections**, **시간당 임금**, **고용보고서 (비농업 고용)** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
@@ -10,11 +10,11 @@
     {"date": "2026-11-04", "time": "00:16", "market": "US", "type": "data", "imp": 3, "title": "Congressional Elections", "note": "", "src": "ff:Congressional Elections", "rx": {"day": "2026-11-03", "mk": "US", "items": [["S&P500", 0.36, "pct"], ["나스닥", 0.83, "pct"], ["미 10년물", 6, "bp"], ["달러지수", -0.06, "pct"]]}},
     {"date": "2026-11-05", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "ISM 서비스업 PMI", "note": "미국 경제의 몸통(서비스) 체감 경기. 50 위·아래와 가격지수 확인. (예상 54.9 · 직전 54.9)", "src": "ff:ISM Services PMI", "rx": {"day": "2026-11-04", "mk": "US", "items": [["S&P500", 1.58, "pct"], ["나스닥", 1.44, "pct"], ["미 10년물", -6, "bp"], ["달러지수", -0.51, "pct"]]}},
     {"date": "2026-11-05", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 197K · 직전 194K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "197K"}, "rx": {"day": "2026-11-05", "mk": "US", "items": [["S&P500", -4.36, "pct"], ["나스닥", -5.52, "pct"], ["미 10년물", -6, "bp"], ["달러지수", 0.12, "pct"]]}},
-    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "시간당 임금", "note": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)", "src": "ff:Average Hourly Earnings m/m", "fc": {"Average Hourly Earnings m/m": "0.3%"}},
-    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "고용보고서 (비농업 고용)", "note": "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차. (예상 63K · 직전 29K)", "src": "ff:Non-Farm Employment Change", "fc": {"Non-Farm Employment Change": "65K"}},
-    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "실업률", "note": "고용보고서와 함께 발표. 상승 시 경기 둔화 신호. (예상 4.2% · 직전 4.2%)", "src": "ff:Unemployment Rate", "fc": {"Unemployment Rate": "4.2%"}},
-    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 47.8 · 직전 46.3)", "src": "ff:Prelim UoM Consumer Sentiment"},
-    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Prelim UoM Inflation Expectations"}
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "시간당 임금", "note": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)", "src": "ff:Average Hourly Earnings m/m", "fc": {"Average Hourly Earnings m/m": "0.3%"}, "result": {"v": "**전월비 0.4%** (예상 0.3%) — 예상보다 뜨거움 → 금리 부담", "verdict": "hot"}, "rx": {"day": "2026-11-06", "mk": "US", "items": [["S&P500", 0.31, "pct"], ["나스닥", 1.09, "pct"], ["미 10년물", 2, "bp"], ["달러지수", 0.72, "pct"]]}},
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "고용보고서 (비농업 고용)", "note": "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차. (예상 63K · 직전 29K)", "src": "ff:Non-Farm Employment Change", "fc": {"Non-Farm Employment Change": "65K"}, "result": {"v": "**비농업 고용 +165K** (예상 65K) — 예상보다 뜨거움 → 금리 부담", "verdict": "hot"}, "rx": {"day": "2026-11-06", "mk": "US", "items": [["S&P500", 0.31, "pct"], ["나스닥", 1.09, "pct"], ["미 10년물", 2, "bp"], ["달러지수", 0.72, "pct"]]}},
+    {"date": "2026-11-06", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "실업률", "note": "고용보고서와 함께 발표. 상승 시 경기 둔화 신호. (예상 4.2% · 직전 4.2%)", "src": "ff:Unemployment Rate", "fc": {"Unemployment Rate": "4.2%"}, "result": {"v": "**실업률 4.1%** (예상 4.2%) — 예상보다 뜨거움 → 금리 부담", "verdict": "hot"}, "rx": {"day": "2026-11-06", "mk": "US", "items": [["S&P500", 0.31, "pct"], ["나스닥", 1.09, "pct"], ["미 10년물", 2, "bp"], ["달러지수", 0.72, "pct"]]}},
+    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 47.8 · 직전 46.3)", "src": "ff:Prelim UoM Consumer Sentiment", "rx": {"day": "2026-11-06", "mk": "US", "items": [["S&P500", 0.31, "pct"], ["나스닥", 1.09, "pct"], ["미 10년물", 2, "bp"], ["달러지수", 0.72, "pct"]]}},
+    {"date": "2026-11-07", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.7%)", "src": "ff:Prelim UoM Inflation Expectations", "rx": {"day": "2026-11-06", "mk": "US", "items": [["S&P500", 0.31, "pct"], ["나스닥", 1.09, "pct"], ["미 10년물", 2, "bp"], ["달러지수", 0.72, "pct"]]}}
   ],
   "keys": [{"t": "시간당 임금 (11/6 22:30)", "b": "임금발 물가 압력 확인. (예상 0.3% · 직전 0.1%)"}, {"t": "고용보고서 (비농업 고용) (11/6 22:30)", "b": "주 최대 지표. 강하면 금리↑, 약하면 경기 우려와 인하 기대가 교차. (예상 63K · 직전 29K)"}]
 }
