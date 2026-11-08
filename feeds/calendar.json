@@ -1084,14 +1084,13 @@
      },
      {
       "c": "earn",
-      "t": "Enbridge·Moderna·Brookfield Asset·Humana (장 전)",
-      "tk": "ENB,MRNA,BAM,HUM",
-      "when": "B"
+      "t": "Enbridge (시간 미정)",
+      "tk": "ENB"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 20곳: Honda Motor·비스트라(전)·Ubiquiti·PPL(전)·EchoStar(전)·Brookfield Infrastructure(전)·Plains All(전)·Franklin Templeton(전)·Emera Incorporated(전)·TELUS(전)·Charter Communications(전)·Elanco Animal(전)·Freedom Holding·KT·MSG Knickerbockers(전)·Essent(전)·Fluor(전)·Plains GP(전)·VEON(전)·TeraWulf(전)"
+      "t": "미국 실적 24곳: Moderna·Brookfield Asset·Humana·Honda Motor·비스트라(전)·Ubiquiti·PPL·EchoStar(전)·Brookfield Infrastructure·Plains All·Franklin Templeton·Emera Incorporated·TELUS·Charter Communications·Elanco Animal·Freedom Holding·KT·MSG Knickerbockers·Essent·Fluor 외 4곳"
      }
     ]
    }
