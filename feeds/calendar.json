@@ -1145,25 +1145,6 @@
       "imp": 2
      },
      {
-      "c": "earn",
-      "t": "두산 (국내)",
-      "kw": [
-       "두산"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 5곳: 한국앤컴퍼니·한전KPS·롯데칠성·덕산하이메탈·메쎄이상",
-      "kw": [
-       "한국앤컴퍼니",
-       "한전KPS",
-       "롯데칠성",
-       "덕산하이메탈",
-       "메쎄이상"
-      ]
-     },
-     {
       "c": "data",
       "lo": 1,
       "t": "美 도매재고",
@@ -1174,19 +1155,19 @@
      },
      {
       "c": "earn",
-      "t": "KKR &·컨스텔레이션에너지·Barrick Mining·Ferguson Enterprises (장 전)",
-      "tk": "KKR,CEG,B,FERG",
+      "t": "컨스텔레이션에너지·KKR &·Barrick Mining (장 전)",
+      "tk": "CEG,KKR,B",
       "when": "B"
      },
      {
       "c": "earn",
-      "t": "Occidental Petroleum·Skydance (장 마감 후)",
-      "tk": "OXY,SKYD"
+      "t": "Occidental Petroleum·Skydance·Take-Two Interactive (장 마감 후)",
+      "tk": "OXY,SKYD,TTWO"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 33곳: Take-Two Interactive(후)·ORIX(전)·Rocket Lab(후)·Credicorp(후)·Roivant Sciences(전)·Grupo Cibest(후)·Joint Stock(전)·RB Global(전)·NRG Energy(전)·Somnigroup International(전)·CNH Industrial(전)·JBS(후)·Equinox Gold(후)·AST SpaceMobile(후)·Affiliated Managers(전)·Lineage(후)·TG Therapeutics(전)·TIM(후)·Onto Innovation(후)·Zeta Global(후) 외 13곳"
+      "t": "미국 실적 33곳: ORIX(전)·Rocket Lab(후)·Roivant Sciences(전)·Credicorp(후)·Grupo Cibest(후)·NRG Energy(전)·Joint Stock(전)·RB Global(전)·Somnigroup International(전)·CNH Industrial(전)·Equinox Gold(후)·JBS(후)·AST SpaceMobile(후)·Affiliated Managers(전)·TG Therapeutics(전)·Lineage(후)·TIM(후)·Onto Innovation(후)·Zeta Global(후)·Praxis Precision(전) 외 13곳"
      }
     ],
     "2026-11-10": [
@@ -1266,22 +1247,27 @@
      },
      {
       "c": "earn",
-      "t": "KT·크래프톤 (국내)",
+      "t": "KT·크래프톤·코웨이 (국내)",
       "kw": [
        "KT",
-       "크래프톤"
+       "크래프톤",
+       "코웨이"
       ]
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 5곳: F&F·CJ제일제당·NHN·CJ대한통운·지역난방공사",
+      "t": "국내 실적 9곳: F&F·CJ제일제당·NHN·CJ대한통운·SK케미칼·지역난방공사·코스메카코리아·서울바이오시스·잉글우드랩",
       "kw": [
        "F&F",
        "CJ제일제당",
        "NHN",
        "CJ대한통운",
-       "지역난방공사"
+       "SK케미칼",
+       "지역난방공사",
+       "코스메카코리아",
+       "서울바이오시스",
+       "잉글우드랩"
       ]
      },
      {
@@ -1350,7 +1336,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 12곳: Alcon(후)·Vodafone Plc(전)·Ecopetrol(후)·Venture Global(전)·CoreWeave(후)·On Holding(전)·Telefonica Brasil(후)·Embraer·ImmunityBio·Silicon Laboratories·Scholar Rock(전)·Veradermics Incorporated"
+      "t": "미국 실적 12곳: Alcon(후)·Vodafone Plc(전)·Ecopetrol(후)·Venture Global(전)·CoreWeave(후)·On Holding(전)·Telefonica Brasil(후)·Embraer·ImmunityBio·Silicon Laboratories·Veradermics Incorporated·Scholar Rock(전)"
      }
     ],
     "2026-11-11": [
@@ -1360,7 +1346,17 @@
       "kw": [
        "Nagel"
       ],
-      "sub": "한국시간 11/11 17:20",
+      "sub": "한국시간 11/11 17:15",
+      "imp": 2
+     },
+     {
+      "c": "talk",
+      "t": "ECB 라가르드 총재 발언",
+      "kw": [
+       "라가르드",
+       "Lagarde"
+      ],
+      "sub": "한국시간 11/11 18:45",
       "imp": 2
      },
      {
@@ -1373,7 +1369,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 10곳: NC·코스맥스·BGF리테일·대한조선·코오롱인더·동원산업·BGF·KG케미칼·JYP Ent.·KG에코솔루션",
+      "t": "국내 실적 11곳: NC·코스맥스·BGF리테일·대한조선·코오롱인더·동원산업·BGF·KG케미칼·JYP Ent.·서울반도체·KG에코솔루션",
       "kw": [
        "NC",
        "코스맥스",
@@ -1384,6 +1380,7 @@
        "BGF",
        "KG케미칼",
        "JYP Ent.",
+       "서울반도체",
        "KG에코솔루션"
       ]
      },
@@ -1411,7 +1408,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 10곳: CGI(전)·Ascendis Pharma·Tetra Tech(후)·CAE(후)·Corteva(후)·OR Royalties(후)·Oruka Therapeutics·Ultrapar Participacoes·ICL(전)·EnerSys(후)"
+      "t": "미국 실적 11곳: CGI(전)·Bio-Techne·Tetra Tech(후)·CAE(후)·Corteva(후)·Oruka Therapeutics·OR Royalties(후)·ICL(전)·Ultrapar Participacoes·EnerSys(후)·Erasca"
      }
     ],
     "2026-11-12": [
@@ -1441,7 +1438,7 @@
        "해맥",
        "Hammack"
       ],
-      "sub": "한국시간 11/12 23:00"
+      "sub": "한국시간 11/12 22:30"
      },
      {
       "c": "talk",
@@ -1459,7 +1456,16 @@
        "굴스비",
        "Goolsbee"
       ],
-      "sub": "한국시간 11/13 01:30"
+      "sub": "한국시간 11/13 01:15"
+     },
+     {
+      "c": "talk",
+      "t": "ECB Nagel 총재 발언",
+      "kw": [
+       "Nagel"
+      ],
+      "sub": "한국시간 11/13 02:30",
+      "imp": 2
      },
      {
       "c": "talk",
@@ -1500,29 +1506,32 @@
      },
      {
       "c": "earn",
-      "t": "삼성생명·NAVER·삼성화재·LG·미래에셋증권·DB손해보험 (국내)",
+      "t": "삼성생명·NAVER·삼성화재·한국전력·LG·미래에셋증권 (국내)",
       "kw": [
        "삼성생명",
        "NAVER",
        "삼성화재",
+       "한국전력",
        "LG",
-       "미래에셋증권",
-       "DB손해보험"
+       "미래에셋증권"
       ]
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 8곳: 삼성증권·한화생명·달바글로벌·더블유게임즈·한화손해보험·진에어·클래시스·덕산네오룩스",
+      "t": "국내 실적 11곳: DB손해보험·삼성증권·DB하이텍·한화생명·달바글로벌·더블유게임즈·한화손해보험·진에어·클래시스·덕산네오룩스·KT밀리의서재",
       "kw": [
+       "DB손해보험",
        "삼성증권",
+       "DB하이텍",
        "한화생명",
        "달바글로벌",
        "더블유게임즈",
        "한화손해보험",
        "진에어",
        "클래시스",
-       "덕산네오룩스"
+       "덕산네오룩스",
+       "KT밀리의서재"
       ]
      },
      {
@@ -1587,13 +1596,13 @@
      },
      {
       "c": "earn",
-      "t": "시스코·어플라이드머티리얼즈 (장 마감 후)",
-      "tk": "CSCO,AMAT"
+      "t": "시스코·어플라이드머티리얼즈·Nu (장 마감 후)",
+      "tk": "CSCO,AMAT,NU"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 17곳: Nu·Nebius(전)·Bending Spoons·Cerebras Systems(후)·Brookfield Wealth·Hudbay Minerals(전)·Stantec(후)·Arrowhead Pharmaceuticals(후)·Twist Bioscience(전)·Companhia Paranaense(후)·Andersen(후)·NIQ Global(전)·Mobility Global(전)·Belite Bio(후)·Kodiak Sciences·Octave Intelligence(전)·Forgent Power(전)"
+      "t": "미국 실적 19곳: Nebius(전)·Cerebras Systems(후)·Ascendis Pharma(전)·Brookfield Wealth·Hudbay Minerals(전)·Stantec(후)·Arrowhead Pharmaceuticals(후)·Twist Bioscience(전)·Companhia Paranaense(후)·Andersen(후)·Kodiak Sciences·Belite Bio(후)·NIQ Global(전)·Forgent Power(전)·Mobility Global(전)·Octave Intelligence(전)·SOLV Energy(전)·Grupo Aval·Figure Technology(전)"
      }
     ],
     "2026-11-13": [
@@ -1624,6 +1633,15 @@
        "Bowman"
       ],
       "sub": "한국시간 11/14 00:50"
+     },
+     {
+      "c": "talk",
+      "t": "ECB Nagel 총재 발언",
+      "kw": [
+       "Nagel"
+      ],
+      "sub": "한국시간 11/14 01:00",
+      "imp": 2
      },
      {
       "c": "talk",
@@ -1690,7 +1708,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 4곳: KB Financial·Woori Bank·CG Oncology·Comp En"
+      "t": "미국 실적 3곳: KB Financial·Woori Bank·Comp En"
      }
     ],
     "2026-11-15": [
