@@ -5193,7 +5193,7 @@ function renderEconCal(sel){
   var dayBlocks=function(days){ var body='';
   Object.keys(days).sort().forEach(function(d){ var dt=new Date(d+'T00:00:00'), md=(dt.getMonth()+1)+'월 '+dt.getDate()+'일', isT=d===today, dn=(_ECAL.dayNotes&&_ECAL.dayNotes[d])||'';
     body+='<div style="margin-top:12px"><div style="font-weight:800;font-size:13px;margin-bottom:6px">'+md+' ('+WD[dt.getDay()]+')'+(dn?' <span style="font-weight:600;color:var(--faint);font-size:11px">'+_bbEsc(dn)+'</span>':'')+(isT?' <span style="font-size:10px;font-weight:800;color:#fff;background:#f6465d;padding:1px 6px;border-radius:5px">TODAY</span>':'')+'</div>';
-    days[d].sort(function(a,b){ var k=function(t){t=t||''; return /^\d\d:\d\d$/.test(t)?t:(/개장/.test(t)?'08:59':'00:00');}; return k(a.time).localeCompare(k(b.time)); }).forEach(function(e){ var tp=TYPE[e.type]||TYPE.event, mk=MKT[e.market]||MKT.US;
+    days[d].sort(function(a,b){ var k=function(t){t=t||''; return /^\d\d:\d\d$/.test(t)?t:(/개장/.test(t)?'08:59':'00:00');}; return ((b.imp||1)-(a.imp||1))||k(a.time).localeCompare(k(b.time)); }).forEach(function(e){ var tp=TYPE[e.type]||TYPE.event, mk=MKT[e.market]||MKT.US;
       body+='<div style="border:1px solid var(--line2);border-left:3px solid '+tp.c+';border-radius:8px;padding:9px 11px;margin-bottom:6px">'
         +'<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-size:11.5px;color:var(--faint);font-weight:700">'+_bbEsc(e.time||'')+'</span>'
         +'<span style="font-size:10px;font-weight:800;color:'+mk.c+';background:'+mk.bg+';padding:1px 6px;border-radius:5px">'+mk.lab+'</span>'
@@ -5234,7 +5234,7 @@ function renderEconCal(sel){
 function renderHomeEvents(){ var el=document.getElementById('homeEvents'); if(!el)return; if(typeof _ECAL==='undefined'||!_ECAL||!_ECAL.events){el.innerHTML='';return;}
   var today=_bbToday(), WD=['일','월','화','수','목','금','토'], FLAG={US:'🇺🇸',KR:'🇰🇷',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵'};
   var up=(_ECAL.events||[]).filter(function(e){return (e.date||'')>=today;});
-  var evs=(up.length?up:(_ECAL.events||[])).slice(0,5);
+  var evs=(up.length?up:(_ECAL.events||[])).slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||'')||((b.imp||1)-(a.imp||1))||(a.time||'').localeCompare(b.time||''); }).slice(0,5);
   if(!evs.length){el.innerHTML='';return;}
   var rows=evs.map(function(e){ var dt=new Date((e.date||today)+'T00:00:00'), md=(dt.getMonth()+1)+'/'+dt.getDate(), wd=WD[dt.getDay()]||'';
     return '<tr class="rowbtn" onclick="showView(\'events\')"><td class="l num" style="color:var(--sub);white-space:nowrap">'+md+' ('+wd+') '+_bbEsc(e.time||'')+'</td><td style="text-align:center">'+(FLAG[e.market]||'🌐')+'</td><td class="l" style="font-weight:700">'+_bbEsc(e.title)+'</td><td style="color:#e0a83e;letter-spacing:-1px;white-space:nowrap">'+new Array(((e.imp||1)+1)).join('★')+'</td><td class="l" style="color:var(--sub);font-size:11.5px">'+_bbEsc((e.note||'')).slice(0,46)+'</td></tr>'; }).join('');
@@ -5246,6 +5246,9 @@ var WC_CAT={ev:['주요 이벤트','#f6465d','rgba(246,70,93,.12)'],pol:['정책
 function _wcLoad(){ if(_WC)return; _WC={};
   Promise.all([_loadJ('feeds/calendar.json'),_loadJ('feeds/claims.json'),_loadJ('feeds/watch-eval.json'),_loadJ('feeds/claims-auto.json')]).then(function(a){ _WC={cal:a[0],cl:a[1],ev:a[2]||{},au:a[3]}; renderWeekCal(); }); }
 function _wcSg(v,u){ return v==null?'—':'<span class="'+(v>0?'up':v<0?'down':'')+'" style="font-weight:700">'+(v>0?'+':'')+v.toFixed(2)+(u||'%')+'</span>'; }
+/* 그날 칸 정렬 = 중요한 순 (2026-11-11 사용자: CPI 같은 핵심 일정이 위로). ★ 수 먼저, 같으면 정책·금리 > 지표 > 이벤트 > 실적 > 발언 > 상장 */
+var WC_RANK={pol:6,data:5,ev:4,earn:3,talk:2,ipo:1};
+function _wcRank(it){ return (it.imp||0)*10+(WC_RANK[it.c]||0); }
 function _wcMD(d){ var t=new Date(d+'T00:00:00'); return (t.getMonth()+1)+'/'+t.getDate()+'('+'일월화수목금토'[t.getDay()]+')'; }
 window._wcSet=function(i){ _wcWk=i; renderWeekCal(); };
 /* 📋 일정 붙여넣기 (2026-10-26 사용자: 자동으로 못 받는 일정 — 보호예수·전시회·추가상장 등 — 은 목록을 붙여 넣어 보충)
@@ -5300,7 +5303,7 @@ function renderWeekCal(){
   var grid=days.filter(function(ds,i){ return i<5||(w.days[ds]&&w.days[ds].length); }).map(function(ds){ var a=w.days[ds]||[], isT=ds===today;
     return '<div style="border:1px solid '+(isT?'#f6465d':'var(--line2)')+';border-radius:10px;padding:8px;min-width:0"><div style="font-weight:800;font-size:12.5px;margin-bottom:6px">'+_wcMD(ds)+(isT?' <span style="font-size:10px;color:#fff;background:#f6465d;padding:1px 5px;border-radius:5px">TODAY</span>':'')+'</div>'
       +(function(){ /* 중요 항목은 바로, 나머지(lo)·붙여넣은 일정은 '전체 N건 보기' 안 (2026-10-26) — key 는 원래 순서(ds#k) 유지: watch-eval 결과와 맞물림 */
-        var vis=[], lo=[]; a.forEach(function(it,k){ (it.lo?lo:vis).push(chip(it,ds+'#'+k)); });
+        var vis=[], lo=[]; a.map(function(it,k){ return [it,k]; }).sort(function(x,y){ return _wcRank(y[0])-_wcRank(x[0])||x[1]-y[1]; }).forEach(function(p){ (p[0].lo?lo:vis).push(chip(p[0],ds+'#'+p[1])); });
         var ps=_wcPasteFor(ds,a); ps.forEach(function(it){ lo.push(chip(it,'p#'+ds)); });
         return (vis.length?vis.join(''):(lo.length?'':'<div style="font-size:11.5px;color:var(--faint)">—</div>'))
           +(lo.length?'<details style="margin-top:2px"><summary style="cursor:pointer;font-size:11.5px;color:var(--sub);font-weight:700">전체 '+(vis.length+lo.length)+'건 보기 <span style="color:var(--faint);font-weight:600">(+'+lo.length+(ps.length?' · 붙여넣기 '+ps.length:'')+')</span></summary><div style="margin-top:5px">'+lo.join('')+'</div></details>':''); })()+'</div>'; }).join('');

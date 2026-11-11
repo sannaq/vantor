@@ -329,8 +329,8 @@ def build_week(monday, events_doc, ff):
         if d not in out:
             continue
         it = {"c": TYPE_C.get(ev.get("type"), "ev"), "t": ev["title"]}
-        if ev.get("imp", 0) >= 3:
-            it["imp"] = 3
+        it["imp"] = min(3, ev.get("imp", 2))  # ★★ 도 남겨야 그날 칸에서 중요한 순으로 위에 선다 (2026-11-11)
+        if it["imp"] >= 3:
             focus3.append(ev["title"])
         if sub:
             it["sub"] = sub
