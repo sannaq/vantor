@@ -2280,14 +2280,32 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
     var GL_ORDER=['gl-mkt','😱','🧭','🇺🇸','gl-radar','gl-stock','💰','gl-smart','📝','📅','📰','gl-watch','📊','🤖','📚'];
     var _gk=function(h){ for(var i=0;i<GL_ORDER.length;i++){ if(h.indexOf(GL_ORDER[i].indexOf('gl-')===0?'id="'+GL_ORDER[i]+'"':'<div class="gl-h">'+GL_ORDER[i])>=0)return i; } return 99; };
     T=T.map(function(h,i){ return [h,_gk(h),i]; }).sort(function(a,b){ return a[1]-b[1]||a[2]-b[2]; }).map(function(x){ return x[0]; });
-    el.innerHTML='<style>#glance .gl-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:1100px){#glance .gl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#glance .gl-g{grid-template-columns:1fr}}'
+    /* 폰 첫 화면 = 앱처럼 (2026-11-11 사용자 '가'): 위 요약(코스피·나스닥100·공포탐욕·오늘 추천 1~3위) + 아래 메뉴 아이콘 3×3. PC 는 기존 타일 그대로 */
+    var _ap=function(){ var cell=function(nm,v,c,sub,id){ return '<div class="ga-k"'+(id?' id="'+id+'"':'')+'><div class="ga-kn">'+nm+'</div><div class="ga-kv">'+v+'</div><div class="ga-kc">'+(c||'')+(sub?' <small>'+sub+'</small>':'')+'</div></div>'; };
+      var ks=[], tr=fl&&fl.trend&&fl.trend.KOSPI;
+      if(tr&&tr.length>1){ var a1=tr[tr.length-1][1], a0=tr[tr.length-2][1]; ks.push(cell('코스피',(+a1).toLocaleString('ko-KR',{maximumFractionDigits:2}),P((a1/a0-1)*100),'','ga-kospi')); }
+      var nq=(typeof _usIdx==='function')?_usIdx('.NDX','QQQ','NQcv1'):null; if(nq)ks.push(cell('나스닥100',(+nq.v).toLocaleString('en-US',{maximumFractionDigits:0}),P(nq.c),nq.fut?'선물':''));
+      if(_FS&&_FS.now)ks.push(cell('공포탐욕','<span style="color:'+_fsColor(_FS.now.fg)+'">'+Math.round(_FS.now.fg)+'</span>',_FS.now.zone));
+      var rk=(pk&&pk.top||[]).slice(0,3).map(function(x,i){ return '<div class="ga-r" data-gv="reco"><b>'+(i+1)+'</b><span>'+E(x.n)+'</span><i>'+x.total+'점</i>'+P(x.day)+'</div>'; }).join('');
+      var M=[['market','📊','시장'],['macro','🌡️','지표'],['reco','🧭','추천'],['stock','🔎','종목'],['brief','📝','브리핑'],['events','📅','이벤트'],['learn','📚','스터디'],['watch','⭐','관심'],['quant','🤖','퀀트']];
+      return '<div class="gl-app"><div class="ga-sum" data-gv="macro"><div class="ga-ks">'+ks.join('')+'</div></div>'
+        +(rk?'<div class="ga-reco"><div class="ga-h" data-gv="reco">🧭 오늘 추천 <small>'+(pk?_vsDate(pk.date):'')+'</small><span>전체 ›</span></div>'+rk+'</div>':'')
+        +'<div class="ga-grid">'+M.map(function(m){ return '<button data-gv="'+m[0]+'"><b>'+m[1]+'</b>'+m[2]+'</button>'; }).join('')+'</div></div>'; };
+    var _apCss='#glance .gl-app{display:none}@media(max-width:700px){#glance .gl-app{display:block}#glance .gl-full{display:none}}'
+      +'#glance .ga-sum{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 6px;margin-bottom:10px;cursor:pointer}#glance .ga-ks{display:flex}#glance .ga-k{flex:1;text-align:center;min-width:0;border-left:1px solid var(--line2)}#glance .ga-k:first-child{border-left:0}'
+      +'#glance .ga-kn{font-size:11.5px;color:var(--sub);font-weight:700}#glance .ga-kv{font-size:18px;font-weight:800;margin:2px 0;font-variant-numeric:tabular-nums}#glance .ga-kc{font-size:11.5px}#glance .ga-kc small{color:var(--faint);font-size:10px}'
+      +'#glance .ga-reco{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:10px 14px;margin-bottom:12px}#glance .ga-h{display:flex;align-items:baseline;gap:6px;font-weight:800;font-size:14px;margin-bottom:4px;cursor:pointer}#glance .ga-h small{color:var(--faint);font-size:11px;font-weight:600}#glance .ga-h span{margin-left:auto;font-size:12px;color:var(--faint);font-weight:600}'
+      +'#glance .ga-r{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid var(--line2);font-size:14px;cursor:pointer}#glance .ga-r b{width:18px;color:var(--gold)}#glance .ga-r span{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#glance .ga-r i{font-style:normal;color:#2ebd85;font-weight:700;font-size:12.5px}'
+      +'#glance .ga-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}#glance .ga-grid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 4px 13px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}#glance .ga-grid button b{font-size:28px;line-height:1}#glance .ga-grid button:active{transform:scale(.96)}';
+    el.innerHTML='<style>'+_apCss+'#glance .gl-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}@media(max-width:1100px){#glance .gl-g{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:560px){#glance .gl-g{grid-template-columns:1fr}}'
       +'#glance .gl-t{border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;background:var(--card,transparent);min-width:0}#glance .gl-t:hover{border-color:var(--gold)}'
       +'#glance .gl-h{font-weight:800;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:4px}#glance .gl-h small{font-weight:600;color:var(--faint);font-size:11px}#glance .gl-h span{margin-left:auto;color:var(--faint)}'
       +'#glance .gl-r{display:flex;gap:6px;align-items:baseline;font-size:12px;line-height:1.75}#glance .gl-r span:first-child{color:var(--sub);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#glance .gl-r b{font-variant-numeric:tabular-nums}'
       +'#glance .gl-s{font-size:11px;color:var(--faint);margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#glance .gl-b{font-size:12px;line-height:1.5;margin-bottom:4px}#glance .gl-b div{color:var(--sub);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}'
       +'#glance .gl-n{font-size:12px;line-height:1.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--sub)}</style>'
-      +'<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🧭 한눈에 보기</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">누르면 해당 화면으로</span></div></div><div class="pad" style="padding-top:6px"><div class="gl-g">'+T.join('')+'</div></div></div>';
+      +_ap()+'<div class="card gl-full" style="margin-bottom:14px"><div class="ch"><h2>🧭 한눈에 보기</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">누르면 해당 화면으로</span></div></div><div class="pad" style="padding-top:6px"><div class="gl-g">'+T.join('')+'</div></div></div>';
     _glLive();
+    $$('#glance .gl-app [data-gv]').forEach(function(t){ t.onclick=function(e){ e.stopPropagation(); showView(t.dataset.gv); }; });
     $$('#glance .gl-t').forEach(function(t){ t.onclick=function(){ if(t.dataset.gus&&typeof _recoF!=='undefined'){ try{ _recoF.m='US'; }catch(e){} } showView(t.dataset.gv); if(t.dataset.gl){ var lb=document.querySelector('#ltabs button[data-l='+t.dataset.gl+']'); if(lb)lb.click(); } }; });
   });
 }
@@ -2296,6 +2314,7 @@ function _glLive(){ if(!$('#gl-radar'))return;
   var P=function(v){ return (v==null||!isFinite(v))?'—':'<span class="'+(v>0?'up':v<0?'down':'')+'" style="font-weight:700">'+(v>0?'+':'')+(+v).toFixed(2)+'%</span>'; };
   // 시장 타일: 지수 스트립의 실시간 값(IDX)이 있으면 그걸로 (feeds/flow.json 은 30분 단위라 늦을 수 있음)
   var ix=(typeof IDX!=='undefined'&&IDX)||[], live=ix.filter(function(x){ return (x._real||x._us)&&x.v; });
+  var _gk0=live.filter(function(x){ return !x._us&&/^(KOSPI|코스피)$/.test(x.nm); })[0], _gkE=$('#ga-kospi'); if(_gk0&&_gkE){ _gkE.querySelector('.ga-kv').textContent=(+_gk0.v).toLocaleString('ko-KR',{maximumFractionDigits:2}); _gkE.querySelector('.ga-kc').innerHTML=P(_gk0.c); }
   if(live.length&&$('#gl-mkt')){ var _ur=function(nm,code,etf,fc){ var q=_usIdx(code,etf,fc); return q?'<div class="gl-r"><span>'+nm+(q.fut?' <small>선물</small>':'')+'</span><b>'+(+q.v).toLocaleString('en-US',{maximumFractionDigits:2})+'</b>'+P(q.c)+'</div>':''; };
     $('#gl-mkt').innerHTML='<div class="gl-h">📈 시장 <small>실시간</small><span>›</span></div>'+live.filter(function(x){return !x._us;}).slice(0,4).map(function(x){ return '<div class="gl-r"><span>'+esc(x.nm)+'</span><b>'+(+x.v).toLocaleString('en-US',{maximumFractionDigits:2})+'</b>'+P(x.c)+'</div>'; }).join('')
       +_ur('나스닥100','.NDX','QQQ','NQcv1')+_ur('S&P500','.INX','SPY','EScv1'); }
