@@ -275,22 +275,29 @@
   .fsl-m{display:none}
   /* 폰 = 앱처럼 (2026-11-11): 칸은 제목 한 줄 목록 → 누르면 화면 전체로 (app.js mfApply) · 위클리 캘린더는 날짜별 한 줄 */
   .mf-back,.wc-sum{display:none}
+  #cAppGrid{display:none}
   @media(max-width:700px){
-    .view .card.mf:not(.mf-open)>*:not(.ch){display:none!important}
+    #cAppGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0}
+    #cAppGrid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:15px 4px 12px;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--ink);font:inherit;font-size:13px;font-weight:700;cursor:pointer}
+    #cAppGrid button b{font-size:26px;line-height:1}#cAppGrid button:active{transform:scale(.96)}
+  }
+  @media(max-width:700px){
+    .view .card.mf:not(.mf-open)>*:not(.mf-h){display:none!important}
     .view .card.mf:not(.mf-open){margin-bottom:8px!important}
-    .view .card.mf:not(.mf-open)>.ch{cursor:pointer;padding-top:14px;padding-bottom:14px}
-    .view .card.mf:not(.mf-open)>.ch h2::after{content:'›';margin-left:auto;padding-left:8px;font-size:20px;line-height:1;color:var(--faint)}
-    .view .card.mf .ch h2{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+    .view .card.mf:not(.mf-open)>.mf-h{cursor:pointer;padding-top:14px;padding-bottom:14px}.view .card.mf:not(.mf-open)>h2.mf-h{margin:0;padding:14px 4px}
+    .view .card.mf:not(.mf-open)>.mf-h h2::after,.view .card.mf:not(.mf-open)>h2.mf-h::after{content:'›';margin-left:auto;padding-left:8px;font-size:20px;line-height:1;color:var(--faint)}
+    .view .card.mf .mf-h h2,.view .card.mf>h2.mf-h{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
     .view .card.mf:not(.mf-open) .ch .r{display:none}
     .card.mf .cardtog,.card.mf .cardshot{display:none!important}
     .card.mf-open{position:fixed!important;inset:0;z-index:1200;margin:0!important;border-radius:0!important;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(30px + env(safe-area-inset-bottom));background:var(--bg,var(--panel))}
-    .card.mf-open>.ch{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding-top:calc(10px + env(safe-area-inset-top));flex-wrap:wrap;gap:6px}
+    .card.mf-open>.mf-h{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);padding-top:calc(10px + env(safe-area-inset-top));flex-wrap:wrap;gap:6px}
     .card.mf-open .mf-back{display:inline-flex;align-items:center;flex:none;border:0;background:none;color:var(--gold);font:inherit;font-size:15px;font-weight:800;padding:4px 8px 4px 0;cursor:pointer}
     body.mf-lock{overflow:hidden}
     .wc-sum{display:block;font-weight:600;font-size:13px;color:var(--sub);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .wc-sum i{font-style:normal;color:#f6465d}.wc-sum small{color:var(--faint)}
     .wc-day{cursor:pointer}.wc-day:not(.wc-open)>.wc-body{display:none}.wc-day:not(.wc-open)>.wc-dh{margin-bottom:0!important}
     .wc-day.wc-open .wc-sum{display:none}
+    #recoHist .rh-x{display:none}
     #weekCal div[style*="minmax(170px"]{grid-template-columns:1fr!important}
     #homeRail{display:none!important}
   }

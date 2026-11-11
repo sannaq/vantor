@@ -1615,11 +1615,11 @@ function renderRecoHist(){
     var head='<div onclick="_rhSet(\'open\',\''+x.d+'\')" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding:12px 14px;cursor:pointer">'
       +'<b style="font-size:15px;min-width:92px">'+(on?'▾ ':'▸ ')+_vsDate(x.d)+'('+WD[dt.getDay()]+') 추천</b>'
       +(today?'<span style="font-size:12.5px;color:var(--faint)">오늘 추천 — 변동은 다음 거래일부터</span>'
-        :'<span style="font-size:12.5px;color:var(--sub)">'+x.e+'거래일 지남</span>'
+        :'<span class="rh-x" style="font-size:12.5px;color:var(--sub)">'+x.e+'거래일 지남</span>'
          +'<span style="font-size:13px">추천 '+x.i.length+'종목 평균 '+P(avg,1)+'</span>'
          +(tav!=null?'<span style="font-size:13px">TOP10 '+P(tav,1)+'</span>':'')
-         +'<span style="font-size:13px;color:var(--sub)">시장 평균 '+P(x.mkt)+'</span>'
-         +'<span style="font-size:12.5px;color:var(--sub)">오른 종목 '+up+'/'+rs.length+(beat!=null?' · 시장보다 나음 '+beat+'/'+rs.length:'')+'</span>')+'</div>';
+         +'<span class="rh-x" style="font-size:13px;color:var(--sub)">시장 평균 '+P(x.mkt)+'</span>'
+         +'<span class="rh-x" style="font-size:12.5px;color:var(--sub)">오른 종목 '+up+'/'+rs.length+(beat!=null?' · 시장보다 나음 '+beat+'/'+rs.length:'')+'</span>')+'</div>';
     if(!on)return '<div class="card" style="margin-bottom:8px;padding:0">'+head+'</div>';
     var n=_RH.show[x.d]||30, list=x.i.slice(0,n);
     var rows=list.map(function(r,ix){
@@ -2801,6 +2801,7 @@ function _applyCoinMenu(on){ var menu=$('#menu'); if(!menu)return;
   else { if(_stockMenuHTML!==null){ menu.innerHTML=_stockMenuHTML; if(typeof bindNav==='function')$$('#menu a').forEach(bindNav); } menu.style.display='flex'; } }
 function _ensureCoinSection(){ var s=$('#coinSection'); if(!s){ var host=$('#coinHost'); if(!host)return null; s=document.createElement('div'); s.id='coinSection'; s.style.display='none'; host.parentNode.insertBefore(s,host); } return s; }
 window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect=_ensureCoinSection(); if(!sect)return;
+  if(typeof _mfClose==='function'){ $$('.card.mf-open').forEach(function(x){ _mfClose(x); }); if(history.state&&history.state.mf){ try{ history.replaceState(null,''); }catch(e){} } _mfSoon(); }
   if(sec!=='liq'){ _ctabCur=sec; if(typeof _renderTabbar==='function')_renderTabbar(); var ch=$('#coinHead'); if(ch)ch.style.display=(sec==='home'||sec==='radar'||sec==='sector')?'':'none'; }
   if(sec==='liq'){ if(typeof openLiqMap==='function')openLiqMap(_coinCur||'BTC'); return; }
   if(window._huntT){ clearInterval(window._huntT); window._huntT=null; }
@@ -2808,8 +2809,9 @@ window.coinNav=function(sec){ var body=$('#coinBody'), host=$('#coinHost'), sect
   $$('#menu .cmenu-a').forEach(function(a){ a.classList.toggle('on',a.dataset.cs===sec); });
   if(host){host.style.display='none';host.innerHTML='';}
   if(sec==='home'||sec==='radar'||sec==='sector'){ if(body)body.style.display=''; sect.style.display='none';
-    if(sec==='radar'){ var c=$('#coinRadar'); if(c&&c.closest('.card'))c.closest('.card').scrollIntoView({behavior:'smooth',block:'start'}); else window.scrollTo({top:0,behavior:'smooth'}); }
-    else if(sec==='sector'){ var s2=$('#coinSectors'); if(s2&&s2.closest('.card'))s2.closest('.card').scrollIntoView({behavior:'smooth',block:'start'}); }
+    var _cOpen=function(id){ var e=$(id), cd=e&&e.closest('.card'); if(!cd)return false; if(_mfIsM()){ setTimeout(function(){ mfApply(); if(cd.classList.contains('mf'))_mfOpen(cd); else cd.scrollIntoView({behavior:'smooth',block:'start'}); },160); } else cd.scrollIntoView({behavior:'smooth',block:'start'}); return true; };
+    if(sec==='radar'){ if(!_cOpen('#coinRadar'))window.scrollTo({top:0,behavior:'smooth'}); }
+    else if(sec==='sector'){ _cOpen('#coinSectors'); }
     else window.scrollTo({top:0,behavior:'smooth'});
     return; }
   if(body)body.style.display='none'; sect.style.display=''; window.scrollTo({top:0,behavior:'smooth'});
@@ -5381,22 +5383,27 @@ function renderClaims(){ var CL=_WC&&_WC.cl, R=(_WC&&_WC.ev&&_WC.ev.claims)||{},
    자동 갱신으로 칸이 새로 그려져도 열려 있던 칸(제목 기준)은 다시 연다. PC 는 영향 없음. ═══ */
 var _MF=null, _mfT=null;
 function _mfIsM(){ return window.matchMedia&&matchMedia('(max-width:700px)').matches; }
-function _mfKey(c){ var h=c.querySelector('.ch h2'); if(!h)return ''; var t=''; for(var i=0;i<h.childNodes.length;i++){ var n=h.childNodes[i]; if(n.nodeType===3){ t+=n.textContent; } else if(n.tagName!=='SPAN'&&n.tagName!=='SMALL'){ t+=n.textContent; } } return t.trim().slice(0,24); }
-function _mfCards(v){ return [].filter.call(v.querySelectorAll('.card'),function(c){ var ch=c.querySelector('.ch'); return ch&&ch.parentElement===c&&ch.querySelector('h2')&&!c.parentElement.closest('.card')&&!c.classList.contains('off')&&c.style.display!=='none'; }); }
+function _mfHead(c){ for(var i=0;i<c.children.length;i++){ var x=c.children[i]; if(x.classList.contains('ch')&&x.querySelector('h2'))return x; if(x.tagName==='H2')return x; } return null; }
+function _mfKey(c){ var hd=_mfHead(c), h=hd&&(hd.tagName==='H2'?hd:hd.querySelector('h2')); if(!h)return ''; var t=''; for(var i=0;i<h.childNodes.length;i++){ var n=h.childNodes[i]; if(n.nodeType===3){ t+=n.textContent; } else if(n.tagName!=='SPAN'&&n.tagName!=='SMALL'){ t+=n.textContent; } } return t.trim().slice(0,24); }
+function _mfCards(v){ return [].filter.call(v.querySelectorAll('.card'),function(c){ return _mfHead(c)&&!c.parentElement.closest('.card')&&!c.classList.contains('off')&&c.style.display!=='none'&&(c.offsetParent!==null||c.classList.contains('mf-open')); }); }
 function _mfOpen(c,noPush){ if(c.classList.contains('mf-open'))return; $$('.card.mf-open').forEach(function(x){ if(x!==c)_mfClose(x,true); });
   c.classList.add('mf-open'); if(c.dataset.card){ c.dataset.mfcard=c.dataset.card; c.removeAttribute('data-card'); } document.body.classList.add('mf-lock'); _MF=_mfKey(c); c.scrollTop=0;
   if(!noPush){ try{ history.pushState({mf:1},''); }catch(e){} } }
 function _mfClose(c,silent){ c.classList.remove('mf-open'); if(c.dataset.mfcard){ c.dataset.card=c.dataset.mfcard; delete c.dataset.mfcard; } if(!$('.card.mf-open'))document.body.classList.remove('mf-lock'); if(!silent)_MF=null; }
 window._mfBack=function(e){ if(e)e.stopPropagation(); if(history.state&&history.state.mf){ history.back(); } else { $$('.card.mf-open').forEach(function(x){ _mfClose(x); }); } };
 window.addEventListener('popstate',function(){ var o=$$('.card.mf-open'); if(o.length){ o.forEach(function(x){ _mfClose(x); }); } });
-function mfApply(){ var v=$('.view.on'); if(!v)return; var on=_mfIsM()&&!(typeof coinMode!=='undefined'&&coinMode), cs=_mfCards(v);
+function mfApply(){ var v=$('.view.on'); if(!v)return; var on=_mfIsM(), cs=_mfCards(v); _coinAppGrid();
   if(cs.length<2)on=false;
   $$('.card.mf').forEach(function(c){ if(!on||cs.indexOf(c)<0){ c.classList.remove('mf'); if(c.classList.contains('mf-open'))_mfClose(c,true); } });
   if(!on){ if(!$('.card.mf-open'))document.body.classList.remove('mf-lock'); return; }
-  cs.forEach(function(c){ c.classList.add('mf'); var ch=c.querySelector('.ch');
+  cs.forEach(function(c){ c.classList.add('mf'); var ch=_mfHead(c); ch.classList.add('mf-h');
     if(!ch.querySelector('.mf-back')){ var bk=document.createElement('button'); bk.className='mf-back'; bk.type='button'; bk.textContent='‹ 뒤로'; bk.onclick=_mfBack; ch.insertBefore(bk,ch.firstChild); }
     if(!c._mfOn){ c._mfOn=1; ch.addEventListener('click',function(e){ if(!c.classList.contains('mf')||c.classList.contains('mf-open'))return; if(e.target.closest('button,a,input,select,label,textarea,.mktseg'))return; _mfOpen(c); }); }
     if(_MF&&!c.classList.contains('mf-open')&&_mfKey(c)===_MF)_mfOpen(c,true); }); }
+function _coinAppGrid(){ var cm=$('#coinMetrics'); if(!cm||$('#cAppGrid')||typeof CMORE==='undefined')return;
+  var g=document.createElement('div'); g.id='cAppGrid'; g.className='ga-grid c-app';
+  g.innerHTML=CMORE.filter(function(x){ return x[0]!=='home'; }).map(function(x){ return '<button type="button" onclick="coinNav(\''+x[0]+'\')"><b>'+x[2]+'</b>'+x[1]+'</button>'; }).join('');
+  cm.parentNode.insertBefore(g,cm.nextSibling); }
 function _mfSoon(){ clearTimeout(_mfT); _mfT=setTimeout(mfApply,120); }
 (function(){ var mc=document.querySelector('.maincol'); if(mc&&window.MutationObserver)new MutationObserver(function(ms){ for(var i=0;i<ms.length;i++){ var t=ms[i].target; if(t.nodeType===1&&t.closest&&t.closest('.card.mf-open .pad'))continue; _mfSoon(); return; } }).observe(mc,{childList:true,subtree:true});
   window.addEventListener('resize',_mfSoon); setTimeout(mfApply,800); })();
