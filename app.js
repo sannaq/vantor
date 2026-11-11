@@ -2411,6 +2411,7 @@ function renderMacro(){ var el=$('#macroPanel'); if(!el)return;
 window.renderMacro=renderMacro;
 
 function showView(v,noScroll){
+  if(typeof _mfClose==='function'){ $$('.card.mf-open').forEach(function(x){ _mfClose(x); }); if(history.state&&history.state.mf){ try{ history.replaceState(null,''); }catch(e){} } }
   $$('.view').forEach(function(x){x.classList.remove('on');});
   var el=$('#v-'+v); if(el)el.classList.add('on');
   var _brf=$('#brief'); if(_brf)_brf.style.display=(!coinMode&&v==='home')?'':'none'; // 오늘의 브리핑은 HOME에서만
@@ -2435,6 +2436,7 @@ function showView(v,noScroll){
   if(v==='brief'){ if(typeof renderBriefBoard==='function')renderBriefBoard('#briefPanel'); if(typeof renderBriefing==='function')renderBriefing(); renderMainNews(); }
   if(v==='market')renderHeatmap();
   if(v==='ai'&&typeof mountHomeAsk==='function')mountHomeAsk('#aiAsk','stock');
+  if(typeof _mfSoon==='function')_mfSoon();
   if(!noScroll)window.scrollTo({top:0,behavior:'smooth'});
 }
 let _stkScroll=0;
@@ -5270,6 +5272,7 @@ var WC_RANK={pol:6,data:5,ev:4,earn:3,talk:2,ipo:1};
 function _wcRank(it){ return (it.imp||0)*10+(WC_RANK[it.c]||0); }
 function _wcMD(d){ var t=new Date(d+'T00:00:00'); return (t.getMonth()+1)+'/'+t.getDate()+'('+'일월화수목금토'[t.getDay()]+')'; }
 window._wcSet=function(i){ _wcWk=i; renderWeekCal(); };
+window._wcDay=function(h){ if(!_mfIsM())return; h.parentElement.classList.toggle('wc-open'); };
 /* 📋 일정 붙여넣기 (2026-10-26 사용자: 자동으로 못 받는 일정 — 보호예수·전시회·추가상장 등 — 은 목록을 붙여 넣어 보충)
    한 줄 = 일정 하나. '▪️'·'•'·'-' 같은 머리표와 '美)' 같은 나라 표시를 읽어 분류하고, 자동 일정에 이미 있는 것(이름이 겹치는 것)은 빼고 그날 칸 '전체 보기' 안에 넣는다.
    저장 = 이 기기(localStorage wcPaste) + ☁️ 동기화 코드를 쓰면 다른 기기에도. 14일 지난 날짜는 자동으로 지운다. */
@@ -5320,12 +5323,14 @@ function renderWeekCal(){
   var days=[], d0=new Date(w.from+'T00:00:00');
   for(var i=0;i<7;i++){ var t=new Date(d0.getTime()+i*864e5), ds=t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); days.push(ds); }
   var grid=days.filter(function(ds,i){ return i<5||(w.days[ds]&&w.days[ds].length); }).map(function(ds){ var a=w.days[ds]||[], isT=ds===today;
-    return '<div style="border:1px solid '+(isT?'#f6465d':'var(--line2)')+';border-radius:10px;padding:8px;min-width:0"><div style="font-weight:800;font-size:12.5px;margin-bottom:6px">'+_wcMD(ds)+(isT?' <span style="font-size:10px;color:#fff;background:#f6465d;padding:1px 5px;border-radius:5px">TODAY</span>':'')+'</div>'
+    var _top=a.slice().sort(function(x,y){ return _wcRank(y)-_wcRank(x); })[0], _n=a.length+_wcPasteFor(ds,a).length;
+    return '<div class="wc-day'+(isT?' wc-open':'')+'" style="border:1px solid '+(isT?'#f6465d':'var(--line2)')+';border-radius:10px;padding:8px;min-width:0"><div class="wc-dh" onclick="_wcDay(this)" style="font-weight:800;font-size:12.5px;margin-bottom:6px">'+_wcMD(ds)+(isT?' <span style="font-size:10px;color:#fff;background:#f6465d;padding:1px 5px;border-radius:5px">TODAY</span>':'')
+      +'<span class="wc-sum">'+(_top?_bbEsc(_top.t)+(_top.imp?' <i>'+new Array(_top.imp+1).join('★')+'</i>':''):'일정 없음')+(_n>1?' <small>외 '+(_n-1)+'건</small>':'')+'</span></div><div class="wc-body">'
       +(function(){ /* 중요 항목은 바로, 나머지(lo)·붙여넣은 일정은 '전체 N건 보기' 안 (2026-10-26) — key 는 원래 순서(ds#k) 유지: watch-eval 결과와 맞물림 */
         var vis=[], lo=[]; a.map(function(it,k){ return [it,k]; }).sort(function(x,y){ return _wcRank(y[0])-_wcRank(x[0])||x[1]-y[1]; }).forEach(function(p){ (p[0].lo?lo:vis).push(chip(p[0],ds+'#'+p[1])); });
         var ps=_wcPasteFor(ds,a); ps.forEach(function(it){ lo.push(chip(it,'p#'+ds)); });
         return (vis.length?vis.join(''):(lo.length?'':'<div style="font-size:11.5px;color:var(--faint)">—</div>'))
-          +(lo.length?'<details style="margin-top:2px"><summary style="cursor:pointer;font-size:11.5px;color:var(--sub);font-weight:700">전체 '+(vis.length+lo.length)+'건 보기 <span style="color:var(--faint);font-weight:600">(+'+lo.length+(ps.length?' · 붙여넣기 '+ps.length:'')+')</span></summary><div style="margin-top:5px">'+lo.join('')+'</div></details>':''); })()+'</div>'; }).join('');
+          +(lo.length?'<details style="margin-top:2px"><summary style="cursor:pointer;font-size:11.5px;color:var(--sub);font-weight:700">전체 '+(vis.length+lo.length)+'건 보기 <span style="color:var(--faint);font-weight:600">(+'+lo.length+(ps.length?' · 붙여넣기 '+ps.length:'')+')</span></summary><div style="margin-top:5px">'+lo.join('')+'</div></details>':''); })()+'</div></div>'; }).join('');
   var leg=Object.keys(WC_CAT).map(function(k){ var c=WC_CAT[k]; return '<span style="font-size:11px;padding:1px 7px;border-radius:5px;background:'+c[2]+';color:'+c[1]+';font-weight:800">'+c[0]+'</span>'; }).join(' ');
   var earn=(C.earnings||[]).map(function(e){ var r=ER[e.tk+'@'+e.d], past=e.d<today;
     return '<div style="display:flex;gap:8px;align-items:baseline;font-size:12.5px;padding:4px 0;border-top:1px solid var(--line2)'+(past&&!r?';color:var(--faint)':'')+'"><b style="min-width:70px">'+_wcMD(e.d)+'</b><span style="flex:1">'+_bbEsc(e.n)+' <small style="color:var(--faint)">'+_bbEsc(e.tk||'')+'</small></span>'+(r?'<span>다음 날 '+_wcSg(r.r)+(r.x!=null?' <small style="color:var(--faint)">QQQ 대비 '+(r.x>0?'+':'')+r.x.toFixed(1)+'%p</small>':'')+'</span>':'<span style="color:var(--faint);font-size:11.5px">'+(past?'반응 집계 중':'예정')+'</span>')+'</div>'; }).join('');
@@ -5370,6 +5375,31 @@ function renderClaims(){ var CL=_WC&&_WC.cl, R=(_WC&&_WC.ev&&_WC.ev.claims)||{},
       +(sc&&(sc.hit+sc.miss)?'<div style="font-size:11.5px;color:var(--faint);margin-top:4px">'+_bbEsc(it.who)+' 지금까지 적중 '+sc.hit+' / 채점 '+(sc.hit+sc.miss)+'</div>':'')+'</div>'; }).join('');
   return '<div class="card" style="margin-bottom:14px"><div class="ch"><h2>🎤 전망·발언 기록 & 평가</h2><div class="r"><span style="font-size:11px;color:var(--faint)">기한이 되면 실제 시세로 자동 채점</span></div></div><div class="pad" style="padding-top:6px">'
     +'<div style="font-size:12px;color:var(--sub);margin-bottom:10px;line-height:1.6">유명 투자자·방송이 말한 전망을 모아 두고, 확인할 수 있는 주장은 <b>언제 무엇이 되면 맞은 건지</b> 미리 정해 기한이 되면 S&P500·코스피·VIX 실제 값으로 채점해요. 매일 아침 갱신.</div>'+cards+_claimsAuto()+'</div></div>'; }
+
+/* ═══ 폰 = 앱처럼 (2026-11-11 사용자 '목록 → 눌러서 상세'): 폭 700px 이하에서 화면 안의 제목 있는 칸이 2개 이상이면
+   칸마다 제목 한 줄로 접어 목록처럼 보이고, 누르면 그 칸이 화면 전체로 열린다. 왼쪽 위 ‹ 뒤로 / 폰 뒤로가기로 닫힘.
+   자동 갱신으로 칸이 새로 그려져도 열려 있던 칸(제목 기준)은 다시 연다. PC 는 영향 없음. ═══ */
+var _MF=null, _mfT=null;
+function _mfIsM(){ return window.matchMedia&&matchMedia('(max-width:700px)').matches; }
+function _mfKey(c){ var h=c.querySelector('.ch h2'); if(!h)return ''; var t=''; for(var i=0;i<h.childNodes.length;i++){ var n=h.childNodes[i]; if(n.nodeType===3){ t+=n.textContent; } else if(n.tagName!=='SPAN'&&n.tagName!=='SMALL'){ t+=n.textContent; } } return t.trim().slice(0,24); }
+function _mfCards(v){ return [].filter.call(v.querySelectorAll('.card'),function(c){ var ch=c.querySelector('.ch'); return ch&&ch.parentElement===c&&ch.querySelector('h2')&&!c.parentElement.closest('.card')&&!c.classList.contains('off')&&c.style.display!=='none'; }); }
+function _mfOpen(c,noPush){ if(c.classList.contains('mf-open'))return; $$('.card.mf-open').forEach(function(x){ if(x!==c)_mfClose(x,true); });
+  c.classList.add('mf-open'); if(c.dataset.card){ c.dataset.mfcard=c.dataset.card; c.removeAttribute('data-card'); } document.body.classList.add('mf-lock'); _MF=_mfKey(c); c.scrollTop=0;
+  if(!noPush){ try{ history.pushState({mf:1},''); }catch(e){} } }
+function _mfClose(c,silent){ c.classList.remove('mf-open'); if(c.dataset.mfcard){ c.dataset.card=c.dataset.mfcard; delete c.dataset.mfcard; } if(!$('.card.mf-open'))document.body.classList.remove('mf-lock'); if(!silent)_MF=null; }
+window._mfBack=function(e){ if(e)e.stopPropagation(); if(history.state&&history.state.mf){ history.back(); } else { $$('.card.mf-open').forEach(function(x){ _mfClose(x); }); } };
+window.addEventListener('popstate',function(){ var o=$$('.card.mf-open'); if(o.length){ o.forEach(function(x){ _mfClose(x); }); } });
+function mfApply(){ var v=$('.view.on'); if(!v)return; var on=_mfIsM()&&!(typeof coinMode!=='undefined'&&coinMode), cs=_mfCards(v);
+  if(cs.length<2)on=false;
+  $$('.card.mf').forEach(function(c){ if(!on||cs.indexOf(c)<0){ c.classList.remove('mf'); if(c.classList.contains('mf-open'))_mfClose(c,true); } });
+  if(!on){ if(!$('.card.mf-open'))document.body.classList.remove('mf-lock'); return; }
+  cs.forEach(function(c){ c.classList.add('mf'); var ch=c.querySelector('.ch');
+    if(!ch.querySelector('.mf-back')){ var bk=document.createElement('button'); bk.className='mf-back'; bk.type='button'; bk.textContent='‹ 뒤로'; bk.onclick=_mfBack; ch.insertBefore(bk,ch.firstChild); }
+    if(!c._mfOn){ c._mfOn=1; ch.addEventListener('click',function(e){ if(!c.classList.contains('mf')||c.classList.contains('mf-open'))return; if(e.target.closest('button,a,input,select,label,textarea,.mktseg'))return; _mfOpen(c); }); }
+    if(_MF&&!c.classList.contains('mf-open')&&_mfKey(c)===_MF)_mfOpen(c,true); }); }
+function _mfSoon(){ clearTimeout(_mfT); _mfT=setTimeout(mfApply,120); }
+(function(){ var mc=document.querySelector('.maincol'); if(mc&&window.MutationObserver)new MutationObserver(function(ms){ for(var i=0;i<ms.length;i++){ var t=ms[i].target; if(t.nodeType===1&&t.closest&&t.closest('.card.mf-open .pad'))continue; _mfSoon(); return; } }).observe(mc,{childList:true,subtree:true});
+  window.addEventListener('resize',_mfSoon); setTimeout(mfApply,800); })();
 window.renderHomeEvents=renderHomeEvents;
 window.renderEconCal=renderEconCal;
 window._ecalSet=function(k){ _ecalMkt=k; renderEconCal('#econCal'); renderEconCal('#eventsPanel'); };
