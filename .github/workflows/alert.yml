@@ -1,0 +1,59 @@
+name: 자동 작업 실패 알림
+
+# 자동 작업이 실패하면 디스코드로 알린다 (2026-11-13 사용자 결정).
+# 비밀값 DISCORD_ALERT_WEBHOOK 이 없으면 아무것도 보내지 않는다.
+# 30분마다 도는 작업이 계속 실패해도 도배되지 않게, 직전 실행이 성공이었을 때(새로 깨졌을 때)만 보낸다.
+# 다시 성공하면 '복구됨' 한 줄을 보낸다.
+on:
+  workflow_run:
+    workflows:
+      - "종합 평점 백테스트 (매달)"
+      - "브리핑 이미지 → 디스코드"
+      - "동기화·자동화 회귀 검사"
+      - "이번주 이벤트 자동 갱신"
+      - "시장 심리·전망 채점 (매일)"
+      - "수급 데이터 갱신"
+      - "국내 브리핑 누락 복구"
+      - "매수·손절·목표 규칙 스터디 (매주)"
+      - "뉴스 모으기"
+      - "자동 데이터 사이트 반영"
+      - "AI 퀀트 모의계좌"
+      - "미장 종합 평점 → 사이트·디스코드"
+      - "종합 평점 → 사이트·디스코드"
+      - "미장 브리핑 (장 전·장 중·장 마감)"
+    types: [completed]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  notify:
+    if: github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: 새로 깨졌거나 복구됐을 때만 알림
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+          NAME: ${{ github.event.workflow_run.name }}
+          URL: ${{ github.event.workflow_run.html_url }}
+          NOW: ${{ github.event.workflow_run.conclusion }}
+          WF_ID: ${{ github.event.workflow_run.workflow_id }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          EVENT: ${{ github.event.workflow_run.event }}
+        run: |
+          if [ -z "$HOOK" ]; then echo "DISCORD_ALERT_WEBHOOK 없음 → 건너뜀"; exit 0; fi
+          # 같은 작업의 직전 완료 실행 결과 (이번 실행 제외)
+          prev=$(gh api "repos/${{ github.repository }}/actions/workflows/$WF_ID/runs?status=completed&per_page=10" \
+            --jq "[.workflow_runs[] | select(.id != $RUN_ID) | select(.conclusion==\"success\" or .conclusion==\"failure\")][0].conclusion // \"none\"")
+          echo "이번=$NOW 직전=$prev"
+          if [ "$NOW" = "failure" ] && [ "$prev" != "failure" ]; then
+            msg="🚨 **자동 작업 실패** — $NAME ($EVENT)\n$URL"
+          elif [ "$NOW" = "success" ] && [ "$prev" = "failure" ]; then
+            msg="✅ **복구됨** — $NAME"
+          else
+            echo "알릴 변화 없음"; exit 0
+          fi
+          when=$(TZ=Asia/Seoul date '+%m/%d %H:%M')
+          body=$(python3 -c 'import json,sys;print(json.dumps({"content":sys.argv[1].replace("\\n","\n")+"\n("+sys.argv[2]+" KST)"}))' "$msg" "$when")
+          curl -sS -f -X POST -H 'Content-Type: application/json' -d "$body" "$HOOK"
