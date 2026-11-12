@@ -1,0 +1,40 @@
+name: 추천 정시 신호 (브리핑 도착 기준)
+
+# 깃허브 예약이 8~9시간씩 밀려(국장 추천 16:40 → 실제 00:40 무렵) 임시로 둔 장치 (2026-11-13).
+# 국장 브리핑은 워커(CUTESANNA)가 매일 정해진 시각에 push 하고, push 로 시작하는 작업은 바로 돈다.
+#   pm 브리핑(15:45 KST 무렵) → 16:41 KST 까지 기다렸다가 국장 추천(picks.yml) 실행
+#   am 브리핑(09:20 KST 무렵) → 미장 추천(picks-us.yml) 바로 실행 (07:00 예약분이 밀렸을 때 대신)
+# 이미 발행한 날이면 각 작업이 스스로 건너뛴다. Cloudflare 정시 신호(scheduler/)가 켜지면 백업으로 남는다.
+on:
+  push:
+    branches: [main]
+    paths: ["briefs/20*.json"]
+permissions:
+  actions: write
+  contents: read
+concurrency:
+  group: picks-kick
+  cancel-in-progress: true
+jobs:
+  kick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: 시각 보고 추천 실행
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R: ${{ github.repository }}
+        run: |
+          dow=$(TZ=Asia/Seoul date +%u); hm=$(TZ=Asia/Seoul date +%H%M)
+          echo "KST 요일=$dow 시각=$hm"
+          if [ "$dow" -le 5 ] && [ "$hm" -ge 1500 ]; then
+            now=$(date +%s); at=$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 16:41" +%s)
+            if [ "$now" -lt "$at" ]; then echo "16:41 까지 $(( (at-now)/60 ))분 대기"; sleep $(( at-now )); fi
+            MKT=KR python3 scripts/automation_schedule.py
+            gh workflow run picks.yml -R "$R" -f send=yes -f force=no && echo "국장 추천 실행 신호 보냄"
+          fi
+          if [ "$dow" -ge 2 ] && [ "$dow" -le 6 ] && [ "$hm" -ge 0700 ] && [ "$hm" -lt 1500 ]; then
+            MKT=US python3 scripts/automation_schedule.py
+            gh workflow run picks-us.yml -R "$R" -f send=yes -f force=no && echo "미장 추천 실행 신호 보냄"
+          fi
