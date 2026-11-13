@@ -1,40 +1,48 @@
 name: 추천 정시 신호 (브리핑 도착 기준)
 
-# 깃허브 예약이 8~9시간씩 밀려(국장 추천 16:40 → 실제 00:40 무렵) 임시로 둔 장치 (2026-11-13).
-# 국장 브리핑은 워커(CUTESANNA)가 매일 정해진 시각에 push 하고, push 로 시작하는 작업은 바로 돈다.
-#   pm 브리핑(15:45 KST 무렵) → 16:41 KST 까지 기다렸다가 국장 추천(picks.yml) 실행
-#   am 브리핑(09:20 KST 무렵) → 미장 추천(picks-us.yml) 바로 실행 (07:00 예약분이 밀렸을 때 대신)
-# 이미 발행한 날이면 각 작업이 스스로 건너뛴다. Cloudflare 정시 신호(scheduler/)가 켜지면 백업으로 남는다.
+# 외부 워커 push와 Actions 브리핑 완료 모두 수신한다.
+# GITHUB_TOKEN push는 다른 push 워크플로를 시작하지 않으므로 workflow_run도 필요하다.
+# 오후 신호는 16:41까지 대기, 오전 신호는 직전 미국 거래일 추천을 확인한다.
+# 예약은 브리핑 미도착 시 보조 경로이며 GitHub 예약 지연 자체를 보장하지는 않는다.
 on:
   push:
     branches: [main]
     paths: ["briefs/20*.json"]
+  workflow_run:
+    workflows: ['국내 브리핑 누락 복구', '미장 브리핑 (장 전·장 중·장 마감)']
+    branches: [main]
+    types: [completed]
+  schedule:
+    - cron: '41 7 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      send:
+        description: '디스코드 전송 (점검·복구 기본 no)'
+        type: choice
+        options: ['no', 'yes']
+        default: 'no'
 permissions:
   actions: write
   contents: read
 concurrency:
   group: picks-kick
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   kick:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # 15:00 신호도 16:41까지 101분을 기다릴 수 있어야 한다.
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: 시각 보고 추천 실행
         env:
           GH_TOKEN: ${{ github.token }}
           R: ${{ github.repository }}
-        run: |
-          dow=$(TZ=Asia/Seoul date +%u); hm=$(TZ=Asia/Seoul date +%H%M)
-          echo "KST 요일=$dow 시각=$hm"
-          if [ "$dow" -le 5 ] && [ "$hm" -ge 1500 ]; then
-            now=$(date +%s); at=$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 16:41" +%s)
-            if [ "$now" -lt "$at" ]; then echo "16:41 까지 $(( (at-now)/60 ))분 대기"; sleep $(( at-now )); fi
-            MKT=KR python3 scripts/automation_schedule.py
-            gh workflow run picks.yml -R "$R" -f send=yes -f force=no && echo "국장 추천 실행 신호 보냄"
-          fi
-          if [ "$dow" -ge 2 ] && [ "$dow" -le 6 ] && [ "$hm" -ge 0700 ] && [ "$hm" -lt 1500 ]; then
-            MKT=US python3 scripts/automation_schedule.py
-            gh workflow run picks-us.yml -R "$R" -f send=yes -f force=no && echo "미장 추천 실행 신호 보냄"
-          fi
+          SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.send || 'yes' }}
+        run: python3 scripts/picks_kick.py
