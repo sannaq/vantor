@@ -9,7 +9,10 @@ from zoneinfo import ZoneInfo
 from automation_schedule import session_date
 
 
-def kick_plan(now):
+def kick_plan(now, trigger=""):
+    # The KR-only fallback may arrive after midnight; session_date still finds the closed session.
+    if trigger == "schedule":
+        return "KR", 0
     local = now.astimezone(ZoneInfo('Asia/Seoul'))
     hm = local.hour * 100 + local.minute
     if local.weekday() < 5 and hm >= 1500:
@@ -22,7 +25,7 @@ def kick_plan(now):
 
 def main():
     now = datetime.now(timezone.utc)
-    market, delay = kick_plan(now)
+    market, delay = kick_plan(now, os.environ.get("TRIGGER", ""))
     print(f'KST {now.astimezone(ZoneInfo("Asia/Seoul")).isoformat()} · market={market}', flush=True)
     if not market:
         print('추천 신호 시간대 아님', flush=True)

@@ -23,6 +23,9 @@ class KickTests(unittest.TestCase):
             ('2026-11-13T06:59:00+09:00', (None, 0))]:
             with self.subTest(stamp=stamp):
                 self.assertEqual(kick_plan(datetime.fromisoformat(stamp)), expected)
+    def test_late_scheduled_signal_retains_kr_target(self):
+        self.assertEqual(kick_plan(datetime.fromisoformat("2026-11-14T00:41:00+09:00"), "schedule"), ("KR", 0))
+
     def test_duplicate_and_no_message_recovery(self):
         for published, calls in [('20261113', 0), ('20261112', 1)]:
             response=json.dumps({'content':base64.b64encode(json.dumps({'date':published}).encode()).decode()})

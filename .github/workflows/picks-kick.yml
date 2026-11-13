@@ -44,5 +44,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           R: ${{ github.repository }}
+          TRIGGER: ${{ github.event_name }}
           SEND: ${{ github.event_name == 'workflow_dispatch' && inputs.send || 'yes' }}
         run: python3 scripts/picks_kick.py
