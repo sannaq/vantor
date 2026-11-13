@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { newAccount, queueCandidate } from './paper-engine.mjs';
 import { reviewCandidate, GEMINI_MODEL } from './gemini-review.mjs';
-import { candles, collectEvidence, collectFilingResult } from './paper-data.mjs';
+import { candles, collectNewsResult, collectFilingResult } from './paper-data.mjs';
 
 import {newTrainer, advanceTrainer, recordTrainerReview, candidateFor, trainerUniverse} from './paper-trainer.mjs';
 import { advancePortfolio, evidenceCoverage } from './paper-runtime.mjs';
@@ -116,15 +116,18 @@ for (const market of ['KR', 'US']) {
           }
           state.filingCoverage.verified++;
           if (filingResult.provider === 'official_ir') state.filingCoverage.officialIr++;
-          const articles = await collectEvidence(market, candidate, news.items[row.c] || []).catch(() => []);
+          const newsResult = await collectNewsResult(market, candidate, news.items[row.c] || []);
+          const articles = newsResult.documents;
           const documents = [...articles, ...filingResult.documents];
           if (!documents.some(d => d.type === 'filing') || !documents.some(d => d.type === 'news')) {
-            record({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence', evidenceReason: 'news_missing' },candidate); continue;
+            record({ symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: 'waiting_evidence', evidenceReason: newsResult.reason, newsDiagnostics: newsResult.diagnostics,
+              sources: filingResult.documents.map(({ text, ...meta }) => meta) },candidate); continue;
           }
           // Persist attempt before request. No retry storm or paid-model fallback.
           state.attempts[day] = ++calls; persist(file, state);
           const result = await reviewCandidate({ market, candidate, documents, apiKey: key, freeTierConfirmed: freeConfirmed });
-          const report = { symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: result.status };
+          const report = { symbol: row.c, name: row.n, sourceDate: picks.date, checkedDate: day, status: result.status,
+            sources: documents.map(({ text, ...meta }) => meta), newsDiagnostics: newsResult.diagnostics };
           if (result.review) {
             report.review = result.review;
             report.sources = result.evidence.map(({ text, ...meta }) => meta); // never publish article bodies
@@ -150,6 +153,7 @@ for (const market of ['KR', 'US']) {
     const c = state.filingCoverage;
     state.message += ` · 추천 기준일 검토 공시 확인 ${c.verified}/${c.checked}종목(공식 IR ${c.officialIr}), 자료 미확보 ${c.held}종목 보류`;
   }
+  state.updatedAt = new Date().toISOString();
   persist(file, state);
   console.log(`${market}: ${state.status}, positions=${state.account.positions.length}, pending=${state.account.pending.length}`);
 }

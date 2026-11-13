@@ -37,7 +37,11 @@ var _quantReasons={
   quant_conditions_not_met:'퀀트 선정 조건을 충족하지 못했어요.',quote_or_costs_invalid:'가격 또는 모의 비용 정보를 확인할 수 없어요.',
   review_time_invalid:'AI 검토 시각 또는 유효기한이 유효하지 않아요.',review_expired:'거래 시작 전에 AI 근거 유효기한이 지났어요.',
   open_below_stop:'시가가 손절가 이하라 매수하지 않았어요.',limit_not_reached:'다음 관측 거래일의 저가가 지정 매수가보다 높아 체결되지 않았어요.',
-  news_missing:'검토에 필요한 기사를 확보하지 못했어요.',waiting_sec_contact:'SEC 요청용 연락처 설정을 확인해야 해요.',
+  news_list_unavailable:'뉴스 목록 서버에 접근하지 못했어요.',news_list_invalid:'뉴스 목록 응답 형식을 확인해야 해요.',
+  news_empty:'현재 뉴스 수집처에 이 종목의 기사 목록이 없어요.',news_stale:'수집한 기사들이 허용 기간을 지나 보류했어요.',
+  news_date_invalid:'기사 발행 시각이 없거나 미래라 검토에 쓰지 않았어요.',news_url_invalid:'검증된 기사 주소 형식이 아니라 보류했어요.',
+  news_body_unavailable:'뉴스 목록은 있지만 기사 본문을 가져오지 못했어요.',news_body_short:'확보한 기사 본문이 검토에 필요한 최소 길이보다 짧아요.',
+  news_missing:'공시는 확보했지만 검토에 필요한 기사를 확보하지 못했어요.',waiting_sec_contact:'SEC 요청용 연락처 설정을 확인해야 해요.',
   sec_issuer_missing:'SEC 기업 식별 정보를 찾지 못했어요.',sec_issuer_mismatch:'SEC 자료의 기업 정보가 일치하지 않아요.',
   sec_filing_missing:'검토에 쓸 SEC 공시를 확보하지 못했어요.',sec_document_invalid:'SEC 원문 검증을 통과하지 못했어요.',sec_rate_limited:'SEC 요청 한도에 도달했어요.',
   ir_source_mismatch:'공식 IR 출처가 해당 기업과 일치하지 않아요.',ir_unavailable:'공식 IR 자료에 접근하지 못했어요.',
@@ -75,6 +79,7 @@ function quantReview(r,a,money){
     +(r.signal?'<p class="qt-muted">전략 판단 당시: 20거래일 수익률 '+(Number.isFinite(r.signal.ret20)?r.signal.ret20.toFixed(2)+'%':'자료 없음')+' · 변동성 '+(Number.isFinite(r.signal.vol)?(r.signal.vol*100).toFixed(2)+'%':'자료 없음')+' · 저변동 선정 '+esc(r.signal.lowVolCount)+'/'+esc(r.signal.universeSize)+'종목</p>':'')
     +'<h3>AI 검토 근거 전문</h3><p class="qt-reason">'+esc(reason)+'</p><p class="qt-muted">'+esc(v.reason?'검토 당시 저장된 AI 판단이에요. 위 발췌는 원문 앞부분이며, 체결 여부는 주문 결과에 따로 표시해요.':'AI 판단을 생성하기 전 자료 확보 또는 검증 단계에서 보류된 기록이에요.')+'</p>'
     +(v.company?'<p>기업 설명: '+esc(v.company)+'</p>':'')+(r.secReason?'<p>SEC 수집 상태: '+esc(quantReason(r.secReason))+'</p>':'')
+    +(r.newsDiagnostics?'<p>뉴스 확인: 최근 '+esc(r.newsDiagnostics.maxAgeDays)+'일 이내 원문 필요 · 목록 '+esc(r.newsDiagnostics.checked)+'건 확인 · 기간 초과 '+esc(r.newsDiagnostics.stale)+'건 · 본문 접근 실패 '+esc(r.newsDiagnostics.unavailable)+'건 · 본문 길이 부족 '+esc(r.newsDiagnostics.shortBody)+'건'+(r.newsDiagnostics.latestPublishedAt?' · 가장 최근 기사 '+esc(quantTime(r.newsDiagnostics.latestPublishedAt))+' (한국시간)':'')+'</p>':'')
     +'<h3>확인한 자료와 검토 시각</h3><p class="qt-muted">검토 '+esc(quantTime(v.createdAt))+' · 근거 유효기한 '+esc(quantTime(v.expiresAt))+' (한국시간)</p>'
     +'<ul>'+(r.sources||[]).filter(function(s){try{return new URL(s.url).protocol==='https:';}catch(e){return false;}}).map(function(s){return '<li><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title||'확인한 자료')+'</a> · '+esc(s.provider==='official_ir'?'공식 IR':s.type==='filing'?'공시':'기사')+' · '+esc(quantTime(s.publishedAt))+'</li>';}).join('')+'</ul>'+(!(r.sources||[]).length?'<p class="qt-muted">저장된 검토 출처가 없어요.</p>':'')+'</div></details>';
 }
@@ -155,7 +160,7 @@ function renderQuant(load){
       var stats=[['총 평가액',money(a.equity)],['누적 손익',money(pnl)+' / '+pct(pnl/a.initialCapital*100)],['현금',money(a.cash)],['보유 평가손익',money(unreal)],['실현 손익',money(realized)],['최고점 대비 하락',pct(Math.max(0,1-a.equity/a.peakEquity)*100)]];
       h+='<div class="qt-grid">'+stats.map(function(x){return '<div class="card qt-box"><span class="qt-muted">'+x[0]+'</span><strong>'+x[1]+'</strong></div>';}).join('')+'</div><section class="card qt-box"><h2>평가액 추이</h2>'+quantChart(a,money)+'</section>';
       h+='<section class="card qt-box"><h2>자금과 수집 상태</h2><p>시작 자금 '+money(a.initialCapital)+' · 주문 예약액 '+money(reserved)+' · 예약 제외 현금 '+money(Math.max(0,a.cash-reserved))+'</p><p>누적 모의 비용 '+money(costs)+' · 매매 금액당 비용 가정 '+pct(a.costRate*100)+'</p><p class="qt-muted">실현 손익은 매수·매도 비용 반영, 보유 평가손익은 매수 비용 반영·향후 매도 비용 제외예요. 예약액은 현금에서 아직 출금되지 않았어요.</p><p>추천 기준일 검토 '+(cov.checked||0)+'건 · 공시 확보 '+(cov.verified||0)+'건 · 공식 IR '+(cov.officialIr||0)+'건 · 자료 부족 '+(cov.held||0)+'건</p></section>';
-      h+='<section class="card qt-box"><h2>운용 규칙</h2><p>거래대금·재무·가격 조건 → 기사·공시 확보 → AI 위험 검토 → 다음 거래일 모의주문 → 보유 관리</p><p>20~60거래일 중기 검증 · 종목당 최대 15% · 손절 계획 손실 1% · 최고 평가액 대비 15% 하락 시 신규 매수 중단</p><p>Gemini 무료 한도 · 시장별 UTC 날짜당 최대 3회 검토 · 자료 부족·AI 오류·한도 소진 시 신규 검토와 매수 대기</p><p class="qt-muted">일봉 기반 모의 체결이에요. 가격 급변 시 계획 손실을 넘을 수 있어요. GitHub Actions에서 자동 실행되며 이 화면의 새로고침은 자료만 다시 읽어요.</p></section>';
+      h+='<section class="card qt-box"><h2>운용 규칙</h2><p>거래대금·재무·가격 조건 → 기사·공시 확보 → AI 위험 검토 → 다음 거래일 모의주문 → 보유 관리</p><p>20~60거래일 중기 검증 · 종목당 최대 15% · 손절 계획 손실 1% · 최고 평가액 대비 15% 하락 시 신규 매수 중단</p><p>Gemini 무료 한도 · 시장별 UTC 날짜당 최대 10회 검토 · 자료 부족·AI 오류·한도 소진 시 신규 검토와 매수 대기</p><p class="qt-muted">일봉 기반 모의 체결이에요. 가격 급변 시 계획 손실을 넘을 수 있어요. GitHub Actions에서 자동 실행되며 이 화면의 새로고침은 자료만 다시 읽어요.</p></section>';
     }
     var name=function(x){return '<b>'+esc(x.name||x.symbol)+'</b><br><small>'+esc(x.symbol)+'</small>';};
     if(_quantTab==='positions'){

@@ -26,6 +26,7 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   else{await page.locator('#tabbar').getByText('더보기',{exact:true}).click();await page.locator('#moreSheet').getByText('퀀트 트레이딩',{exact:true}).click();}
   const board=page.locator('#quantBoard');await board.getByText('총 평가액',{exact:true}).waitFor();
   assert.equal(await page.locator('#menu a[data-v="watch"] + a').getAttribute('data-v'),'quant');
+  assert((await board.innerText()).includes('최대 10회 검토'));
   assert((await board.innerText()).includes('₩1,050'));assert((await board.innerText()).includes('₩50 / 5.00%'));
   const metrics=board.locator('.qt-grid');assert((await metrics.innerText()).includes('₩30'));assert((await metrics.innerText()).includes('₩20'));
   assert((await board.innerText()).includes('18:39:00'));assert.equal(await board.locator('svg circle').count(),2);
@@ -42,9 +43,11 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   await page.evaluate(()=>{_quantData.KR.account.positions[0].lastPrice=100;renderQuant();});
   await board.locator('[data-qt-tab="orders"]').click();assert((await board.innerText()).includes('대기 종목'));assert((await board.innerText()).includes('11:00:00'));
   await board.locator('[data-qt-tab="trades"]').click();assert((await board.innerText()).includes('1차 목표가 분할 매도'));
-  await board.locator('[data-qt-tab="reviews"]').click();assert((await board.locator('.qt-review-summary').innerText()).includes('모의매수 1건 · 주문 대기 0건 · 미매수 2건'));assert(await board.locator('.qt-review-excerpt').first().isVisible());await board.locator('[data-qt-filter="pass"]').click();assert.equal(await board.locator('details').count(),1);await board.locator('summary').click();
+  await board.locator('[data-qt-tab="reviews"]').click();assert((await board.locator('.qt-review-summary').innerText()).includes('모의매수 1건 · 주문 대기 0건 · 미매수 2건'));assert(await board.locator('.qt-review-excerpt').first().isVisible());if(width<700){await board.locator('[data-qt-filter="pass"]').evaluate(el=>el.scrollIntoView({block:'end'}));assert(await board.locator('[data-qt-filter="pass"]').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'mobile navigation must not cover review filter');}await board.locator('[data-qt-filter="pass"]').click();assert.equal(await board.locator('details').count(),1);await board.locator('summary').click();
   assert((await board.innerText()).includes('₩89 × 5주'));assert((await board.innerText()).includes('현재 3주 보유'));assert((await board.innerText()).includes('<img src=x'));assert.equal(await board.locator('img').count(),0);assert.equal(await board.locator('a').count(),1);assert.equal(await page.evaluate(()=>window.qtInjected),undefined);
   await page.screenshot({path:'/tmp/vantor-quant-review-'+width+'.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await board.locator('[data-qt-filter="evidence"]').click();assert((await board.innerText()).includes('자료 없는 종목'));assert.equal(await board.locator('details').count(),1);
+  await page.evaluate(()=>{const r=_quantData.KR.reviews.find(r=>r.status==='waiting_evidence');r.evidenceReason='news_stale';r.newsDiagnostics={checked:3,stale:3,maxAgeDays:14,unavailable:0,shortBody:0,latestPublishedAt:'2026-10-01T00:00:00Z'};renderQuant();});
+  assert((await board.innerText()).includes('수집한 기사들이 허용 기간을 지나 보류했어요.'));await board.locator('summary').click();assert((await board.innerText()).includes('기간 초과 3건'));assert((await board.innerText()).includes('최근 14일 이내 원문 필요'));
   await board.locator('[data-qt-tab="trainer"]').click();assert((await board.innerText()).includes('첫 비교 계좌 생성 대기'));
   await page.evaluate(()=>{
     const p=_quantData.KR;p.trainer={version:1,startedAt:'2026-11-02T09:00:00Z',valuationDate:'20261103',accounts:['기존 전략','상승추세','저변동'].map((name,i)=>({id:['baseline','trend','lowvol'][i],name,rule:'시험 전략 조건',account:JSON.parse(JSON.stringify(p.account)),reviews:JSON.parse(JSON.stringify(p.reviews))}))};renderQuant();

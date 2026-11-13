@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 // SEC asks automated clients to identify their application and contact address.
 // The contact stays in GitHub Secrets and request headers, never published feeds.
 // `cache` = feeds/sec-cache-us.json (11/4 한 번 받아 둔 공시, 4일 지나면 자동으로 안 씀).
-// ⚠ SEC 403 의 진짜 원인 = 연락처가 naver.com 주소(SEC 가 거부). Actions 서버 자체는 정상(11/4 진단).
+// A 403 alone does not identify its cause; do not infer rejection from an email domain.
 export function createSecClient({ email = process.env.SEC_CONTACT_EMAIL || '', fetcher = fetch,
   wait = ms => new Promise(resolve => setTimeout(resolve, ms)), now = Date.now, cache = null } = {}) {
   const contact = email.trim();

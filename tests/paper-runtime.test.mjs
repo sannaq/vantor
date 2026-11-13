@@ -52,3 +52,10 @@ test('fill quantity rechecks the accepted one percent risk budget',()=>{
   const b=advanceDay(a,'20261102',{TEST:bar('20261102')});
   assert.ok(b.trades[0].quantity * (10 + 190*a.costRate) <= 100);
 });
+test('filing coverage includes verified filings when news or AI fails, including legacy news_missing',()=>{
+ const reviews=[{symbol:'A',sourceDate:'1',status:'waiting_evidence',evidenceReason:'news_missing'},
+ {symbol:'B',sourceDate:'1',status:'waiting_evidence',evidenceReason:'news_stale',sources:[{type:'filing',provider:'official_ir'}]},
+ {symbol:'C',sourceDate:'1',status:'quota_wait',sources:[{type:'filing'}]},
+ {symbol:'D',sourceDate:'1',status:'waiting_evidence',evidenceReason:'sec_access_denied'}];
+ assert.deepEqual(evidenceCoverage(reviews,'1'),{checked:4,verified:3,officialIr:1,held:3});
+});

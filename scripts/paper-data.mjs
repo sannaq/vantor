@@ -34,37 +34,52 @@ function kstTime(value) {
 
 // Only public article bodies are sent to the model. Missing/blocked pages are
 // never replaced with made-up content or assumed risk-free.
-export async function collectEvidence(market, candidate, newsRows = []) {
-  const documents = [];
+export async function collectEvidence(market, candidate, newsRows = [], options = {}) {
+  return (await collectNewsResult(market, candidate, newsRows, options)).documents;
+}
+// Diagnostics distinguish stale coverage from transport/body failures without relaxing evidence rules.
+export async function collectNewsResult(market, candidate, newsRows = [], { load = get, now = Date.now() } = {}) {
+  const documents = [], maxAgeDays = market === 'US' ? 14 : 7;
+  const diagnostics = { checked: 0, stale: 0, invalidDate: 0, invalidUrl: 0, unavailable: 0,
+    shortBody: 0, maxAgeDays, latestPublishedAt: null };
+  const result = reason => ({ documents, reason, diagnostics });
   if (market === 'US') {
-    const list = await get(`https://api.stock.naver.com/news/worldStock/${encodeURIComponent(candidate.rc)}?pageSize=3&page=1`);
-    newsRows = (Array.isArray(list) ? list : []).map(x => ({ title: x.tit, date: x.dt,
-      office: x.oid, article: x.aid }));
+    let list;
+    try { list = await load(`https://api.stock.naver.com/news/worldStock/${encodeURIComponent(candidate.rc)}?pageSize=3&page=1`); }
+    catch { return result('news_list_unavailable'); }
+    if (!Array.isArray(list)) return result('news_list_invalid');
+    newsRows = list.map(x => ({ title: x.tit, date: x.dt, office: x.oid, article: x.aid }));
   } else newsRows = newsRows.map(x => ({ title: x[0], date: x[2], url: x[3] }));
   for (const row of newsRows.slice(0, 3)) {
+    diagnostics.checked++;
+    let publishedAt;
+    try { publishedAt = kstTime(row.date); } catch {}
+    const published = Date.parse(publishedAt);
+    if (!Number.isFinite(published) || published > now) { diagnostics.invalidDate++; continue; }
+    if (!diagnostics.latestPublishedAt || published > Date.parse(diagnostics.latestPublishedAt)) diagnostics.latestPublishedAt = publishedAt;
+    if (now - published > maxAgeDays * 864e5) { diagnostics.stale++; continue; }
+    let html, url;
     try {
-      const publishedAt = kstTime(row.date), published = Date.parse(publishedAt);
-      // 미장은 기사 14일, 국장 7일 (2026-11-04 사용자 결정 — 미장 소형주는 기사가 드물다)
-      const maxAge = (market === 'US' ? 14 : 7) * 864e5;
-      if (!Number.isFinite(published) || published > Date.now() || Date.now() - published > maxAge) continue;
-      let html, url;
       if (market === 'US') {
         const params = new URLSearchParams({ officeId: row.office, articleId: row.article, reutersCode: candidate.rc });
         url = `https://m.stock.naver.com/front-api/news/worldStock/end?${params}`;
-        const result = await get(url);
-        html = result?.result?.article?.content;
+        const response = await load(url);
+        html = response?.result?.article?.content;
       } else {
-        if (!/^https:\/\/n\.news\.naver\.com\/mnews\/article\/\d+\/\d+$/.test(row.url || '')) continue;
-        url = row.url; const page = await get(url, false);
+        if (!/^https:\/\/n\.news\.naver\.com\/mnews\/article\/\d+\/\d+$/.test(row.url || '')) { diagnostics.invalidUrl++; continue; }
+        url = row.url; const page = await load(url, false);
         html = page.match(/<article\b[^>]*id=["']dic_area["'][^>]*>([\s\S]*?)<\/article>/i)?.[1];
       }
+      if (typeof html !== 'string' || !html.trim()) { diagnostics.unavailable++; continue; }
       const text = plainText(html);
-      if (text.length < 160) continue;
+      if (text.length < 160) { diagnostics.shortBody++; continue; }
       documents.push({ id: snapshotHash({ url, text }), type: 'news', title: plainText(row.title),
-        text: text.slice(0, 6000), url, publishedAt, fetchedAt: new Date().toISOString(), verified: true });
-    } catch { /* unverified source omitted; model must hold if evidence is insufficient */ }
+        text: text.slice(0, 6000), url, publishedAt, fetchedAt: new Date(now).toISOString(), verified: true });
+    } catch { diagnostics.unavailable++; }
   }
-  return documents;
+  return result(documents.length ? 'ok' : !diagnostics.checked ? 'news_empty' :
+    diagnostics.unavailable ? 'news_body_unavailable' : diagnostics.shortBody ? 'news_body_short' :
+    diagnostics.invalidUrl ? 'news_url_invalid' : diagnostics.invalidDate ? 'news_date_invalid' : 'news_stale');
 }
 
 let secCache = null;

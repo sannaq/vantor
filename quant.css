@@ -10,3 +10,6 @@
 .qt-review summary .qt-review-outcome{display:block;font-weight:700;color:var(--ink);font-size:14px;margin-top:8px}.qt-review summary .qt-review-excerpt{display:block;color:var(--ink);font-size:13px;margin:6px 0}.qt-review-detail{background:var(--panel2);padding:14px;border-radius:10px;margin-top:12px}.qt-review-detail h3{font-size:13px;margin:16px 0 6px}.qt-review-detail h3:first-child{margin-top:0}.qt-reason{white-space:pre-wrap}.qt-review-summary{border-left:3px solid var(--gold)}
 
 .qt-trainer-account h3{font-size:14px;margin:22px 0 10px}.qt-trainer-account>details>summary{font-weight:700;color:var(--gold);padding:10px 0}
+
+/* Keep focus/scroll targets clear of the fixed mobile navigation. */
+@media(max-width:700px){#quantBoard{padding-bottom:calc(80px + env(safe-area-inset-bottom))}#quantBoard button,#quantBoard summary{scroll-margin-block:80px}}

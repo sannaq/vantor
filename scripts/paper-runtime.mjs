@@ -31,7 +31,8 @@ export function evidenceCoverage(reviews, sourceDate) {
   for(const r of reviews) if(r.sourceDate === sourceDate) latest.set(r.symbol,r);
   const rows=[...latest.values()];
   return { checked: rows.length,
-    verified: rows.filter(r=>r.sources?.some(s=>s.type==='filing')).length,
+    // Legacy news_missing was emitted only after successful filing collection.
+    verified: rows.filter(r=>r.evidenceReason==='news_missing'||r.sources?.some(s=>s.type==='filing')).length,
     officialIr: rows.filter(r=>r.sources?.some(s=>s.provider==='official_ir')).length,
     held: rows.filter(r=>r.status==='waiting_evidence').length };
 }
