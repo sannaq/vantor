@@ -58,7 +58,7 @@ export function recordTrainerReview(t,candidate,universe,report,result,now=Date.
   const next=structuredClone(t);
   for(const row of next.accounts){
     if(row.reviews.some(r=>r.trainerKey===key))continue;
-    const r=structuredClone(report);delete r.entryStatus;delete r.entryReason;
+    const r=structuredClone(report);delete r.entryStatus;delete r.entryReason;delete r.sizeReason;delete r.earnDate;
     r.trainerKey=key;r.signal={ret20:Number.isFinite(candidate.ret20)?candidate.ret20:null,
       vol:Number.isFinite(candidate.vol)?candidate.vol:null,lowVolEligible:universe.lowVolSymbols.includes(candidate.c),
       universeSize:universe.size,lowVolCount:universe.lowVolSymbols.length};
@@ -69,6 +69,7 @@ export function recordTrainerReview(t,candidate,universe,report,result,now=Date.
     else if(result?.review){
       const plan=queueCandidate(row.account,candidate,result.review,result.evidence,result.snapshotId,now);
       r.entryStatus=plan.status;r.entryReason=plan.reason||null;
+      if(plan.sizeReason){r.sizeReason=plan.sizeReason;r.earnDate=plan.earnDate;}
     }
     row.reviews.push(r);
   }

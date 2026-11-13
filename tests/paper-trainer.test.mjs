@@ -57,3 +57,13 @@ test('common candidate eligibility preserves existing liquidity and trend rules'
  assert.equal(candidateFor({...r,tv20:50,ref:['하락 추세']},'KR',{},'20261030').qualified,false);
  assert.equal(candidateFor({...r,tv20:.1},'US',{items:{A:Array(15).fill('A.O')}},'20261030').rc,'A.O');
 });
+test('sizing explanation belongs to each strategy order, never copied from main account',()=>{
+ const t=newTrainer('KR','20261030',start),c={...cs[1],earnSoon:'20261102'},rs=result(c);
+ const report={symbol:c.c,sourceDate:c.date,checkedDate:'2026-10-30',status:'review_pass',review:rs.review,entryStatus:'ready',sizeReason:'earnings_soon',earnDate:'20261102'};
+ recordTrainerReview(t,c,trainerUniverse(cs),report,rs,now);
+ assert.equal(t.accounts[0].reviews[0].sizeReason,'earnings_soon');
+ assert.equal(t.accounts[1].reviews[0].entryReason,'trend_not_positive');
+ assert.equal(t.accounts[1].reviews[0].sizeReason,undefined);
+ assert.equal(t.accounts[1].reviews[0].earnDate,undefined);
+ assert.equal(t.accounts[2].reviews[0].sizeReason,'earnings_soon');
+});
