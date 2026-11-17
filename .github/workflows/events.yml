@@ -21,8 +21,8 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: 이벤트 갱신
@@ -40,7 +40,7 @@ jobs:
             commit -m "auto $(TZ=Asia/Seoul date +%F) 이번주 이벤트 갱신"
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
           exit 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: always()
         with:
           python-version: "3.12"
@@ -62,7 +62,7 @@ jobs:
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
       - name: 만든 이미지 보관 (7일)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: events-image
           path: /tmp/brief-img/*.png

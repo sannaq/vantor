@@ -29,10 +29,10 @@ jobs:
   score:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 30
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
       - name: 이미 발행한 거래일인지 확인
@@ -67,7 +67,7 @@ jobs:
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 종합 평점"
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
           exit 1
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.day.outputs.open == '1'
         with:
           python-version: "3.12"
@@ -81,7 +81,7 @@ jobs:
           python3 scripts/picks_image.py
       - name: 만든 이미지 보관 (7일)
         if: steps.day.outputs.open == '1'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: picks-image
           path: /tmp/brief-img/*.png

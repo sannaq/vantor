@@ -34,10 +34,10 @@ jobs:
     # 15:00 신호도 16:41까지 101분을 기다릴 수 있어야 한다.
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: 시각 보고 추천 실행

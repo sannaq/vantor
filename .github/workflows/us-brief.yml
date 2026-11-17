@@ -28,8 +28,8 @@ jobs:
   brief:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: 최신 슬롯 누락 확인
@@ -62,7 +62,7 @@ jobs:
           exit 1
       - name: 만든 이미지 보관 (7일)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: us-brief-image
           path: /tmp/brief-img/*.png

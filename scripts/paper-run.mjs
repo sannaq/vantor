@@ -19,7 +19,7 @@ const key = process.env.GEMINI_API_KEY;
 const freeConfirmed = process.env.GEMINI_FREE_TIER_CONFIRMED === 'true';
 // 시장별 하루 AI 검토 횟수. 3 → 10 (2026-11-04 사용자 결정, 두 시장 합계 20회 · 무료 한도 안).
 // 429 가 오면 그날 검토는 바로 멈춘다(quota_wait).
-const DAILY_REVIEW_LIMIT = 10;
+const DAILY_REVIEW_LIMIT = 8; // (11/17) 두 시장 합계 16회 — 무료 한도(하루 약 20회) 여유 확보
 const EARN_WINDOW_DAYS = 10; // 추천일부터 이 기간 안에 실적 발표가 있으면 절반 비중
 const ymdMs = d => Date.parse(`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T00:00:00Z`);
 const messages = {

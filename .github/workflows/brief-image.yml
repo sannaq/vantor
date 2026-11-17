@@ -24,7 +24,7 @@ jobs:
   send:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: 보낼 브리핑 찾기
@@ -43,7 +43,7 @@ jobs:
           fi
           echo "files=$files" >> "$GITHUB_OUTPUT"
           echo "보낼 브리핑: ${files:-없음}"
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.pick.outputs.files != ''
         with:
           python-version: "3.12"
@@ -69,7 +69,7 @@ jobs:
         run: python3 scripts/brief_image.py ${{ steps.pick.outputs.files }}
       - name: 만든 이미지 보관 (7일)
         if: always() && steps.pick.outputs.files != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: brief-images
           path: /tmp/brief-img/*.png

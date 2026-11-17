@@ -23,8 +23,8 @@ jobs:
       BT_DAYS: "1000"   # 약 4년치 일봉 → 3년 검증 (2026-10-08 사용자 결정)
       BT_WARM: "250"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "20"
       - name: 백테스트

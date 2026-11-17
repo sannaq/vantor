@@ -747,6 +747,14 @@ body:not(.coin-on) #railBtcCard{display:none!important}
 @media(max-width:700px){#heatmap .heat2{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:42px}#heatmap .heat2 .h-xl{grid-column:span 4;grid-row:span 2}}
 #stockPanel .spk-col{width:80px;text-align:center}
 @media(max-width:700px){#stockPanel .spk-col{display:none}}
+.bb{margin:0 0 12px}.bb-t{font-size:12px;font-weight:800;margin-bottom:6px}
+.bb-row{display:flex;align-items:center;gap:8px;margin:4px 0}.bb-nm{font-size:11.5px;color:var(--sub);width:38px;flex:none}
+.bb-bar{flex:1;display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--line2)}
+.bb-bar i{display:block;height:100%}.bb-bar i.up{background:var(--up)}.bb-bar i.fl{background:var(--faint);opacity:.5}.bb-bar i.dn{background:var(--down)}
+.bb-n{font-size:11.5px;white-space:nowrap;min-width:84px;text-align:right}
+.bb-c{margin:2px 0 6px}.bb-c .bb-bar{height:6px}.bb-c .bb-n{min-width:70px;font-size:11px}
+#stockPanel thead th,#fullRadar thead th,.pp-tbl thead th,#watchPanel thead th,.qt-scroll thead th{cursor:pointer;user-select:none}
+thead th.ts-on{color:var(--gold)}thead th[data-ts]:not([data-ts=""])::after{content:" " attr(data-ts);font-size:.85em}
 </style>
 <script>/* 접속 비밀번호 (10/12 사용자 결정) — 처음 한 번 맞히면 이 기기·브라우저는 계속 통과. 정적 사이트라 화면만 가리는 간단한 문(자료 파일은 공개) */
 var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; try{ if(localStorage.getItem('vtGate')!==VT_GATE)document.documentElement.classList.add('gated'); }catch(e){ document.documentElement.classList.add('gated'); }</script>
@@ -1045,8 +1053,8 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=10"></script>
 <script src="sync-core.js?v=1"></script>
-<script src="quant.js?v=8"></script>
-<script src="app.js?v=179"></script>
+<script src="quant.js?v=9"></script>
+<script src="app.js?v=180"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;

@@ -4,21 +4,31 @@ on:
   schedule:
     - cron: "*/30 0-6 * * 1-5"   # 평일 09:00~15:30 KST, 30분마다
     - cron: "0 7,10 * * 1-5"     # 16:00 장마감 확정 · 19:00 종목별 수급 확정
-  workflow_dispatch: {}
+  # (11/17) 예약이 몇 시간씩 밀려 이어 달리기로 바꿈 — 브리핑 push(09:20·15:45)가 첫 실행을 걸고,
+  # 끝날 때마다 chain 작업이 다음 시각(30분 단위·16:00·19:00)까지 기다렸다가 다시 실행시킨다. 예약은 백업.
+  push:
+    branches: [main]
+    paths: ["briefs/20*.json"]
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: '이어 달리기로 실행됨'
+        required: false
+        default: 'no'
 
 permissions:
   contents: write
-
-concurrency:
-  group: flow-update
-  cancel-in-progress: false
+  actions: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    concurrency:
+      group: flow-update
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: 수급 갱신
@@ -32,3 +42,26 @@ jobs:
             commit -m "auto $(TZ=Asia/Seoul date '+%F %H:%M') 수급 갱신"
           for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
           exit 1
+
+  chain:
+    needs: update
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    # 새 실행의 이어 달리기가 시작되면 앞에서 기다리던 것은 취소된다 → 사슬은 항상 하나
+    concurrency:
+      group: flow-chain
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: 다음 수급 갱신 예약
+        env:
+          GH_TOKEN: ${{ github.token }}
+          R: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/flow_chain.py
