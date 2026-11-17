@@ -23,6 +23,24 @@ def kick_plan(now, trigger=""):
     return None, 0
 
 
+def recent_run(repo, workflow, now, window_min=90):
+    out = subprocess.check_output(['gh', 'run', 'list', '-R', repo, '-w', workflow, '-L', '10',
+                                   '--json', 'createdAt,status,conclusion,event'], text=True)
+    return has_recent_run(json.loads(out), now, window_min)
+
+
+def has_recent_run(runs, now, window_min=90):
+    for r in runs:
+        created = datetime.fromisoformat(r['createdAt'].replace('Z', '+00:00'))
+        if r.get('event', 'workflow_dispatch') != 'workflow_dispatch':
+            continue  # 지연된 예약 실행(전날 몫)은 오늘 신호를 막지 않는다
+        if (now - created).total_seconds() > window_min * 60:
+            continue
+        if r.get('status') != 'completed' or r.get('conclusion') == 'success':
+            return True
+    return False
+
+
 def main():
     now = datetime.now(timezone.utc)
     market, delay = kick_plan(now, os.environ.get("TRIGGER", ""))
@@ -43,6 +61,11 @@ def main():
         print(f'{market}: {target} 이미 발행 · 중복 신호 생략', flush=True)
         return
     workflow = 'picks-us.yml' if market == 'US' else 'picks.yml'
+    # 11/16 중복 실행: 대기하던 신호 두 개가 차례로 깨어나, 앞 신호가 막 실행시킨 추천이
+    # 아직 발행 전이라 둘 다 실행시켰다 → 파일 충돌. 최근 90분 안에 신호로 실행(workflow_dispatch)된 추천이 대기·실행 중이거나 성공했으면 건너뛴다.
+    if recent_run(repo, workflow, datetime.now(timezone.utc)):
+        print(f'{workflow}: 최근 실행 있음 · 중복 신호 생략', flush=True)
+        return
     send = os.environ.get('SEND', 'no')
     if send not in ('yes', 'no'):
         raise ValueError('invalid send input')

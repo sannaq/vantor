@@ -319,8 +319,14 @@ function renderHeatmap(){
   var u='· '+nowHM()+' 기준'; if($('#heatupd'))$('#heatupd').textContent=u;
 }
 var _proxyDown=false;
+/* (11/17) 종목 골라보기(국내): 목록 대기 중이면 다시 그리고, 이미 그려져 있으면 가격·등락·거래대금만 제자리 갱신 */
+function _browseLive(){ try{
+  if(typeof stkMkt==='undefined'||stkMkt!=='KR'||!document.getElementById('browseNote'))return;
+  if(window._browseWait){ renderStockBrowse(); return; }
+  (KBOARD||[]).forEach(function(b){ var a=document.getElementById('bam-'+b.c); if(a&&hasNum(b.amount))a.textContent=fmtEok(Math.round(b.amount/1e8)); });
+}catch(e){} }
 function _setProxyDown(v){ if(_proxyDown===v)return; _proxyDown=v; var db=$('#demoban'); if(db){ if(v){ db.style.display=''; db.innerHTML='⚠️ <b>실시간 데이터 연결 실패</b> — 1분 뒤 자동으로 다시 시도해요. 그동안 RADAR 순위는 예시 데이터예요.'; } }
-  try{ renderCatch(); renderHeatmap(); renderHomeMarket(); }catch(e){} }
+  try{ renderCatch(); renderHeatmap(); renderHomeMarket(); _browseLive(); }catch(e){} }
 async function loadKisRadar(){
   if(!PROXY) return;
   try{
@@ -332,7 +338,7 @@ async function loadKisRadar(){
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
       j.stocks.forEach(function(s){ s.ccy='KRW'; });
       KISUNIV=j.stocks; useReal=true; window._prevRank=prev;
-      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; if(typeof _glLive==='function')setTimeout(_glLive,0); renderHeatmap(); renderCatch(); renderStrongSectors(); if(typeof renderHomeMarket==='function')renderHomeMarket(); }
+      if(Array.isArray(j.board)&&j.board.length){ KBOARD=j.board; _browseLive(); if(typeof _glLive==='function')setTimeout(_glLive,0); renderHeatmap(); renderCatch(); renderStrongSectors(); if(typeof renderHomeMarket==='function')renderHomeMarket(); }
       var db=$('#demoban'); if(db)db.style.display='none';
       renderRadar(); renderCats();
     }
@@ -2486,16 +2492,18 @@ function renderStockBrowse(){
   if(stkMkt==='US'){ return _renderUSBrowse(el,'<div class="sec-title" style="font-size:22px">🔎 종목 골라보기 (스크리너)</div><p class="sec-sub">미국은 나스닥·NYSE·AMEX 중 20일 평균 거래대금 상위 100종목이에요. 티커 검색도 됩니다 (예: AAPL).</p>'
     +'<div style="display:flex;gap:6px;margin-bottom:12px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid var(--line);border-radius:20px;font-weight:800;font-size:13px">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid var(--gold);border-radius:20px;font-weight:800;font-size:13px;color:var(--gold)">🇺🇸 미국</button></div>'); }
   // 국내 실데이터: board(거래대금 상위 30) 우선 → 스크리너. 없으면 RADAR/데모.
-  var base=(stkMkt==='US')?USTK:((KBOARD&&KBOARD.length)?KBOARD:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:STK));
+  // (11/17) 실시간 목록이 오기 전엔 데모(STK) 가격을 보여주지 않는다 — 옛 시험 가격이 실제처럼 보였음.
+  var base=(stkMkt==='US')?USTK:((KBOARD&&KBOARD.length)?KBOARD:((useReal&&KISUNIV&&KISUNIV.length)?KISUNIV:[]));
   var real=(stkMkt==='KR'&&((KBOARD&&KBOARD.length)||(useReal&&KISUNIV&&KISUNIV.length)));
+  window._browseWait=(stkMkt==='KR'&&!real);
   var list=base.filter(stkPass);
   var showFilters=(stkMkt==='KR'); // 스크리너는 국내 board 대상
   el.innerHTML='<div class="sec-title" style="font-size:22px">🔎 종목 골라보기 (스크리너)</div><p class="sec-sub">거래대금 상위 종목을 조건으로 거릅니다. 티커·코드 검색도 됩니다 (예: AAPL, 005930).</p>'
     +'<div style="display:flex;gap:6px;margin-bottom:12px"><button class="ibtn sbm" data-m="KR" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='KR'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='KR'?';color:var(--gold)':'')+'">🇰🇷 국내</button><button class="ibtn sbm" data-m="US" style="width:auto;padding:0 15px;border:1px solid '+(stkMkt==='US'?'var(--gold)':'var(--line)')+';border-radius:20px;font-weight:800;font-size:13px'+(stkMkt==='US'?';color:var(--gold)':'')+'">🇺🇸 미국</button></div>'
     +(showFilters?('<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="stkFilters">'+STK_FILTERS.map(function(f){return '<button class="scfil'+(f[0]===_stkFilter?' on':'')+'" data-f="'+f[0]+'">'+f[1]+'</button>';}).join('')+'</div>'):'')
     +'<div style="overflow-x:auto"><table><thead><tr><th class="l">종목</th><th>현재가</th><th>등락률</th><th>거래대금</th></tr></thead><tbody>'
-    +(list.length?list.map(function(s){var amtT=hasNum(s.amount)?fmtEok(Math.round(s.amount/1e8)):'';return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num" id="bpx-'+s.c+'">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" id="bch-'+s.c+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td class="num" style="color:var(--sub)">'+amtT+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:24px">조건에 맞는 종목이 없습니다.</td></tr>')+'</tbody></table></div>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+(real?('✅ 국내 실시간 · '+list.length+'종목 (거래대금 상위)'):(PROXY?'시세 불러오는 중…':'🧪 데모 데이터'))+'</div>';
+    +(list.length?list.map(function(s){var am=hasNum(s.amount)?s.amount:s.value;var amtT=hasNum(am)?fmtEok(Math.round(am/1e8)):'–';return '<tr class="rowbtn" data-c="'+s.c+'"><td class="l"><div class="sym">'+s.n+'<small>'+s.c+' · '+s.mk+'</small></div></td><td class="num" id="bpx-'+s.c+'">'+priceFmt(s,s.px)+'</td><td class="'+cls(s.ch)+'" id="bch-'+s.c+'" style="font-weight:700">'+pctTxt(s.ch)+'</td><td class="num" id="bam-'+s.c+'" style="color:var(--sub)">'+amtT+'</td></tr>';}).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--faint);padding:24px">'+(window._browseWait?(_proxyDown?'⚠️ 실시간 시세 연결 실패 — 1분 뒤 자동으로 다시 시도해요.':'실시간 시세 불러오는 중…'):'조건에 맞는 종목이 없습니다.')+'</td></tr>')+'</tbody></table></div>'
+    +'<div style="font-size:11px;color:var(--faint);margin-top:10px" id="browseNote">'+(real?('✅ 국내 실시간 · '+list.length+'종목 (거래대금 상위)'):(PROXY?(_proxyDown?'⚠️ 실시간 시세 연결 실패':'시세 불러오는 중…'):'실시간 시세 없음'))+'</div>';
   $$('#stockPanel .rowbtn').forEach(function(tr){tr.onclick=function(){openStock(tr.dataset.c);};});
   $$('#stockPanel .sbm').forEach(function(b){b.onclick=function(){stkMkt=b.dataset.m;renderStockBrowse();};});
   $$('#stockPanel .scfil').forEach(function(b){b.onclick=function(){_stkFilter=b.dataset.f;renderStockBrowse();};});
