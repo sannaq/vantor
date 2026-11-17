@@ -725,6 +725,28 @@
 #splash .sp-coin .sp-ico{animation-delay:.9s}
 #splash .sp-half.sp-picked .sp-half-in{animation:spPop .34s ease forwards}
 @media(prefers-reduced-motion:reduce){#splash *{animation:none!important;transition:opacity .3s!important}}
+
+/* (11/17 디자인 정돈) 선 아이콘·고정폭 숫자·오른쪽 칸 */
+.ti{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;display:block}
+.ibtn .ti{margin:auto}.search .ic .ti{width:16px;height:16px;color:var(--faint)}
+body{font-variant-numeric:tabular-nums}
+body:not(.coin-on) #railBtcCard{display:none!important}
+@media (min-width:1161px){ body.rail-empty:not(.coin-on) .main .wrap{grid-template-columns:minmax(0,1fr)} body.rail-empty:not(.coin-on) #homeRail{display:none} }
+.rail .rw .rpx{font-size:12px;font-weight:700;text-align:right;white-space:nowrap}
+.pp-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}
+.pp-k{background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.pp-k span{font-size:11px;color:var(--faint)}.pp-k b{font-size:15px}
+.pp-tbl{width:100%;font-size:12.5px}.pp-tbl td,.pp-tbl th{white-space:nowrap}
+#heatmap .heat2{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-auto-rows:46px;grid-auto-flow:dense;gap:3px}
+#heatmap .heat2 .htile{min-width:0;max-width:none;min-height:0;border-radius:6px;padding:6px 8px}
+#heatmap .heat2 .h-xl{grid-column:span 3;grid-row:span 3}#heatmap .heat2 .h-l{grid-column:span 2;grid-row:span 2}
+#heatmap .heat2 .h-m{grid-column:span 2}#heatmap .heat2 .h-s{grid-column:span 1}
+#heatmap .heat2 .h-xl .hn{font-size:18px}#heatmap .heat2 .h-xl .hc{font-size:16px}#heatmap .heat2 .h-l .hn{font-size:14.5px}
+#heatmap .heat2 .h-s .hn{font-size:11px}#heatmap .heat2 .h-s .hc{font-size:10.5px}
+#heatmap .heat2 .ha{font-size:11px;opacity:.8;margin-top:2px}
+@media(max-width:700px){#heatmap .heat2{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:42px}#heatmap .heat2 .h-xl{grid-column:span 4;grid-row:span 2}}
+#stockPanel .spk-col{width:80px;text-align:center}
+@media(max-width:700px){#stockPanel .spk-col{display:none}}
 </style>
 <script>/* 접속 비밀번호 (10/12 사용자 결정) — 처음 한 번 맞히면 이 기기·브라우저는 계속 통과. 정적 사이트라 화면만 가리는 간단한 문(자료 파일은 공개) */
 var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; try{ if(localStorage.getItem('vtGate')!==VT_GATE)document.documentElement.classList.add('gated'); }catch(e){ document.documentElement.classList.add('gated'); }</script>
@@ -784,12 +806,11 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
     <a data-v="watch"><svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9L6.3 20l1.1-6L3 9.8l6-.8z"/></svg><span class="lbl">관심</span></a>
     <a data-v="quant"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16V9M10 16V5M15 16v-6M20 16V3"/></svg><span class="lbl">퀀트 트레이딩</span></a>
   </div>
-  <div class="side-promo"><div class="m">🐿️</div><p>좋은 사람들과<br><b>더 좋은 투자를!</b></p><button onclick="showView('brief')">브리핑 보기 →</button></div>
 </aside>
 <div class="main">
 <header class="topbar">
-  <div class="search"><span class="ic">🔍</span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
-  <button class="ibtn mob-more" title="설정·도구" onclick="_openTools()">⋯</button><div class="navbtns"><button class="ibtn" id="theme" title="테마">🌙</button><button class="ibtn" title="지금 화면을 JPG 이미지로 저장" onclick="saveViewJpg()">📸</button><button class="ibtn" title="화면 편집" onclick="openCardEditor()">⚙️</button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()">⧉</button><button class="ibtn" title="관심종목" onclick="showView('watch')">★</button><button class="ibtn" title="기기 간 동기화" onclick="openSync()">☁️</button><button class="ibtn" title="가이드·도움말" onclick="openHelp()">❓</button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
+  <div class="search"><span class="ic"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg></span><input id="q" placeholder="종목명·코드 검색" autocomplete="off"/></div>
+  <button class="ibtn mob-more" title="설정·도구" onclick="_openTools()">⋯</button><div class="navbtns"><button class="ibtn" id="theme" title="테마"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><button class="ibtn" title="지금 화면을 JPG 이미지로 저장" onclick="saveViewJpg()"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button><button class="ibtn" title="화면 편집" onclick="openCardEditor()"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></button><button class="ibtn" title="팝업 창으로 띄우기" onclick="openPopup()"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="12" height="12" rx="2"/><path d="M9 4h11v11"/></svg></button><button class="ibtn" title="관심종목" onclick="showView('watch')"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4l2.5 5.2 5.5.8-4 3.9.9 5.6L12 16.9 7.1 19.5l.9-5.6-4-3.9 5.5-.8z"/></svg></button><button class="ibtn" title="기기 간 동기화" onclick="openSync()"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"/></svg></button><button class="ibtn" title="가이드·도움말" onclick="openHelp()"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.5a2.5 2.5 0 1 1 3.4 2.3c-.7.3-1 .9-1 1.6v.6M12 17h0"/></svg></button><div class="fontseg" title="글자 크기 (Small·Medium·Large)"><button data-f="s" onclick="setFont('s')">S</button><button data-f="m" onclick="setFont('m')">M</button><button data-f="l" onclick="setFont('l')">L</button></div></div>
 </header>
 
 <div class="wrap">
@@ -823,7 +844,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 
   <!-- ===== HOME ===== -->
   <div class="view" id="v-ai">
-    <div class="sec-title">🤖 차트 분석 도우미</div>
+    <div class="sec-title">차트 분석 도우미</div>
     <p class="sec-sub">종목·코인을 입력하거나 <b>차트 사진(📎)</b>을 첨부해 물어보면, 지지·저항·추세·RSI를 읽어 <b>교육용</b>으로 분석해줘요. 매매 지시는 아니에요.</p>
     <div id="aiAsk"></div>
   </div>
@@ -831,12 +852,12 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <div class="view on" id="v-home">
     <div class="row a" style="margin-top:0;grid-template-columns:1fr">
       <div class="card">
-        <div class="ch"><h2>📈 실시간 시장</h2><div class="r"><span class="mktseg" id="homeMktSeg"><button class="on" data-mk="all">전체</button><button data-mk="KR">국내</button><button data-mk="US">해외</button></span></div></div>
+        <div class="ch"><h2>실시간 시장</h2><div class="r"><span class="mktseg" id="homeMktSeg"><button class="on" data-mk="all">전체</button><button data-mk="KR">국내</button><button data-mk="US">해외</button></span></div></div>
         <div class="pad" style="padding-top:6px"><div style="overflow-x:auto"><table id="homeMarket"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
       </div>
       <div id="homeReco"></div>
       <div class="card off"><!-- 커뮤니티 연동 전까지 숨김 -->
-        <div class="ch"><h2>💬 오늘의 이슈 · 커뮤니티</h2><div class="r"><span class="more" data-v="brief">더보기 ›</span></div></div>
+        <div class="ch"><h2>오늘의 이슈 · 커뮤니티</h2><div class="r"><span class="more" data-v="brief">더보기 ›</span></div></div>
         <div class="pad feed" style="padding-top:8px">
           <a><div class="av">🧑</div><div class="fc"><div><span class="ftag s">주식</span><span class="ft">반도체주, 추가 상승 가능할까요?</span></div><div class="fs"><span>👁 1.2만</span><span>💬 132</span><span>2시간 전</span></div></div></a>
           <a><div class="av">🧑</div><div class="fc"><div><span class="ftag c">코인</span><span class="ft">비트코인 조정 구간인가요?</span></div><div class="fs"><span>👁 8,432</span><span>💬 96</span><span>3시간 전</span></div></div></a>
@@ -851,31 +872,31 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
     <div class="sec-h2 off" style="display:none">🛠 프로 지표 <span>· VANTOR 엔진</span></div>
     <div class="row a off" style="display:none">
       <div class="card">
-        <div class="ch"><h2>🌊 MARKET FLOW</h2><div class="r"><span id="flowupd">–</span></div></div>
+        <div class="ch"><h2>시장 흐름</h2><div class="r"><span id="flowupd">–</span></div></div>
         <div class="pad" id="marketFlow"></div>
       </div>
       <div class="card">
-        <div class="ch"><h2>👑 오늘 강한 업종</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
+        <div class="ch"><h2>오늘 강한 업종</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
         <div class="pad" style="padding-top:8px" id="strongSectors"></div>
       </div>
     </div>
 
     <div class="card off" style="margin-top:16px">
-      <div class="ch"><h2>🚨 실시간 포착 <span style="font-weight:600;color:var(--faint);font-size:12px">급등·급락·거래폭발</span></h2><div class="r"><span id="catchupd">–</span></div></div>
+      <div class="ch"><h2>실시간 포착 <span style="font-weight:600;color:var(--faint);font-size:12px">급등·급락·거래폭발</span></h2><div class="r"><span id="catchupd">–</span></div></div>
       <div class="pad" style="padding-top:10px" id="catchFeed"></div>
     </div>
 
     <div class="row b">
       <div class="card">
-        <div class="ch"><h2>🎯 DAY TRADE RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">TOP 10</span></h2><div class="r"><span class="op" id="opmode" style="display:none">OPENING</span><span class="more" data-v="radar">더보기 ›</span></div></div>
+        <div class="ch"><h2>단타 레이더 <span style="font-weight:600;color:var(--faint);font-size:12px">TOP 10</span></h2><div class="r"><span class="op" id="opmode" style="display:none">OPENING</span><span class="more" data-v="radar">더보기 ›</span></div></div>
         <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="homeRadar"></table></div></div>
       </div>
       <div class="card">
-        <div class="ch"><h2>💰 SMART MONEY</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
+        <div class="ch"><h2>스마트 머니</h2><div class="r"><span class="more" data-v="market">더보기 ›</span></div></div>
         <div class="pad" style="padding-top:10px" id="smartMoney"></div>
       </div>
       <div class="card">
-        <div class="ch"><h2>📰 MARKET NEWS</h2><div class="r"><span class="more" data-v="news">더보기 ›</span></div></div>
+        <div class="ch"><h2>시장 뉴스</h2><div class="r"><span class="more" data-v="news">더보기 ›</span></div></div>
         <div class="pad" style="padding-top:8px"><div class="nlist" id="homeNews"><div style="color:var(--faint);font-size:12px;padding:8px 0">불러오는 중…</div></div></div>
       </div>
     </div>
@@ -883,12 +904,12 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 
   <!-- ===== RADAR ===== -->
   <div class="view" id="v-radar">
-    <div class="sec-title">🔥 DAY TRADE RADAR</div>
+    <div class="sec-title">단타 레이더</div>
     <p class="sec-sub">전 시장을 동일한 <b>VANTOR 100점</b> 공식으로 평가해, 지금 <b>돈이 몰리고 움직임이 강해지는</b> 종목 TOP을 포착합니다. 단순 등락률 순위가 아닙니다.</p>
     <div id="tunePanel" style="margin-bottom:16px"></div>
     <div class="row a">
       <div class="card">
-        <div class="ch"><h2>RADAR TOP 10</h2><div class="r"><span id="radarupd2">–</span><span id="mktfilter"></span></div></div>
+        <div class="ch"><h2>레이더 TOP 10</h2><div class="r"><span id="radarupd2">–</span><span id="mktfilter"></span></div></div>
         <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="fullRadar"></table></div>
         <div style="font-size:11px;color:var(--faint);margin-top:10px">SCORE=VANTOR 100점 · 1M=1분 전 대비 순위 변화 · 압력=체결·호가 종합 · 상태 🚀SURGING ↑RISING →STEADY ⚠️COOLING</div></div>
       </div>
@@ -901,17 +922,17 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <div class="view" id="v-recoval"><div id="recoVal"></div></div>
   <div class="view" id="v-macro"><div id="macroPanel"></div></div>
   <div class="view" id="v-market">
-    <div class="sec-title">📊 MARKET · 히트맵 · 업종 강도</div>
+    <div class="sec-title">히트맵 · 업종 강도</div>
     <p class="sec-sub">지금 <b>돈이 몰리는 종목</b>을 한눈에. 거래대금 상위 종목을 등락률 색으로 — 빨강 상승·파랑 하락.</p>
-    <div class="card"><div class="ch"><h2>🗺 거래대금 상위 히트맵</h2><div class="r"><span id="heatupd">–</span></div></div>
+    <div class="card"><div class="ch"><h2>거래대금 상위 히트맵</h2><div class="r"><span id="heatupd">–</span></div></div>
       <div class="pad" style="padding-top:10px"><div id="heatmap"></div>
-        <div class="llegend" style="margin-top:10px;font-size:11px"><span><i class="lsw" style="background:#e5384d"></i> 강한 상승</span><span><i class="lsw" style="background:#3a3f4a"></i> 보합</span><span><i class="lsw" style="background:#2f6bff"></i> 강한 하락</span><span style="color:var(--faint)">· 타일 크기 = 거래대금</span></div>
+        <div style="margin-top:10px;font-size:10.5px;color:var(--faint);display:flex;gap:3px;align-items:flex-end;flex-wrap:wrap"><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#1f4fc4"></i>−5%</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#2f6bff"></i>−3%</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#6b93f0"></i>−1%</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#5b6472"></i>0</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#e86b78"></i>+1%</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#e0384b"></i>+3%</span><span style="display:inline-flex;flex-direction:column;align-items:center;gap:2px"><i style="display:block;width:30px;height:10px;border-radius:2px;background:#b4232f"></i>+5%</span><span style="margin-left:10px">칸 크기 = 거래대금 순위</span></div>
       </div></div>
     <div class="sec-title" style="font-size:18px;margin-top:8px">업종 강도</div>
     <div class="card"><div class="pad"><div class="catgrid" id="allCats"></div></div></div>
     <div class="row a" style="margin-top:16px">
-      <div class="card"><div class="ch"><h2>CATEGORY 순위 변화</h2></div><div class="pad" id="catRank"></div></div>
-      <div class="card"><div class="ch"><h2>CATEGORY SCORE 히트맵</h2></div><div class="pad" id="catHeat"></div></div>
+      <div class="card"><div class="ch"><h2>카테고리 순위 변화</h2></div><div class="pad" id="catRank"></div></div>
+      <div class="card"><div class="ch"><h2>카테고리 점수 히트맵</h2></div><div class="pad" id="catHeat"></div></div>
     </div>
   </div>
 
@@ -921,14 +942,14 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <div class="view" id="v-quant"><div id="quantBoard"></div></div>
 <div class="view" id="v-recohist"><div id="recoHist"></div></div>
   <div class="view" id="v-watch">
-    <div class="card"><div class="ch"><h2>⭐ 관심종목</h2><div class="r"><span id="watchupd">–</span></div></div>
+    <div class="card"><div class="ch"><h2>관심종목</h2><div class="r"><span id="watchupd">–</span></div></div>
       <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><div id="watchPanel"></div></div></div>
     </div>
   </div>
 
   <!-- ===== NEWS ===== -->
   <div class="view" id="v-news">
-    <div class="sec-title">📰 NEWS RADAR</div>
+    <div class="sec-title">뉴스</div>
     <p class="sec-sub">한국·미국 증시 뉴스와 한글로 쓴 해외주식 기사. 미국은 🌐 한글 번역 지원.</p>
     <div class="card"><div class="pad">
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
@@ -947,7 +968,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <div class="view" id="v-brief"><div id="briefPanel"></div><div id="usBriefPanel"></div><div id="mainNews"></div><div id="recoPanel"></div></div>
   <div class="view" id="v-events"><div id="weekCal"></div><div id="eventsPanel"></div></div>
   <div class="view" id="v-learn">
-    <div class="sec-title">📚 LEARN</div>
+    <div class="sec-title">스터디</div>
     <p class="sec-sub">차트·캔들·패턴·지표·매매원칙·엘리엇 파동까지 — 교육용 정리. 매수·매도 신호가 아닙니다.</p>
     <div class="ltabs" id="ltabs">
       <button class="on" data-l="basic">🎯 기초</button>
@@ -970,23 +991,23 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 
   <!-- ===== COIN (코인 모드) ===== -->
   <div class="view" id="v-coin">
-    <div id="coinHead"><div class="sec-title">🪙 COIN · 실시간 코인 시장</div>
+    <div id="coinHead"><div class="sec-title">실시간 코인 시장</div>
     <p class="sec-sub"><b>바이낸스 실시간</b> 데이터로 주요 코인을 봅니다. 코인을 누르면 <b>차트·타점·수급 상세를 이 화면에서 바로</b> 봅니다.</p></div>
     <div id="coinBody">
       <button onclick="openCoin('BTC')" style="display:inline-flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#3a2c07;font-weight:800;font-size:13px;padding:10px 16px;border-radius:10px;margin-bottom:16px;border:none;cursor:pointer;font-family:inherit">🪙 BTC 상세 차트 바로 보기</button>
       <div id="coinMetrics" style="margin-bottom:16px"></div>
       <div class="row a">
         <div class="card">
-          <div class="ch"><h2>🔥 COIN RADAR <span style="font-weight:600;color:var(--faint);font-size:12px">바이낸스 실시간 · 27종</span></h2><div class="r"><span id="coinupd">–</span></div></div>
+          <div class="ch"><h2>코인 레이더 <span style="font-weight:600;color:var(--faint);font-size:12px">바이낸스 실시간 · 27종</span></h2><div class="r"><span id="coinupd">–</span></div></div>
           <div class="pad" style="padding-top:8px"><div style="overflow-x:auto"><table id="coinRadar"><tbody><tr><td style="color:var(--faint);padding:14px">불러오는 중…</td></tr></tbody></table></div></div>
         </div>
         <div class="card">
-          <div class="ch"><h2>😱 공포·탐욕 & 시장</h2></div>
+          <div class="ch"><h2>공포·탐욕 & 시장</h2></div>
           <div class="pad" id="coinMarket"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div>
         </div>
       </div>
       <div class="card" style="margin-top:16px">
-        <div class="ch"><h2>🧭 섹터 히트 <span style="font-weight:600;color:var(--faint);font-size:12px">지금 돈이 도는 내러티브 · 24h · CoinGecko</span></h2><div class="r"><span id="secupd">–</span></div></div>
+        <div class="ch"><h2>섹터 히트 <span style="font-weight:600;color:var(--faint);font-size:12px">지금 돈이 도는 내러티브 · 24h · CoinGecko</span></h2><div class="r"><span id="secupd">–</span></div></div>
         <div class="pad" id="coinSectors"><div style="color:var(--faint);font-size:12px">섹터 불러오는 중…</div></div>
       </div>
     </div>
@@ -994,9 +1015,9 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   </div>
 </div><!--/maincol-->
 <aside class="rail" id="homeRail">
-  <div class="card"><div class="ch"><h2>👀 관심 종목</h2><div class="r"><span class="more" data-v="watch">더보기 ›</span></div></div><div class="pad" style="padding-top:8px" id="railWatch"><div style="color:var(--faint);font-size:12px">관심종목을 담아보세요.</div></div></div>
-  <div class="card"><div class="ch"><h2>🪙 BTC/USDT</h2><div class="r" id="railBtcUpd">–</div></div><div class="pad" style="padding-top:8px" id="railBtc"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div></div>
-  <div class="card off"><!-- 검색 집계 연동 전까지 숨김 --><div class="ch"><h2>🔥 실시간 인기 검색어</h2></div><div class="pad" style="padding-top:6px"><ol class="railhot">
+  <div class="card" id="railWatchCard"><div class="ch"><h2>관심 종목</h2><div class="r"><span class="more" data-v="watch">더보기 ›</span></div></div><div class="pad" style="padding-top:8px" id="railWatch"><div style="color:var(--faint);font-size:12px">관심종목을 담아보세요.</div></div></div>
+  <div class="card" id="railBtcCard"><div class="ch"><h2>BTC/USDT</h2><div class="r" id="railBtcUpd">–</div></div><div class="pad" style="padding-top:8px" id="railBtc"><div style="color:var(--faint);font-size:12px">불러오는 중…</div></div></div>
+  <div class="card off"><!-- 검색 집계 연동 전까지 숨김 --><div class="ch"><h2>실시간 인기 검색어</h2></div><div class="pad" style="padding-top:6px"><ol class="railhot">
     <li><span class="rk">1</span><span class="hnm">삼성전자</span><span class="hdt up">▲ 3</span></li>
     <li><span class="rk">2</span><span class="hnm">SK하이닉스</span><span class="hdt up">▲ 2</span></li>
     <li><span class="rk">3</span><span class="hnm">비트코인</span><span class="hdt down">▼ 1</span></li>
@@ -1024,8 +1045,8 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=10"></script>
 <script src="sync-core.js?v=1"></script>
-<script src="quant.js?v=7"></script>
-<script src="app.js?v=178"></script>
+<script src="quant.js?v=8"></script>
+<script src="app.js?v=179"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;

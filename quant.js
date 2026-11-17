@@ -150,14 +150,15 @@ function renderQuant(load){
   if(_quantError[m])h+='<p role="alert" class="qt-status">'+esc(_quantError[m])+(p?' 아래는 마지막으로 불러온 자료예요.':'')+'</p>';
   if(!p)h+='<div class="card qt-box">'+(_quantBusy[m]?'모의계좌를 불러오고 있어요.':'계좌 자료 확인 대기')+'</div>';
   else {
-    var a=p.account, money=function(n){return Number.isFinite(n)?(m==='US'?'$':'₩')+n.toLocaleString('ko-KR',{maximumFractionDigits:m==='US'?2:0}):'—';};
+    var a=p.account, money=function(n){return Number.isFinite(n)?(n<0?'-':'')+(m==='US'?'$':'₩')+Math.abs(n).toLocaleString('ko-KR',{maximumFractionDigits:m==='US'?2:0}):'—';};
     var pct=function(n){return Number.isFinite(n)?n.toFixed(2)+'%':'—';};
     var pnl=a.equity-a.initialCapital, unreal=a.positions.reduce(function(s,x){return s+x.quantity*(x.lastPrice-x.costBasis);},0), realized=a.trades.reduce(function(s,t){return s+(t.side==='sell'&&Number.isFinite(t.pnl)?t.pnl:0);},0), costs=a.trades.reduce(function(s,t){return s+(t.cost||0);},0);
     var reserved=a.pending.reduce(function(s,x){return s+(x.reserved||0);},0), cov=p.filingCoverage||{};
     h+='<div class="qt-status" role="status"><b>'+esc(p.message||'계좌 상태 확인 대기')+'</b>'+(a.paused?'<p>신규 매수 중단 · 보유 종목의 보호 매도는 계속돼요.</p>':'')+'<p class="qt-muted">추천 기준 '+quantDate(p.sourceDate)+' · 평가 기준 '+quantDate(p.valuationDate||a.lastDate)+' · 마지막 실행 '+esc(quantTime(p.updatedAt))+' (한국시간)</p></div>';
     h+='<div class="qt-controls qt-tabs">'+[['overview','운용 현황'],['positions','보유 종목 '+a.positions.length],['orders','대기 주문 '+a.pending.length],['trades','매매 기록 '+a.trades.length],['reviews','AI 검토'],['trainer','전략 비교']].map(function(x){return btn('tab',x[0],x[1],_quantTab===x[0]);}).join('')+'</div>';
     if(_quantTab==='overview'){
-      var stats=[['총 평가액',money(a.equity)],['누적 손익',money(pnl)+' / '+pct(pnl/a.initialCapital*100)],['현금',money(a.cash)],['보유 평가손익',money(unreal)],['실현 손익',money(realized)],['최고점 대비 하락',pct(Math.max(0,1-a.equity/a.peakEquity)*100)]];
+      var tone=function(n,t){return '<span class="qt-pnl '+(n>0?'qt-profit':n<0?'qt-loss':'qt-flat')+'">'+t+'</span>';};
+      var stats=[['총 평가액',money(a.equity)],['누적 손익',tone(pnl,money(pnl)+' / '+pct(pnl/a.initialCapital*100))],['현금',money(a.cash)],['보유 평가손익',tone(unreal,money(unreal))],['실현 손익',tone(realized,money(realized))],['최고점 대비 하락',pct(Math.max(0,1-a.equity/a.peakEquity)*100)]];
       h+='<div class="qt-grid">'+stats.map(function(x){return '<div class="card qt-box"><span class="qt-muted">'+x[0]+'</span><strong>'+x[1]+'</strong></div>';}).join('')+'</div><section class="card qt-box"><h2>평가액 추이</h2>'+quantChart(a,money)+'</section>';
       h+='<section class="card qt-box"><h2>자금과 수집 상태</h2><p>시작 자금 '+money(a.initialCapital)+' · 주문 예약액 '+money(reserved)+' · 예약 제외 현금 '+money(Math.max(0,a.cash-reserved))+'</p><p>누적 모의 비용 '+money(costs)+' · 매매 금액당 비용 가정 '+pct(a.costRate*100)+'</p><p class="qt-muted">실현 손익은 매수·매도 비용 반영, 보유 평가손익은 매수 비용 반영·향후 매도 비용 제외예요. 예약액은 현금에서 아직 출금되지 않았어요.</p><p>추천 기준일 검토 '+(cov.checked||0)+'건 · 공시 확보 '+(cov.verified||0)+'건 · 공식 IR '+(cov.officialIr||0)+'건 · 자료 부족 '+(cov.held||0)+'건</p></section>';
       h+='<section class="card qt-box"><h2>운용 규칙</h2><p>거래대금·재무·가격 조건 → 기사·공시 확보 → AI 위험 검토 → 다음 거래일 모의주문 → 보유 관리</p><p>20~60거래일 중기 검증 · 종목당 최대 15% · 손절 계획 손실 1% · 최고 평가액 대비 15% 하락 시 신규 매수 중단</p><p>Gemini 무료 한도 · 시장별 UTC 날짜당 최대 10회 검토 · 자료 부족·AI 오류·한도 소진 시 신규 검토와 매수 대기</p><p class="qt-muted">일봉 기반 모의 체결이에요. 가격 급변 시 계획 손실을 넘을 수 있어요. GitHub Actions에서 자동 실행되며 이 화면의 새로고침은 자료만 다시 읽어요.</p></section>';
