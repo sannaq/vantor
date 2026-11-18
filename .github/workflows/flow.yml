@@ -33,6 +33,11 @@ jobs:
           python-version: "3.12"
       - name: 수급 갱신
         run: python3 scripts/update_flow.py
+      - name: 수급 디스코드 알림 (장중 급변 · 저녁 종목별 확정)
+        continue-on-error: true
+        env:
+          DISCORD_BRIEF_WEBHOOK: ${{ secrets.DISCORD_BRIEF_WEBHOOK }}
+        run: python3 scripts/flow_alert.py
       - name: 변경분 올리기
         run: |
           git add feeds/flow.json feeds/stock-list.json feeds/industries.json feeds/news-main.json
