@@ -1,15 +1,15 @@
 {
   "week": "2026년 11월 3주차",
   "range": "11/16~11/20",
-  "updated": "2026-11-17",
+  "updated": "2026-11-18",
   "intro": "이번 주 핵심: **연준 의장 발언**, **소매판매**, **FOMC 의사록 공개** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
     {"date": "2026-11-17", "time": "02:00", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 발언", "note": "금리 경로 힌트. 발언 톤에 시장 민감.", "src": "ff:Fed Chairman Warsh Speaks", "rx": {"day": "2026-11-16", "mk": "US", "items": [["S&P500", -1.92, "pct"], ["나스닥", -2.49, "pct"], ["미 10년물", -3, "bp"], ["달러지수", 0.11, "pct"]]}},
-    {"date": "2026-11-17", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.4% · 직전 0.9%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.4%", "Retail Sales m/m": "0.1%"}},
+    {"date": "2026-11-17", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.4% · 직전 0.9%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.4%", "Retail Sales m/m": "0.1%"}, "rx": {"day": "2026-11-17", "mk": "US", "items": [["S&P500", -1.03, "pct"], ["나스닥", -0.74, "pct"], ["미 10년물", -2, "bp"], ["달러지수", 0.05, "pct"]]}},
     {"date": "2026-11-19", "time": "04:00", "market": "US", "type": "policy", "imp": 3, "title": "FOMC 의사록 공개", "note": "직전 회의에서 추가 인상·인하 논의가 얼마나 강했는지. 매파적이면 금리·달러↑.", "src": "ff:FOMC Meeting Minutes"},
-    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 19.2 · 직전 20.9)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "19.2"}},
-    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 199K · 직전 200K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "199K"}},
+    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 19.2 · 직전 20.9)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "20.6"}},
+    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 199K · 직전 200K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "198K"}},
     {"date": "2026-11-21", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 52.1 · 직전 51.0)", "src": "ff:Revised UoM Consumer Sentiment"},
     {"date": "2026-11-21", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.3%)", "src": "ff:Revised UoM Inflation Expectations"}
   ],
