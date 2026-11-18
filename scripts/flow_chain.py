@@ -13,6 +13,9 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 KST = ZoneInfo('Asia/Seoul')
+# chain 작업 timeout-minutes(200) 안에서 끝나야 한다. 16:00→19:00 간격(3시간)은 들어가고,
+# 밤에 밀려 돈 예약이 다음 날 09:00 까지 기다리다 시간 초과로 끊기는 것은 막는다 (11/18).
+MAX_WAIT_SEC = 190 * 60
 
 
 def slots(day):
@@ -56,6 +59,9 @@ def main():
         return
     repo, self_id = os.environ['R'], int(os.environ.get('RUN_ID', '0'))
     wait = int((nxt - now).total_seconds())
+    if wait > MAX_WAIT_SEC:
+        print(f'다음 갱신 {nxt:%m/%d %H:%M} KST 까지 {wait // 60}분 · 대기 상한 초과라 이어 달리기 종료', flush=True)
+        return
     print(f'다음 갱신 {nxt:%H:%M} KST · {wait}초 대기', flush=True)
     time.sleep(wait)
     if others_waiting(repo, self_id):
