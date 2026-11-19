@@ -1,0 +1,39 @@
+name: 미장 공식 모의 비교
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['미장 종합 평점 → 사이트·디스코드']
+    types: [completed]
+  schedule:
+    - cron: '31 23 * * 1-5'
+    - cron: '31 1,3 * * 2-6'
+permissions:
+  contents: write
+concurrency:
+  group: formula-paper-portfolios
+  cancel-in-progress: false
+jobs:
+  compare:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: AI 없는 공식별 모의계좌 갱신
+        run: node scripts/paper-formula-run.mjs
+      - name: 비교 기록 보존
+        if: always()
+        run: |
+          if [ ! -f feeds/formula-paper-us.json ]; then exit 0; fi
+          git add feeds/formula-paper-us.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'auto: 미장 공식 모의 비교'
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1

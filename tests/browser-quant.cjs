@@ -3,11 +3,15 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const root=path.resolve(__dirname,'..'),base='https://sannaq.github.io/vantor/';
 const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuationDate:'20261103',status:'waiting_evidence',message:'검토 중 · 자료 부족 종목 보류',filingCoverage:{checked:3,verified:2,officialIr:1,held:1},account:{market:m,mode:'paper',initialCapital:1000,cash:750,equity:1050,peakEquity:1100,costRate:.0015,paused:false,lastDate:'20261103',positions:[{symbol:'TEST',name:'검증 종목',quantity:3,costBasis:90,lastPrice:100,stop:80,target1:110,target:130,heldDays:2,entryDate:'20261102',reviewId:'test-review'}],pending:[{symbol:'NEXT',name:'대기 종목',quantity:1,entry:50,stop:45,reserved:50.075,signalDate:'20261103',reviewExpiresAt:'2026-11-07T02:00:00Z'}],trades:[{symbol:'TEST',name:'검증 종목',date:'20261102',side:'buy',quantity:5,price:89,cost:5,reason:'reviewed_limit_entry'},{symbol:'SOLD',name:'매도 종목',date:'20261103',side:'sell',quantity:2,price:100,cost:.3,pnl:20,reason:'first_target'}],history:[{date:'20261102',equity:1000,cash:800},{date:'20261103',equity:1050,cash:750}]},reviews:[{symbol:'TEST',name:'검증 종목',sourceDate:'20261103',status:'review_pass',entryStatus:'ready',review:{id:'test-review',reason:'<img src=x onerror="window.qtInjected=1"> 원문 그대로',createdAt:'2026-11-03T09:00:00Z'},sources:[{url:'https://example.com/filing',title:'공식 공시',type:'filing',provider:'official_ir'},{url:'javascript:alert(1)',title:'잘못된 주소'}]},{symbol:'RISK',name:'위험 종목',sourceDate:'20261103',status:'risk_hold',review:{reason:'위험 확인'}},{symbol:'NONE',name:'자료 없는 종목',sourceDate:'20261103',status:'waiting_evidence',evidenceReason:'ir_unsupported'}]});
 (async()=>{
+ const {newFormulaExperiment}=await import('../scripts/paper-formulas.mjs');
+ const formula=newFormulaExperiment('20261118',Date.parse('2026-11-19T08:00:00Z'));formula.lastSignalDate='20261118';formula.universeSize=100;
+ formula.accounts.forEach(r=>{r.account.pending=[{symbol:'TEST',name:'공식 대기 종목',entry:100,quantity:5,stop:90}];r.reviews=[{date:'20261118',symbol:'TEST',name:'<img src=x onerror=window.formulaInjected=1>',rank:1,score:75,status:'ready',reason:'formula_top10'}];});
  const browser=await chromium.launch();
  try{for(const width of [1440,390]){
-  const context=await browser.newContext({viewport:{width,height:1000}});let fail=false,empty=false;
+  const context=await browser.newContext({viewport:{width,height:1000}});let fail=false,empty=false,formulaFail=false;
   await context.route('https://sannaq.github.io/vantor/**',async r=>{
    const u=new URL(r.request().url()),rel=decodeURIComponent(u.pathname.slice('/vantor/'.length))||'index.html';
+   if(rel==='feeds/formula-paper-us.json')return formulaFail?r.fulfill({status:503,body:''}):r.fulfill({json:formula});
    if(/^feeds\/paper-(kr|us)\.json$/.test(rel)){
     if(fail)return r.fulfill({status:503,body:'unavailable'});
     const j=fixture(rel.includes('-us')?'US':'KR');
@@ -60,6 +64,13 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   await board.locator('[data-qt-tab="positions"]').click();assert((await board.locator('tbody').innerText()).includes('+$10'));assert((await board.locator('tbody').innerText()).includes('+11.11%'));await board.locator('[data-qt-tab="overview"]').click();
   await page.screenshot({path:'/tmp/vantor-quant-'+width+'.png',fullPage:true});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'page must not overflow horizontally');
+  await board.locator('[data-qt-tab="formulas"]').click();await board.locator('.qt-formula-account').first().waitFor();
+  assert.equal(await board.locator('.qt-formula-account').count(),3);assert((await board.innerText()).includes('AI 심사 없음'));assert((await board.innerText()).includes('$100,000'));assert((await board.innerText()).includes('자료 부족'));assert.equal(await board.locator('img').count(),0);assert.equal(await page.evaluate(()=>window.formulaInjected),undefined);
+  await board.locator('.qt-formula-account').first().locator('details>summary').first().click();assert((await board.innerText()).includes('5주'));assert((await board.innerText()).includes('$100'));
+  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:'/tmp/vantor-formulas-'+width+'.png',fullPage:true});
+  formulaFail=true;await board.locator('[data-qt-refresh]').click();await board.getByRole('alert').waitFor();assert.equal(await board.locator('.qt-formula-account').count(),3,'failed formula refresh retains good accounts');formulaFail=false;
+  await page.evaluate(()=>{delete _quantData.US;renderQuant(false);});assert.equal(await board.locator('.qt-formula-account').count(),3,'formula screen works independently of AI feed');
+  await board.locator('[data-qt-refresh]').click();await page.waitForFunction(()=>!_quantBusy.US&&!_formulaBusy);await board.locator('[data-qt-tab="overview"]').click();
   fail=true;await board.locator('[data-qt-refresh]').click();await board.getByRole('alert').waitFor();assert((await board.innerText()).includes('$1,050'),'failed refresh keeps last good snapshot');
   fail=false;empty=true;await board.locator('[data-qt-refresh]').click();await board.getByText('평가 기록이 쌓이면 수익 추이가 표시돼요.',{exact:true}).waitFor();
   for(const [tab,msg] of [['positions','현재 보유 종목이 없어요.'],['orders','대기 중인 모의주문이 없어요.'],['trades','아직 모의 체결 기록이 없어요.'],['reviews','해당 검토 이력이 없어요.']]){await board.locator('[data-qt-tab="'+tab+'"]').click();assert((await board.innerText()).includes(msg));}

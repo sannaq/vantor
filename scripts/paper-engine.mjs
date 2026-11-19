@@ -74,7 +74,7 @@ export function advanceDay(original, date, bars) {
     a.positions.push({ ...p, entryDate: date, heldDays: 0, costBasis: price * (1 + fee),
       lastPrice: price, firstTargetDone: false });
     a.trades.push({ date, symbol: p.symbol, name: p.name, side: 'buy', quantity: p.quantity,
-      reviewId: p.reviewId || null, price, cost: p.quantity * price * fee, reason: 'reviewed_limit_entry' });
+      reviewId: p.reviewId || null, price, cost: p.quantity * price * fee, reason: p.signalKind === 'formula' ? 'formula_limit_entry' : 'reviewed_limit_entry' });
   }
   for (const p of a.positions) {
     const [, open, high, low, close] = bars[p.symbol]; p.heldDays++; p.lastPrice = close;

@@ -12,6 +12,7 @@ on:
       - "시장 심리·전망 채점 (매일)"
       - "종합 평점 백테스트 (매달)"
       - "AI 퀀트 모의계좌"
+      - "미장 공식 모의 비교"
     types: [completed]
   workflow_dispatch: {}
 permissions:
