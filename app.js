@@ -2324,7 +2324,7 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
     if(nw&&nw.KR){ T.push(tile('news','📰','뉴스 <small>'+E(String(nw.updated||'').slice(11))+'</small>',nw.KR.slice(0,4).map(function(n){ return '<div class="gl-n">'+E(n.title)+'</div>'; }).join(''))); }
     T.push('<div class="gl-t" data-gv="watch" id="gl-watch"></div>');
     T.push(tile('ai','🤖','차트 분석 도우미','<div class="gl-s" style="white-space:normal">종목·코인을 입력하거나 차트 사진을 올리면 지지·저항·추세를 읽어 줘요</div>'));
-    if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('macro','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
+    if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('macro','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>',' id="gl-fg"')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
     T.push(tile('learn','📚','스터디','<div class="gl-s" style="white-space:normal">차트·지표·수급 기초부터 차근차근</div>'));
     // 홈 순서 (10/19 사용자 결정, 네이버·토스식): ① 시장·심리·추천 ② 지금 움직임(레이더·포착·수급·스마트머니) ③ 브리핑·일정·뉴스·관심 ④ 성과·AI·스터디
     var GL_ORDER=['gl-mkt','😱','🧭','🇺🇸','gl-radar','gl-stock','💰','gl-smart','📝','📅','📰','gl-watch','📊','🤖','📚'];
@@ -4768,6 +4768,9 @@ $$('#ltabs button').forEach(function(b){ b.onclick=function(){ _learnTab=b.datas
 var CARDPREF={collapsed:{},hidden:{}};
 try{ var _cp=JSON.parse(localStorage.getItem('aurCards')||'null'); if(_cp)CARDPREF=Object.assign({collapsed:{},hidden:{}},_cp); }catch(e){}
 if(!CARDPREF.d1012){ CARDPREF.collapsed['실시간포착급등급락거래폭발']=true; CARDPREF.d1012=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} } // 홈 정리(10/12): 실시간 포착은 처음엔 접어 둠
+/* 홈 정리(11/19 사용자 '가'): 지수 줄과 같은 숫자 — PC '시장'·'시장 심리' 타일, 폰 큰 숫자 3칸 — 은 처음엔 숨김. 화면 편집에서 다시 켤 수 있다 */
+var GL_HIDE=[['gl_mkt','홈 · 시장 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-mkt'],['gl_fg','홈 · 시장 심리 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-fg'],['ga_ks','홈 · 큰 숫자 3칸 (휴대폰, 지수 줄과 같은 숫자)','#glance .ga-ks']];
+if(!CARDPREF.d1119){ GL_HIDE.forEach(function(g){ CARDPREF.hidden[g[0]]=1; }); CARDPREF.d1119=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} }
 function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
 
 /* ═══════════ 초기화 ═══════════ */
@@ -4817,6 +4820,7 @@ function initCards(){
 function applyCollapseCss(){
   var ids=Object.keys((CARDPREF&&CARDPREF.collapsed)||{});
   var css=ids.map(function(id){ var sel='.card[data-card="'+id+'"]'; return sel+'>*:not(.ch){display:none!important}'+sel+' .cardtog{transform:rotate(-90deg)}'; }).join('');
+  (GL_HIDE||[]).forEach(function(g){ if(CARDPREF.hidden[g[0]])css+=g[2]+'{display:none!important}'; });
   var st=document.getElementById('collapseStyle'); if(!st){ st=document.createElement('style'); st.id='collapseStyle'; document.head.appendChild(st); }
   st.textContent=css;
 }
@@ -4832,7 +4836,7 @@ function applyCollapseCss(){
 function openCardEditor(){
   var cards=$$('.card').filter(function(c){return c.querySelector('.ch h2');});
   // 중복 id 제거(대표 1개씩)
-  var seen={}, list=[];
+  var seen={}, list=GL_HIDE.map(function(g){ return {id:g[0],nm:g[1]}; });
   cards.forEach(function(c){ var id=cardId(c), nm=c.querySelector('.ch h2').textContent.trim(); if(seen[id])return; seen[id]=1; list.push({id:id,nm:nm}); });
   var bg=document.createElement('div'); bg.className='modal-bg';
   bg.innerHTML='<div class="modal"><h3>⚙️ 화면 편집</h3><div class="msub">보고 싶은 항목만 켜두세요. 카드 제목의 ▾ 로 접을 수도 있어요.</div>'
