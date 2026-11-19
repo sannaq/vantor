@@ -1548,6 +1548,12 @@ function _btHTML(b){ if(!b||!b.all)return '';
     +'<div style="margin-top:6px">점수와 이후 수익률의 순위 상관(예측력) <b>'+b.all.ic+'</b> (앞 '+b.first.ic+' · 뒤 '+b.second.ic+'). 0이면 무관, 0.05만 넘어도 의미 있는 편이에요. '+(b.market==='US'?'미장 공식은 앞 1.5년으로 고르고 <b>뒤 1.5년이 확인 구간</b>이에요. 국장 공식(안정성·고점 근접·이익)은 미장 뒤 1.5년에 추천이 시장보다 못해서 쓰지 않아요.':'<b>매수 금지 쪽이 더 확실</b>하고, 추천은 평균으로는 낫지만 주마다 들쭉날쭉해요.')+'</div>'
     +'<div style="overflow-x:auto;margin-top:10px"><table style="width:100%;font-size:12.5px"><thead><tr><th class="l">지표</th><th>앞 절반 예측력</th><th>뒤 절반</th><th></th></tr></thead><tbody>'+fac+'</tbody></table></div>'
     +'<div style="font-size:11.5px;color:var(--faint);margin-top:8px">한계: '+(b.limits||[]).map(esc).join(' · ')+'</div></div></div>'; }
+/* (11/19) 검증·성과 — 백테스트·매수손절 표를 20일/60일 두 벌 다 늘어놓지 않고 버튼으로 한 벌씩 */
+function _valH(){ try{ return localStorage.getItem('vtValH')==='60'?'60':'20'; }catch(e){ return '20'; } }
+function _valSet(h){ try{ localStorage.setItem('vtValH',h); }catch(e){} renderReco(); }
+window._valSet=_valSet;
+function _valHBar(){ var cur=_valH(); return '<div style="display:flex;align-items:center;gap:8px;margin-top:16px"><span style="font-size:12.5px;font-weight:700;color:var(--sub)">백테스트 보유 기간</span><div style="display:inline-flex;background:var(--panel2);border:1px solid var(--line2);border-radius:9px;padding:2px;gap:2px">'
+  +[['20','20일'],['60','60일']].map(function(o){ var on=o[0]===cur; return '<button onclick="_valSet(\''+o[0]+'\')" style="border:none;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;'+(on?'background:#2b6cff;color:#fff':'background:transparent;color:var(--sub)')+'">'+o[1]+'</button>'; }).join('')+'</div></div>'; }
 var _PAPER={};
 function _paperPanel(US){
   var key=US?'US':'KR', p=_PAPER[key];
@@ -1625,7 +1631,7 @@ function renderReco(){
   var D=US?{trk:_US.trk,bt60:_US.bt60,aud:null,bt:_US.bt,btl60:_US.btl60,btl:_US.btl}:{trk:_TRK,bt60:_BT60,aud:_AUD,bt:_BT,btl60:_BTL60,btl:_BTL};
   // 2026-10-19 사용자 결정: 추천 = [오늘 추천 · 추천 변동 · 검증·성과] 3탭. 오늘 추천은 가격 사다리 20종목, 전 종목 순위·필터는 버튼으로, 검증 표는 '검증·성과' 탭(#recoVal)
   var VAL='<div style="margin-bottom:10px">'+tabs+'</div>'+_tcSummary(D.trk)+(D.trk?_trkHTML(D.trk):(US?'<div class="card" style="margin-top:14px"><div class="ch"><h2>실제 성과 (기록)</h2></div><div class="pad" style="padding-top:6px;font-size:12.5px;color:var(--faint)">미장 기록은 10/9(미국) 추천부터 시작해요. 20일 결과는 11월 초에 나와요.</div></div>':''))
-    +_btHTML(D.bt60)+_audHTML(D.aud)+_btHTML(D.bt)+_btlHTML(D.btl60)+_btlHTML(D.btl);
+    +_valHBar()+(_valH()==='60'?_btHTML(D.bt60)+_audHTML(D.aud)+_btlHTML(D.btl60):_btHTML(D.bt)+_audHTML(D.aud)+_btlHTML(D.btl));
   var vb=$('#recoVal'); if(vb)vb.innerHTML=VAL;
   if(!F.full){ el.innerHTML=tabs+_scCard()+_paperPanel(US)+'<div class="card"><div class="ch"><h2>'+(US?'미장 ':'')+'종목 추천</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">'+(US?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · '+j.n.toLocaleString()+'종목 채점</span></div></div>'
     +'<div class="pad" style="padding-top:6px">'+_fsLine(US)+_ladderList(US)
@@ -4772,6 +4778,8 @@ if(!CARDPREF.d1012){ CARDPREF.collapsed['실시간포착급등급락거래폭발
 /* 홈 정리(11/19 사용자 '가'): 지수 줄과 같은 숫자 — PC '시장'·'시장 심리' 타일, 폰 큰 숫자 3칸 — 은 처음엔 숨김. 화면 편집에서 다시 켤 수 있다 */
 var GL_HIDE=[['gl_mkt','홈 · 시장 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-mkt'],['gl_fg','홈 · 시장 심리 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-fg'],['ga_ks','홈 · 큰 숫자 3칸 (휴대폰, 지수 줄과 같은 숫자)','#glance .ga-ks','#glance #gaBreadth{padding-top:0!important}#glance .ga-sum{padding-top:8px!important;padding-bottom:8px!important}']];
 if(!CARDPREF.d1119){ GL_HIDE.forEach(function(g){ CARDPREF.hidden[g[0]]=1; }); CARDPREF.d1119=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} }
+/* 11/19 2차 정리(사용자 '가'): 추천 화면의 AI·퀀트 모의계좌(퀀트 트레이딩 메뉴와 같은 내용), 이벤트 화면의 '이번주 증시 이벤트' 표(위클리 캘린더와 같은 주)는 처음엔 숨김 */
+if(!CARDPREF.d1119b){ ['AI퀀트모의계좌국내','AI퀀트모의계좌미국','이번주증시이벤트'].forEach(function(id){ CARDPREF.hidden[id]=1; }); CARDPREF.d1119b=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} }
 function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
 
 /* ═══════════ 초기화 ═══════════ */
@@ -4780,6 +4788,7 @@ renderIdx(); _renderTabbar('home'); renderTune(); renderRadar(); renderSmart(); 
 /* ═══════════ 카드 편집기 ═══════════ */
 function cardId(card){
   var h=card.querySelector('.ch h2'); var txt=h?h.textContent:'';
+  if(txt.indexOf('이번주 증시 이벤트')===0)return '이번주증시이벤트'; // (11/19) 제목 뒤 날짜가 매주 바뀌어 숨김 설정이 풀리지 않게
   // (11/17) 제목 한글화 — 저장된 숨김·순서 설정이 끊기지 않게 옛 영어 이름으로 id 를 만든다
   [['시장 흐름','MARKET FLOW'],['단타 레이더','DAY TRADE RADAR'],['스마트 머니','SMART MONEY'],['시장 뉴스','MARKET NEWS'],['레이더 TOP 10','RADAR TOP 10'],['카테고리 순위 변화','CATEGORY 순위 변화'],['카테고리 점수 히트맵','CATEGORY SCORE 히트맵'],['코인 레이더','COIN RADAR'],['레이더 엔진 튜닝','RADAR 엔진 튜닝'],['VANTOR 점수','VANTOR SCORE']].forEach(function(r){ if(txt.indexOf(r[0])===0)txt=r[1]+txt.slice(r[0].length); });
   return (txt||'').replace(/[^\w가-힣]/g,'').slice(0,24)||('card'+([].indexOf.call(document.querySelectorAll('.card'),card)));
