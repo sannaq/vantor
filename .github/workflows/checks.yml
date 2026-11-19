@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # (11/19) ubuntu-latest=26.04 는 playwright 1.59 가 chromium 설치를 거부
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
