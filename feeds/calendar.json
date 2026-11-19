@@ -1838,7 +1838,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 13곳: KB Financial·Trip.com Limited·Baidu·Tyson Foods·KE·Woori Bank·H World·Aramark·Freedom Holding·AECOM·XPeng·XP·Powell Industries"
+      "t": "미국 실적 13곳: KB Financial·Trip.com Limited·Baidu·Tyson Foods·KE·Woori Bank·H World·Aramark·AECOM·XPeng·Freedom Holding·XP·Powell Industries"
      }
     ],
     "2026-11-17": [
@@ -1906,36 +1906,6 @@
       "tk": "MSFT"
      },
      {
-      "c": "earn",
-      "t": "이수페타시스 (국내)",
-      "kw": [
-       "이수페타시스"
-      ]
-     },
-     {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 16곳: KCC·DN오토모티브·솔루엠·아이에스동서·세아제강·HL홀딩스·테스·엘앤씨바이오·SFA·와이지엔터테인먼트·오픈엣지테크놀로지·디지털대성·SAMG엔터·옵티팜·제노레이·사이냅소프트",
-      "kw": [
-       "KCC",
-       "DN오토모티브",
-       "솔루엠",
-       "아이에스동서",
-       "세아제강",
-       "HL홀딩스",
-       "테스",
-       "엘앤씨바이오",
-       "SFA",
-       "와이지엔터테인먼트",
-       "오픈엣지테크놀로지",
-       "디지털대성",
-       "SAMG엔터",
-       "옵티팜",
-       "제노레이",
-       "사이냅소프트"
-      ]
-     },
-     {
       "c": "data",
       "lo": 1,
       "t": "美 주간 ADP 취업자 변동",
@@ -1999,24 +1969,13 @@
      },
      {
       "c": "earn",
-      "t": "홈디포·디즈니·Viking (장 전)",
-      "tk": "HD,DIS,VIK",
-      "when": "B"
-     },
-     {
-      "c": "earn",
-      "t": "엔비디아 (장 마감 후)",
-      "tk": "NVDA"
-     },
-     {
-      "c": "earn",
-      "t": "BHP (시간 미정)",
-      "tk": "BHP"
+      "t": "엔비디아·홈디포·디즈니·BHP (시간 미정)",
+      "tk": "NVDA,HD,DIS,BHP"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 9곳: JD.com(전)·Elbit Systems(전)·Amer Sports(전)·ZTO Express(후)·Sociedad Quimica(후)·Tencent Music(전)·Klarna(전)·Dolby Laboratories(후)·Spire(전)"
+      "t": "미국 실적 10곳: Viking·JD.com·Elbit Systems·Amer Sports·ZTO Express·Tencent Music·Sociedad Quimica·Klarna·Dolby Laboratories·Spire"
      }
     ],
     "2026-11-18": [
@@ -2196,7 +2155,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 8곳: Everpure(후)·Woodward(후)·UGI(후)·Global-E Online(전)·StoneX(후)·NewJersey Resources(후)·Copa(후)·Hafnia Limited(전)"
+      "t": "미국 실적 7곳: Everpure(후)·Woodward(후)·UGI(후)·Global-E Online(전)·StoneX(후)·NewJersey Resources(후)·Copa(후)"
      }
     ],
     "2026-11-19": [
@@ -2287,11 +2246,13 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 4곳: 동진쎄미켐·네오위즈·아로마티카·누보",
+      "t": "국내 실적 6곳: 동진쎄미켐·한솔아이원스·네오위즈·아로마티카·아이에스티이·누보",
       "kw": [
        "동진쎄미켐",
+       "한솔아이원스",
        "네오위즈",
        "아로마티카",
+       "아이에스티이",
        "누보"
       ]
      },
@@ -2327,7 +2288,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 8곳: Copart·Williams-Sonoma(전)·Warner Music(전)·Futu Limited(전)·Elastic(후)·Full Truck(전)·ESCO Technologies(후)·Gap (후)"
+      "t": "미국 실적 7곳: Williams-Sonoma(전)·Warner Music(전)·Futu Limited(전)·Full Truck(전)·Elastic(후)·ESCO Technologies(후)·Gap (후)"
      }
     ],
     "2026-11-20": [
@@ -2392,8 +2353,9 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 1곳: 경동도시가스",
+      "t": "국내 실적 2곳: 교촌에프앤비·경동도시가스",
       "kw": [
+       "교촌에프앤비",
        "경동도시가스"
       ]
      },
@@ -2426,7 +2388,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 7곳: Bending Spoons(전)·BJ's Wholesale(전)·Moog(전)·Moog(전)·Frontline Plc(전)·KT·IES"
+      "t": "미국 실적 7곳: Bending Spoons(전)·BJ's Wholesale(전)·Moog(전)·Moog(전)·Frontline Plc(전)·KT·IES(전)"
      }
     ],
     "2026-11-22": [
@@ -2444,18 +2406,6 @@
   }
  ],
  "earnings": [
-  {
-   "d": "2026-10-28",
-   "n": "알파벳",
-   "tk": "GOOGL",
-   "when": "A"
-  },
-  {
-   "d": "2026-10-28",
-   "n": "마이크로소프트",
-   "tk": "MSFT",
-   "when": "A"
-  },
   {
    "d": "2026-10-29",
    "n": "아마존",
@@ -2574,12 +2524,6 @@
  "earningsNote": "장 전 / 장 마감 후는 미국 시간 기준 → 장 마감 후 발표는 다음 거래일에 반응",
  "upcoming": [
   {
-   "d": "2026-11-18",
-   "c": "ev",
-   "t": "APEC 정상회의 (중국 선전)",
-   "auto": true
-  },
-  {
    "d": "2026-11-22",
    "c": "ev",
    "t": "트럼프 밈코인 만찬 개최"
@@ -2642,6 +2586,12 @@
    "d": "2027-01-06",
    "c": "ev",
    "t": "CES 2027 (라스베이거스)",
+   "auto": true
+  },
+  {
+   "d": "2027-01-18",
+   "c": "ev",
+   "t": "다보스포럼 (세계경제포럼)",
    "auto": true
   }
  ]
