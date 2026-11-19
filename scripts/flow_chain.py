@@ -3,6 +3,9 @@
 깃허브 예약(cron)이 몇 시간씩 밀려 장중 30분 갱신이 하루 2~3번만 돌았다.
 flow.yml 이 끝날 때마다 다음 정해진 시각까지 기다렸다가 자기 자신을 다시 실행시킨다.
 첫 시작은 국장 브리핑 push(09:20·15:45, 지연 없음)이 걸어 준다. 예약은 백업으로 남긴다.
+
+(11/19 사용자 결정) 종목별 수급(smart)은 19:00 에도 안 올라오는 날이 많아(11/16치 22:02, 11/17치 다음 날 00:46)
+20:00~23:00 매시 정각에 다시 확인한다. 그날치가 이미 들어왔으면 저녁 확인은 더 돌지 않고 멈춘다.
 """
 import json
 import os
@@ -25,8 +28,24 @@ def slots(day):
             if (h, m) <= (15, 30):
                 out.append(day.replace(hour=h, minute=m, second=0, microsecond=0))
     out.append(day.replace(hour=16, minute=0, second=0, microsecond=0))
-    out.append(day.replace(hour=19, minute=0, second=0, microsecond=0))
+    for h in EVENING_HOURS:
+        out.append(day.replace(hour=h, minute=0, second=0, microsecond=0))
     return out
+
+
+# 19:00 확정 + 종목별 수급이 늦는 날을 위한 저녁 재확인 (11/19)
+EVENING_HOURS = (19, 20, 21, 22, 23)
+
+
+def smart_date(repo):
+    """main 에 올라간 feeds/flow.json 의 종목별 수급 날짜(YYYYMMDD). 못 읽으면 None."""
+    try:
+        out = subprocess.check_output(['gh', 'api', f'repos/{repo}/contents/feeds/flow.json?ref=main',
+                                       '-H', 'Accept: application/vnd.github.raw'], text=True, timeout=60)
+        return (json.loads(out).get('smart') or {}).get('date')
+    except Exception as e:
+        print('종목별 수급 날짜 확인 실패 · 저녁 확인은 계속:', e, flush=True)
+        return None
 
 
 def next_slot(now_kst, holidays=()):
@@ -58,6 +77,9 @@ def main():
         print('오늘 남은 갱신 시각 없음 · 이어 달리기 종료', flush=True)
         return
     repo, self_id = os.environ['R'], int(os.environ.get('RUN_ID', '0'))
+    if nxt.hour >= 20 and smart_date(repo) == now.strftime('%Y%m%d'):
+        print(f'오늘({now:%m/%d}) 종목별 수급이 이미 들어옴 · 저녁 확인 종료', flush=True)
+        return
     wait = int((nxt - now).total_seconds())
     if wait > MAX_WAIT_SEC:
         print(f'다음 갱신 {nxt:%m/%d %H:%M} KST 까지 {wait // 60}분 · 대기 상한 초과라 이어 달리기 종료', flush=True)
