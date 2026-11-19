@@ -327,7 +327,7 @@ function renderHeatmap(){
   $$('#heatmap .htile').forEach(function(t){ t.onclick=function(){ openStock(t.dataset.c); }; });
   var u='· '+nowHM()+' 기준'; if($('#heatupd'))$('#heatupd').textContent=u;
 }
-var _proxyDown=false;
+var _proxyDown=false, _proxyFail=0; // (11/19) 한 번 실패로는 띠를 안 띄운다 — 두 번 연속일 때만
 /* (11/17) 종목 골라보기(국내): 목록 대기 중이면 다시 그리고, 이미 그려져 있으면 가격·등락·거래대금만 제자리 갱신 */
 function _browseLive(){ try{
   if(typeof stkMkt==='undefined'||stkMkt!=='KR'||!document.getElementById('browseNote'))return;
@@ -341,7 +341,7 @@ async function loadKisRadar(){
   try{
     var j=await fetch(PROXY+'/radar?mkt=KR&limit=40').then(function(r){if(!r.ok)throw new Error(r.status);return r.json();});
     if(!(j&&Array.isArray(j.stocks)&&j.stocks.length))throw new Error('empty');
-    _setProxyDown(false);
+    _proxyFail=0; _setProxyDown(false);
     if(j&&Array.isArray(j.stocks)&&j.stocks.length){
       // 이전 순위 저장 → 1분 순위변화(dRank) 계산
       var prev={}; RADAR.forEach(function(r){prev[r.c]=r.rank;});
@@ -351,7 +351,7 @@ async function loadKisRadar(){
       var db=$('#demoban'); if(db)db.style.display='none';
       renderRadar(); renderCats();
     }
-  }catch(e){ _setProxyDown(true); }
+  }catch(e){ if(++_proxyFail>=2)_setProxyDown(true); }
 }
 function computeRadar(){
   var uni=radarUniverse();
@@ -2323,11 +2323,12 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
     // 8 뉴스
     if(nw&&nw.KR){ T.push(tile('news','📰','뉴스 <small>'+E(String(nw.updated||'').slice(11))+'</small>',nw.KR.slice(0,4).map(function(n){ return '<div class="gl-n">'+E(n.title)+'</div>'; }).join(''))); }
     T.push('<div class="gl-t" data-gv="watch" id="gl-watch"></div>');
-    T.push(tile('ai','🤖','차트 분석 도우미','<div class="gl-s" style="white-space:normal">종목·코인을 입력하거나 차트 사진을 올리면 지지·저항·추세를 읽어 줘요</div>'));
     if(_FS&&_FS.now){ var fn=_FS.now; T.push(tile('macro','😱','시장 심리 <small>'+fn.fgDate.slice(5).replace('-','/')+'</small>','<div class="gl-r"><span>공포탐욕지수</span><b style="color:'+_fsColor(fn.fg)+'">'+Math.round(fn.fg)+' '+fn.zone+'</b></div><div class="gl-r"><span>VIX</span><b>'+fn.vix.toFixed(1)+'</b></div><div class="gl-r"><span>하이일드 스프레드</span><b>'+(fn.hy==null?'—':fn.hy.toFixed(2)+'%')+'</b></div>',' id="gl-fg"')); } else _fsLoad(function(j){ if(j)renderGlance(true); });
-    T.push(tile('learn','📚','스터디','<div class="gl-s" style="white-space:normal">차트·지표·수급 기초부터 차근차근</div>'));
+    // (11/19) 링크만 있던 '차트 분석 도우미'·'스터디' 두 타일을 하나로 — 마지막 줄에 타일 하나만 남던 것 정리
+    T.push(tile('ai','🧰','도구','<div class="gl-r" data-go="ai" style="cursor:pointer"><span>🤖 차트 분석 도우미</span><b style="font-weight:600;color:var(--faint)">›</b></div><div class="gl-s" style="white-space:normal;margin:0 0 6px">종목·차트 사진으로 지지·저항·추세 읽기</div>'
+      +'<div class="gl-r" data-go="learn" style="cursor:pointer"><span>📚 스터디</span><b style="font-weight:600;color:var(--faint)">›</b></div><div class="gl-s" style="white-space:normal;margin:0">차트·지표·수급 기초부터 차근차근</div>'));
     // 홈 순서 (10/19 사용자 결정, 네이버·토스식): ① 시장·심리·추천 ② 지금 움직임(레이더·포착·수급·스마트머니) ③ 브리핑·일정·뉴스·관심 ④ 성과·AI·스터디
-    var GL_ORDER=['gl-mkt','😱','🧭','🇺🇸','gl-radar','gl-stock','💰','gl-smart','📝','📅','📰','gl-watch','📊','🤖','📚'];
+    var GL_ORDER=['gl-mkt','😱','🧭','🇺🇸','gl-radar','gl-stock','💰','gl-smart','📝','📅','📰','gl-watch','📊','🧰'];
     var _gk=function(h){ for(var i=0;i<GL_ORDER.length;i++){ if(h.indexOf(GL_ORDER[i].indexOf('gl-')===0?'id="'+GL_ORDER[i]+'"':'<div class="gl-h">'+GL_ORDER[i])>=0)return i; } return 99; };
     T=T.map(function(h,i){ return [h,_gk(h),i]; }).sort(function(a,b){ return a[1]-b[1]||a[2]-b[2]; }).map(function(x){ return x[0]; });
     /* 폰 첫 화면 = 앱처럼 (2026-11-11 사용자 '가'): 위 요약(코스피·나스닥100·공포탐욕·오늘 추천 1~3위) + 아래 메뉴 아이콘 3×3. PC 는 기존 타일 그대로 */
@@ -2356,7 +2357,7 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
       +_ap()+'<div class="card gl-full" style="margin-bottom:14px"><div class="ch"><h2>한눈에 보기</h2><div class="r"><span style="font-size:11.5px;color:var(--faint)">누르면 해당 화면으로</span></div></div><div class="pad" style="padding-top:6px"><div class="gl-g">'+T.join('')+'</div></div></div>';
     _glLive();
     $$('#glance .gl-app [data-gv]').forEach(function(t){ t.onclick=function(e){ e.stopPropagation(); showView(t.dataset.gv); }; });
-    $$('#glance .gl-t').forEach(function(t){ t.onclick=function(){ if(t.dataset.gus&&typeof _recoF!=='undefined'){ try{ _recoF.m='US'; }catch(e){} } showView(t.dataset.gv); if(t.dataset.gl){ var lb=document.querySelector('#ltabs button[data-l='+t.dataset.gl+']'); if(lb)lb.click(); } }; });
+    $$('#glance .gl-t').forEach(function(t){ t.onclick=function(ev){ var go=ev&&ev.target&&ev.target.closest&&ev.target.closest('[data-go]'); if(go){ showView(go.dataset.go); return; } if(t.dataset.gus&&typeof _recoF!=='undefined'){ try{ _recoF.m='US'; }catch(e){} } showView(t.dataset.gv); if(t.dataset.gl){ var lb=document.querySelector('#ltabs button[data-l='+t.dataset.gl+']'); if(lb)lb.click(); } }; });
   });
 }
 /* 실시간 타일 — 레이더(RADAR)·종목(KBOARD 거래대금 상위)·스마트머니(SMART)·관심(WATCH) */
@@ -4769,7 +4770,7 @@ var CARDPREF={collapsed:{},hidden:{}};
 try{ var _cp=JSON.parse(localStorage.getItem('aurCards')||'null'); if(_cp)CARDPREF=Object.assign({collapsed:{},hidden:{}},_cp); }catch(e){}
 if(!CARDPREF.d1012){ CARDPREF.collapsed['실시간포착급등급락거래폭발']=true; CARDPREF.d1012=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} } // 홈 정리(10/12): 실시간 포착은 처음엔 접어 둠
 /* 홈 정리(11/19 사용자 '가'): 지수 줄과 같은 숫자 — PC '시장'·'시장 심리' 타일, 폰 큰 숫자 3칸 — 은 처음엔 숨김. 화면 편집에서 다시 켤 수 있다 */
-var GL_HIDE=[['gl_mkt','홈 · 시장 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-mkt'],['gl_fg','홈 · 시장 심리 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-fg'],['ga_ks','홈 · 큰 숫자 3칸 (휴대폰, 지수 줄과 같은 숫자)','#glance .ga-ks']];
+var GL_HIDE=[['gl_mkt','홈 · 시장 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-mkt'],['gl_fg','홈 · 시장 심리 타일 (PC, 지수 줄과 같은 숫자)','#glance #gl-fg'],['ga_ks','홈 · 큰 숫자 3칸 (휴대폰, 지수 줄과 같은 숫자)','#glance .ga-ks','#glance #gaBreadth{padding-top:0!important}#glance .ga-sum{padding-top:8px!important;padding-bottom:8px!important}']];
 if(!CARDPREF.d1119){ GL_HIDE.forEach(function(g){ CARDPREF.hidden[g[0]]=1; }); CARDPREF.d1119=1; try{ localStorage.setItem('aurCards',JSON.stringify(CARDPREF)); }catch(e){} }
 function saveCardPref(){ try{localStorage.setItem('aurCards',JSON.stringify(CARDPREF));}catch(e){} }
 
@@ -4820,7 +4821,7 @@ function initCards(){
 function applyCollapseCss(){
   var ids=Object.keys((CARDPREF&&CARDPREF.collapsed)||{});
   var css=ids.map(function(id){ var sel='.card[data-card="'+id+'"]'; return sel+'>*:not(.ch){display:none!important}'+sel+' .cardtog{transform:rotate(-90deg)}'; }).join('');
-  (GL_HIDE||[]).forEach(function(g){ if(CARDPREF.hidden[g[0]])css+=g[2]+'{display:none!important}'; });
+  (GL_HIDE||[]).forEach(function(g){ if(CARDPREF.hidden[g[0]])css+=g[2]+'{display:none!important}'+(g[3]||''); });
   var st=document.getElementById('collapseStyle'); if(!st){ st=document.createElement('style'); st.id='collapseStyle'; document.head.appendChild(st); }
   st.textContent=css;
 }
