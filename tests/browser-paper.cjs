@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
   try {
     for (const width of [1440, 390]) {
       const context = await browser.newContext({ viewport: { width, height: 1000 } });
-      if (!process.env.VANTOR_LIVE) for (const file of ['index.html','app.js','sync-core.js','quant.js','quant.css']) {
+      if (!process.env.VANTOR_LIVE) for (const file of ['index.html','app.js','sync-core.js','quant.js','quant.css','ui-layout.js','ui-layout.css']) {
         await context.route(file === 'index.html' ? 'https://sannaq.github.io/vantor/' :
           new RegExp('/vantor/' + file.replace('.', '\\.') + '(?:\\?|$)'), r => r.fulfill({
           contentType: file.endsWith('.html') ? 'text/html' : file.endsWith('.css') ? 'text/css' : 'application/javascript',

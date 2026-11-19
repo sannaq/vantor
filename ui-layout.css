@@ -1,0 +1,43 @@
+/* Consistent contrast and reading order across both themes. */
+:root{--sub:#526071;--faint:#667386}
+:root[data-theme="dark"]{--sub:#b2bdce;--faint:#99a7bb}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--sub:#b2bdce;--faint:#99a7bb}}
+#glance .gl-app{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:18px}
+#glance .ga-sum,#glance .ui-home-accounts,#glance .ga-grid{grid-column:1/-1}
+#glance .ga-sum,#glance .ga-reco{margin-bottom:0}
+#glance .ga-ks.ui-market-summary{display:flex!important}
+#glance .ga-r em{font-style:normal;font-size:12px;font-weight:700;white-space:nowrap}
+#glance .ga-grid{display:none}
+.ui-home-accounts{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:14px}
+.ui-home-accounts h2{font-size:15px;margin:0 0 10px}
+.ui-home-accounts>div{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ui-home-accounts button{text-align:left;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel2);color:var(--ink);font:inherit;cursor:pointer;min-width:0}
+.ui-home-accounts button>*{display:block;overflow-wrap:anywhere}.ui-home-accounts strong{font-size:22px;margin:4px 0}.ui-home-accounts span,.ui-home-accounts small{font-size:12px;color:var(--sub)}
+.ld-tv{font-size:12px;color:var(--sub);font-variant-numeric:tabular-nums}.ui-more-reco{display:none}
+.ui-today ul{list-style:none;margin:0;padding:0}.ui-today li{padding:8px 0;border-bottom:1px solid var(--line2)}.ui-today li span{display:block;color:var(--sub);font-size:12px}.ui-today small{font-size:12px;color:var(--sub)}
+.maincol .brf{background:var(--panel);color:var(--ink)}.maincol .brf .tile{background:var(--panel2);border-color:var(--line)}.maincol .brf .tile .v.up{color:var(--up)}.maincol .brf .tile .v.down{color:var(--down)}.maincol .brf .tile .v.flat{color:var(--ink)}
+.ui-notices{position:relative;flex-shrink:0;order:4}.ui-notices .ibtn{width:auto;min-width:48px;padding:8px;font-size:12px}
+#uiNoticePanel{position:absolute;right:0;top:calc(100% + 8px);width:min(350px,calc(100vw - 24px));max-height:65vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow2);padding:14px;z-index:120}
+#uiNoticePanel[hidden]{display:none}#uiNoticePanel header{display:flex;justify-content:space-between;gap:12px}#uiNoticePanel button{font:inherit;color:var(--sub);background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer}#uiNoticePanel ul{padding:0;list-style:none}#uiNoticePanel li{padding:10px 0;border-top:1px solid var(--line2);font-size:13px;overflow-wrap:anywhere}#uiNoticePanel small{display:block;color:var(--sub);font-size:11px;margin-top:5px}
+#quantBoard .qt-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}#quantBoard .qt-tabs .qt-btn{padding:10px 4px;font-size:13px}#quantBoard .qt-subtabs .qt-btn{font-size:12px;padding:6px 10px}
+.ui-holdings{display:none}.ui-holding{border:1px solid var(--line);border-radius:12px;padding:14px;margin:10px 0;background:var(--panel2)}.ui-holding header{display:flex;align-items:baseline;gap:8px}.ui-holding small{color:var(--sub)}.ui-holding>strong{margin:8px 0}.ui-holding dl{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0;font-size:12px}.ui-holding dt{color:var(--sub)}.ui-holding dd{margin:0;text-align:right;overflow-wrap:anywhere}.ui-holding summary{font-size:12px;cursor:pointer;color:var(--sub)}
+@media(max-width:700px){
+ #glance .gl-app{grid-template-columns:1fr;gap:10px}#glance .ga-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}#glance .ga-grid button{padding:10px 4px;font-size:12px}#glance .ga-grid button b{font-size:20px}
+ .ui-home-accounts strong{font-size:18px}.ui-home-accounts>div{gap:6px}.ui-home-accounts button{padding:10px}
+ .ld-list:not(.all) .ld-extra{display:none}.ui-more-reco{display:block;width:100%;padding:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;font:inherit;cursor:pointer;margin-top:8px}
+ .ld-tv{flex-basis:100%;padding-left:28px}.ld-legend{line-height:1.6}.ld-e{margin-left:28px!important}
+ .card.mf:not(.mf-open) .mf-pv.ui-brief-preview{display:block;white-space:pre-line;line-height:1.65;max-height:none;overflow:visible;text-overflow:clip;font-size:13px;color:var(--sub);padding-top:8px}
+ .ui-holdings{display:block}.ui-position-table,.qt-table-hint{display:none}#quantBoard .qt-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}#quantBoard .qt-box{padding:14px}#quantBoard .qt-grid strong{font-size:18px}#quantBoard .qt-head h1{font-size:21px}
+ .ui-notices{position:static}#uiNoticePanel{position:fixed;right:10px;top:60px}
+}
+/* The legacy home stylesheet is injected after load; keep this hierarchy explicit. */
+@media(min-width:701px){#glance .ga-grid{display:none!important}}
+.maincol .brf h3,.maincol .brf b,.maincol .brf h4,.maincol .brf .box h4,.maincol .brf .warn h4,.maincol .brf .ev h4,.maincol .brf .chk h4{color:var(--ink)}
+.maincol .brf .lead,.maincol .brf .ktext,.maincol .brf .sbox .l,.maincol .brf .warn .l,.maincol .brf .evb,.maincol .brf .cb{color:var(--sub)}
+.maincol .brf .src,.maincol .brf .note,.maincol .brf .foot,.maincol .brf .tile .t,.maincol .brf .tile .s{color:var(--faint)}
+.maincol .brf .sbox,.maincol .brf .warn,.maincol .brf .chk,.maincol .brf .pill,.maincol .brf .tag{background:var(--panel2);color:var(--ink);border-color:var(--line)}
+.maincol .brf .box,.maincol .brf .bhead,.maincol .brf .ev,.maincol .brf .evrow,.maincol .brf .note{border-color:var(--line)}
+.maincol .brf .pill.up{color:var(--up);background:var(--upbg)}.maincol .brf .pill.down{color:var(--down);background:var(--downbg)}
+.ui-caution,.ui-market-detail{font-size:12px;line-height:1.6;color:var(--sub)}
+.reco-primary .tf{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;font-size:12px;cursor:pointer}
+@media(max-width:700px){.reco-primary>.ch{flex-wrap:wrap;gap:6px}.reco-primary>.ch h2{flex:1 0 100%;white-space:nowrap}.reco-primary>.ch>.r{margin-left:0;flex-wrap:wrap}.reco-primary>.ch>.r>span{line-height:1.5}#glance .gl-g{grid-template-columns:repeat(2,minmax(0,1fr))!important}#glance .gl-t[data-gv="brief"],#glance .gl-t[data-gv="events"],#glance .gl-t[data-gv="news"]{grid-column:1/-1}}

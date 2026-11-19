@@ -35,15 +35,18 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   const metrics=board.locator('.qt-grid');assert((await metrics.innerText()).includes('₩30'));assert((await metrics.innerText()).includes('₩20'));
   assert((await board.innerText()).includes('18:39:00'));assert.equal(await board.locator('svg circle').count(),2);
   await board.locator('[data-qt-tab="positions"]').click();assert((await board.innerText()).includes('28.57%'));assert((await board.innerText()).includes('₩90'));
+  assert.equal(await board.locator('.qt-tabs button').count(),4);
+  if(width<700){assert(await board.locator('.ui-holding').first().isVisible());assert((await board.locator('.ui-holding').first().innerText()).includes('₩89 × 5주'));assert((await board.locator('.ui-holding').first().innerText()).includes('3주'));}
   var row=board.locator('tbody tr').first();
-  assert((await row.innerText()).includes('매수가 ₩89 × 5주'));assert((await row.innerText()).includes('매수 금액 ₩445'));assert((await row.innerText()).includes('총 차감 ₩450'));assert.equal(await row.locator('td').nth(1).innerText(),'3주');
+  assert((await row.textContent()).includes('매수가 ₩89 × 5주'));assert((await row.textContent()).includes('매수 금액 ₩445'));assert((await row.textContent()).includes('총 차감 ₩450'));assert.equal(await row.locator('td').nth(1).innerText(),'3주');
   assert.equal(await page.evaluate(()=>quantPurchase({trades:[{side:'buy',symbol:'X',date:'20260101',quantity:5,price:80,cost:1}]},{symbol:'X',entryDate:'20261102'})),null,'previous holding cycle must not supply purchase price');
-  assert((await row.innerText()).includes('수익'));assert((await row.innerText()).includes('+₩30'));assert((await row.innerText()).includes('+11.11%'));assert((await row.innerText()).includes('+₩10'));
+  assert((await row.textContent()).includes('수익'));assert((await row.textContent()).includes('+₩30'));assert((await row.textContent()).includes('+11.11%'));assert((await row.textContent()).includes('+₩10'));
   await page.evaluate(()=>{_quantData.KR.account.positions[0].lastPrice=80;renderQuant();});
-  assert((await row.innerText()).includes('손실'));assert((await row.innerText()).includes('−₩30'));assert((await row.innerText()).includes('−11.11%'));assert((await row.innerText()).includes('−₩10'));assert.equal(await row.locator('.qt-loss').count(),4);
+  if(width<700)assert((await board.locator('.ui-holding').first().innerText()).includes('-₩30 / -11.11%'));
+  assert((await row.textContent()).includes('손실'));assert((await row.textContent()).includes('−₩30'));assert((await row.textContent()).includes('−11.11%'));assert((await row.textContent()).includes('−₩10'));assert.equal(await row.locator('.qt-loss').count(),4);
   await page.screenshot({path:'/tmp/vantor-quant-pnl-'+width+'.png',fullPage:true});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
-  await page.evaluate(()=>{_quantData.KR.account.positions[0].lastPrice=90;renderQuant();});assert((await row.innerText()).includes('보합'));assert((await row.innerText()).includes('0.00%'));
+  await page.evaluate(()=>{_quantData.KR.account.positions[0].lastPrice=90;renderQuant();});assert((await row.textContent()).includes('보합'));assert((await row.textContent()).includes('0.00%'));
   await page.evaluate(()=>{_quantData.KR.account.positions[0].lastPrice=100;renderQuant();});
   await board.locator('[data-qt-tab="orders"]').click();assert((await board.innerText()).includes('대기 종목'));assert((await board.innerText()).includes('11:00:00'));
   await board.locator('[data-qt-tab="trades"]').click();assert((await board.innerText()).includes('1차 목표가 분할 매도'));
@@ -61,10 +64,10 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   await board.locator('.qt-trainer-account').first().locator('details>summary').first().click();assert((await board.locator('.qt-trainer-account').first().innerText()).includes('₩89 × 5주'));
   await page.screenshot({path:'/tmp/vantor-trainer-'+width+'.png',fullPage:true});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await board.locator('[data-qt-market="US"]').click();await board.locator('[data-qt-tab="overview"]').waitFor();await board.locator('[data-qt-tab="overview"]').click();assert((await board.innerText()).includes('$1,050'));
-  await board.locator('[data-qt-tab="positions"]').click();assert((await board.locator('tbody').innerText()).includes('+$10'));assert((await board.locator('tbody').innerText()).includes('+11.11%'));await board.locator('[data-qt-tab="overview"]').click();
+  await board.locator('[data-qt-tab="positions"]').click();assert((await board.locator('tbody').textContent()).includes('+$10'));assert((await board.locator('tbody').textContent()).includes('+11.11%'));await board.locator('[data-qt-tab="overview"]').click();
   await page.screenshot({path:'/tmp/vantor-quant-'+width+'.png',fullPage:true});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1),'page must not overflow horizontally');
-  await board.locator('[data-qt-tab="formulas"]').click();await board.locator('.qt-formula-account').first().waitFor();
+  await board.locator('[data-qt-tab="trainer"]').click();await board.locator('[data-qt-tab="formulas"]').click();await board.locator('.qt-formula-account').first().waitFor();
   assert.equal(await board.locator('.qt-formula-account').count(),3);assert((await board.innerText()).includes('AI 심사 없음'));assert((await board.innerText()).includes('$100,000'));assert((await board.innerText()).includes('자료 부족'));assert.equal(await board.locator('img').count(),0);assert.equal(await page.evaluate(()=>window.formulaInjected),undefined);
   await board.locator('.qt-formula-account').first().locator('details>summary').first().click();assert((await board.innerText()).includes('5주'));assert((await board.innerText()).includes('$100'));
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:'/tmp/vantor-formulas-'+width+'.png',fullPage:true});
