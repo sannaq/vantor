@@ -191,11 +191,16 @@ function watchToggle(code,nm){
   updateWatchBadge(); if(typeof renderRailWatch==='function')renderRailWatch();
 }
 /* ── 우측 레일: 관심종목 TOP5 · BTC 미니차트 ── */
+/* (11/19) 레이더·시세판에 없는 관심 종목도 코드 대신 이름으로 — 오늘 추천·전체 종목 목록에서 찾는다 */
+function _wNm(code){ var p=((window._glPk&&window._glPk.top)||[]).filter(function(y){return y.c===code;})[0]; if(p)return esc(p.n);
+  var L=(typeof _STKLIST!=='undefined'&&_STKLIST)||[]; for(var i=0;i<L.length;i++){ if(L[i][0]===code)return esc(L[i][1]); }
+  if(!L.length&&typeof _loadStockList==='function'&&!_wNm._p){ _wNm._p=1; try{ _loadStockList().then(function(){ renderRailWatch(); }); }catch(e){} }
+  return code; }
 function renderRailWatch(){ var el=document.getElementById('railWatch'); if(!el)return;
   var empty=!WATCH||!WATCH.length; document.body.classList.toggle('rail-empty',empty);
   if(empty){ el.innerHTML='<div style="color:var(--faint);font-size:12px">관심종목을 담아보세요. 종목에서 ★ 를 누르면 여기 떠요.</div>'; return; }
   var pool=[].concat((typeof KBOARD!=='undefined'&&KBOARD)||[],(typeof KISUNIV!=='undefined'&&KISUNIV)||[]);
-  el.innerHTML=WATCH.slice(0,8).map(function(code){ var m=(typeof meta==='function')?(meta(code)||{}):{}; var nm=m.nm||code;
+  el.innerHTML=WATCH.slice(0,8).map(function(code){ var m=(typeof meta==='function')?(meta(code)||{}):{}; var nm=m.nm||_wNm(code);
     var q=null; for(var i=0;i<pool.length;i++){ if(pool[i]&&pool[i].c===code){ q=pool[i]; break; } }
     var px=q&&hasNum(q.px)?'<div class="rpx num">'+won(q.px)+'<div class="'+cls(q.ch)+'" style="font-size:11px">'+pctTxt(q.ch)+'</div></div>':'<div style="color:var(--faint);font-size:11px" class="num">'+code+'</div>';
     return '<div class="rw" onclick="openStock?openStock(\''+code+'\'):showView(\'watch\')" style="cursor:pointer"><div class="rnm">'+nm+'</div>'+px+'</div>'; }).join('');
@@ -2297,7 +2302,7 @@ function _glJ(u){ return fetch(u,{cache:'no-store'}).then(function(r){return r.o
 function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Date.now()-_glAt<120000&&el.innerHTML)return; _glAt=Date.now();
   if(!el.innerHTML)el.innerHTML='<div class="card" style="margin-bottom:14px"><div class="pad" style="color:var(--faint);font-size:12.5px">한눈에 보기 불러오는 중…</div></div>';
   Promise.all([_glJ('feeds/flow.json'),_glJ('feeds/stock-picks.json'),_glJ('feeds/stock-picks-us.json'),_glJ('briefs/index.json'),_glJ('briefs-us/index.json'),_glJ('events.json'),_glJ('feeds/track-summary.json'),_glJ('feeds/news-all.json')]).then(function(a){
-    var fl=a[0], pk=a[1], pu=a[2], bk=a[3], bu=a[4], ev=a[5], tr=a[6], nw=a[7];
+    var fl=a[0], pk=a[1], pu=a[2], bk=a[3], bu=a[4], ev=a[5], tr=a[6], nw=a[7]; window._glPk=pk; // 관심 0개 타일의 추천 바로 담기용 (11/19)
     var P=function(v,d){ if(v==null||!isFinite(v))return '—'; return '<span class="'+(v>0?'up':v<0?'down':'')+'" style="font-weight:700">'+(v>0?'+':'')+(+v).toFixed(d==null?2:d)+'%</span>'; };
     var E=function(x){ return x==null?'':esc(String(x)); };
     var tile=function(v,icon,title,body,extra){ return '<div class="gl-t" data-gv="'+v+'"'+(extra||'')+'><div class="gl-h">'+icon+' '+title+'<span>›</span></div>'+body+'</div>'; };
@@ -2382,9 +2387,15 @@ function _glLive(){ if(!$('#gl-radar'))return;
   $('#gl-stock').innerHTML=H('🔎','종목 <small>거래대금 상위</small>')+(kb.length?kb.slice(0,4).map(function(r){ return '<div class="gl-r"><span>'+NM(r)+'</span>'+P(r.ch)+'</div>'; }).join(''):'<div class="gl-s">실시간 시세 연결 중…</div>');
   var sm=(typeof SMART!=='undefined'&&SMART)||{}, W=function(v){ return '<b class="up" style="font-weight:700">+'+(+v).toLocaleString()+'억</b>'; };
   $('#gl-smart').innerHTML=H('💰','스마트 머니 <small>순매수</small>')+((sm.foreign&&sm.foreign.length)?'<div class="gl-r"><span style="color:var(--faint)">외국인</span></div>'+sm.foreign.slice(0,2).map(function(r){ return '<div class="gl-r"><span>'+esc(String(r[0]))+'</span>'+W(r[1])+'</div>'; }).join('')+'<div class="gl-r"><span style="color:var(--faint)">기관</span></div>'+(sm.inst||[]).slice(0,2).map(function(r){ return '<div class="gl-r"><span>'+esc(String(r[0]))+'</span>'+W(r[1])+'</div>'; }).join(''):'<div class="gl-s">집계 중…</div>');
-  var wl=(typeof WATCH!=='undefined'&&WATCH)||[], pool=rd.concat(kb), nmOf=function(c){ var x=pool.filter(function(y){return y.c===c;})[0]; return x?NM(x):esc(c); };
-  $('#gl-watch').innerHTML=H('⭐','관심 종목 <small>'+wl.length+'개</small>')+(wl.length?wl.slice(0,4).map(function(c){ var x=pool.filter(function(y){return y.c===c;})[0]; return '<div class="gl-r"><span>'+nmOf(c)+'</span>'+(x?P(x.ch):'')+'</div>'; }).join(''):'<div class="gl-s" style="white-space:normal">종목에서 ☆ 를 누르면 여기 모여요</div>');
+  var wl=(typeof WATCH!=='undefined'&&WATCH)||[], pool=rd.concat(kb), nmOf=function(c){ var x=pool.filter(function(y){return y.c===c;})[0]; if(x)return NM(x); var p=((window._glPk&&window._glPk.top)||[]).filter(function(y){return y.c===c;})[0]; return p?esc(p.n):esc(c); };
+  $('#gl-watch').innerHTML=H('⭐','관심 종목 <small>'+wl.length+'개</small>')+(wl.length?wl.slice(0,4).map(function(c){ var x=pool.filter(function(y){return y.c===c;})[0]; return '<div class="gl-r"><span>'+nmOf(c)+'</span>'+(x?P(x.ch):'')+'</div>'; }).join(''):_glWatchEmpty());
 }
+/* (11/19) 관심 0개면 빈 안내만 있던 타일 — 오늘 추천 1~3위를 바로 ☆ 담을 수 있게 */
+function _glWatchEmpty(){ var top=((window._glPk&&window._glPk.top)||[]).slice(0,3);
+  return '<div class="gl-s" style="white-space:normal;margin:0 0 4px">아직 없어요 · 종목 옆 ☆ 를 누르면 여기 모여요</div>'
+    +(top.length?'<div class="gl-s" style="margin:2px 0">오늘 추천에서 바로 담기</div>'+top.map(function(x){ return '<div class="gl-r" data-wadd="'+esc(x.c)+'" style="cursor:pointer"><span>☆ '+esc(x.n)+'</span><b style="font-weight:600;color:#2ebd85">'+x.total+'점</b></div>'; }).join(''):''); }
+document.addEventListener('click',function(e){ var w=e.target.closest&&e.target.closest('#glance [data-wadd]'); if(!w)return; e.stopPropagation(); e.preventDefault();
+  var c=w.dataset.wadd; if(!watchHas(c))watchToggle(c); if(typeof _glLive==='function')_glLive(); if(typeof toast==='function')toast('⭐ 관심 종목에 담았어요'); },true);
 setTimeout(function(){ if(typeof coinMode!=='undefined'&&!coinMode&&$('#v-home')&&$('#v-home').classList.contains('on')){ document.body.classList.add('home-glance'); renderGlance(); } },0);
 setInterval(function(){ var g=$('#glance'); if(g&&g.style.display!=='none'&&$('#v-home')&&$('#v-home').classList.contains('on'))renderGlance(true); },5*60000);
 /* ═══ 메뉴 9개 개편 (2026-10-19 사용자 결정: B 정리형 + 폰 하단 탭바) ═══
@@ -5488,7 +5499,21 @@ function mfApply(){ var v=$('.view.on'); if(!v)return; var on=_mfIsM(), cs=_mfCa
   cs.forEach(function(c){ c.classList.add('mf'); var ch=_mfHead(c); ch.classList.add('mf-h');
     if(!ch.querySelector('.mf-back')){ var bk=document.createElement('button'); bk.className='mf-back'; bk.type='button'; bk.textContent='‹ 뒤로'; bk.onclick=_mfBack; ch.insertBefore(bk,ch.firstChild); }
     if(!c._mfOn){ c._mfOn=1; ch.addEventListener('click',function(e){ if(!c.classList.contains('mf')||c.classList.contains('mf-open'))return; if(e.target.closest('button,a,input,select,label,textarea,.mktseg'))return; _mfOpen(c); }); }
+    _mfPreview(c,ch);
     if(_MF&&!c.classList.contains('mf-open')&&_mfKey(c)===_MF)_mfOpen(c,true); }); }
+/* (11/19) 폰 목록에서 제목만 보여 눌러야 알던 것 — 칸 내용의 첫 줄(표면 첫 행)을 제목 아래 한 줄로 */
+function _mfPreview(c,ch){ var t='', tr=c.querySelector('tbody tr');
+  var clean=function(s){ return String(s||'').replace(/☆|★|📷|▾|›/g,' ').replace(/\s+/g,' ').trim(); };
+  if(tr){ t=[].map.call(tr.children,function(td){ return clean(td.textContent); }).filter(Boolean).slice(0,4).join(' · '); }
+  if(!t){ var parts=[], w=document.createTreeWalker(c,NodeFilter.SHOW_TEXT,{acceptNode:function(n){
+      var el=n.parentElement; if(!el||ch.contains(el)||el.closest('button,select,label,script,style,.mktseg,[onclick]'))return NodeFilter.FILTER_REJECT;
+      return clean(n.nodeValue)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT; }});
+    while(w.nextNode()&&parts.join(' ').length<90)parts.push(clean(w.currentNode.nodeValue));
+    t=parts.join(' '); }
+  t=Array.from(t).slice(0,70).join('');
+  var pv=ch.querySelector('.mf-pv'); if(!t){ if(pv)pv.remove(); return; }
+  if(!pv){ pv=document.createElement('div'); pv.className='mf-pv'; ch.appendChild(pv); }
+  if(pv.textContent!==t)pv.textContent=t; }
 function _coinAppGrid(){ var cm=$('#coinMetrics'); if(!cm||$('#cAppGrid')||typeof CMORE==='undefined')return;
   var g=document.createElement('div'); g.id='cAppGrid'; g.className='ga-grid c-app';
   g.innerHTML=CMORE.filter(function(x){ return x[0]!=='home'; }).map(function(x){ return '<button type="button" onclick="coinNav(\''+x[0]+'\')"><b>'+x[2]+'</b>'+x[1]+'</button>'; }).join('');
