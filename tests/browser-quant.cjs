@@ -26,7 +26,7 @@ const fixture=m=>({updatedAt:'2026-11-03T09:39:00Z',sourceDate:'20261103',valuat
   else{await page.locator('#tabbar').getByText('더보기',{exact:true}).click();await page.locator('#moreSheet').getByText('퀀트 트레이딩',{exact:true}).click();}
   const board=page.locator('#quantBoard');await board.getByText('총 평가액',{exact:true}).waitFor();
   assert.equal(await page.locator('#menu a[data-v="watch"] + a').getAttribute('data-v'),'quant');
-  assert((await board.innerText()).includes('최대 10회 검토'));
+  assert((await board.innerText()).includes('최대 8회 검토'));
   assert((await board.innerText()).includes('₩1,050'));assert((await board.innerText()).includes('₩50 / 5.00%'));
   const metrics=board.locator('.qt-grid');assert((await metrics.innerText()).includes('₩30'));assert((await metrics.innerText()).includes('₩20'));
   assert((await board.innerText()).includes('18:39:00'));assert.equal(await board.locator('svg circle').count(),2);

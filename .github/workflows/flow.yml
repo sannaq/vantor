@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       chain:
-        description: '이어 달리기로 실행됨'
+        description: '이어 달리기로 실행됨 (yes=갱신 · hop=밤·주말 사슬만 잇기)'
         required: false
         default: 'no'
 
@@ -23,6 +23,8 @@ permissions:
 
 jobs:
   update:
+    # (11/19) chain=hop 은 밤·주말에 사슬만 잇는 실행 — 수급은 받지 않는다
+    if: github.event.inputs.chain != 'hop'
     runs-on: ubuntu-latest
     concurrency:
       group: flow-update

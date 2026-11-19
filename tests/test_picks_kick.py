@@ -27,9 +27,10 @@ class KickTests(unittest.TestCase):
         self.assertEqual(kick_plan(datetime.fromisoformat("2026-11-14T00:41:00+09:00"), "schedule"), ("KR", 0))
 
     def test_duplicate_and_no_message_recovery(self):
+        # (11/19) main 이 발행본 읽기와 최근 실행 목록(gh run list) 두 번 check_output 을 부른다 — 실행 목록은 빈 목록으로 돌려준다
         for published, calls in [('20261113', 0), ('20261112', 1)]:
             response=json.dumps({'content':base64.b64encode(json.dumps({'date':published}).encode()).decode()})
-            with patch.dict(os.environ, {'R':'sannaq/vantor','SEND':'no'}), patch('picks_kick.kick_plan', return_value=('KR', 0)), patch('picks_kick.session_date', return_value='20261113'), patch('picks_kick.subprocess.check_output', return_value=response), patch('picks_kick.subprocess.run') as run:
+            with patch.dict(os.environ, {'R':'sannaq/vantor','SEND':'no'}), patch('picks_kick.kick_plan', return_value=('KR', 0)), patch('picks_kick.session_date', return_value='20261113'), patch('picks_kick.subprocess.check_output', side_effect=lambda args, **k: '[]' if 'run' in args else response), patch('picks_kick.subprocess.run') as run:
                 main()
                 self.assertEqual(run.call_count, calls)
                 if calls:
