@@ -2417,7 +2417,12 @@ function _openTools(){ var sh=$('#moreSheet'); if(!sh)return; var box=sh.querySe
   box.innerHTML='<div class="ms-tools" style="grid-column:1/-1">'+B('🌙','테마',"document.getElementById('theme').click()")+B('📸','화면 저장','saveViewJpg()')+B('⚙️','화면 편집','openCardEditor()')+B('★','관심종목',"showView('watch')")
     +B('☁️','동기화','openSync()')+B('❓','도움말','openHelp()')+B('A−','글자 작게',"setFont('s')")+B('A+','글자 크게',"setFont('"+(f==='l'?'m':'l')+"')")+'</div>';
   sh.classList.add('on'); }
-window._openTools=_openTools; window._closeSheet=_closeSheet;
+window._openTools=_openTools;
+/* (11/19) PC ⋯ 메뉴 — 바깥을 누르면 닫힌다 */
+function _pcMore(ev){ var m=document.querySelector('.pcmore'); if(!m)return; if(ev)ev.stopPropagation(); m.classList.toggle('on',ev?!m.classList.contains('on'):false); }
+document.addEventListener('click',function(e){ var m=document.querySelector('.pcmore.on'); if(m&&!m.contains(e.target))m.classList.remove('on'); });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){ var m=document.querySelector('.pcmore.on'); if(m)m.classList.remove('on'); } });
+window._pcMore=_pcMore; window._closeSheet=_closeSheet;
 window._openMore=_openMore;
 
 /* ═══ 📟 시장지표 화면 — 심리·금리·환율·미국 지수/선물·국내 시장 폭을 한곳에 (네이버 '시장지표'·Finviz 시장 폭 참고, 10/19) ═══ */
