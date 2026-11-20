@@ -1838,7 +1838,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 13곳: KB Financial·Trip.com Limited·Baidu·Tyson Foods·KE·Woori Bank·H World·Aramark·AECOM·XPeng·Freedom Holding·XP·Powell Industries"
+      "t": "미국 실적 12곳: KB Financial·Baidu·Tyson Foods·KE·Woori Bank·H World·Aramark·AECOM·Freedom Holding·XPeng·XP·Powell Industries"
      }
     ],
     "2026-11-17": [
@@ -2066,21 +2066,6 @@
       ]
      },
      {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 8곳: TKG휴켐스·세아제강지주·세미파이브·컴투스·나이스정보통신·에코아이·녹십자웰빙·플리토",
-      "kw": [
-       "TKG휴켐스",
-       "세아제강지주",
-       "세미파이브",
-       "컴투스",
-       "나이스정보통신",
-       "에코아이",
-       "녹십자웰빙",
-       "플리토"
-      ]
-     },
-     {
       "c": "data",
       "lo": 1,
       "t": "美 건축허가",
@@ -2143,19 +2128,13 @@
      },
      {
       "c": "earn",
-      "t": "TJX Companies·로우스·타깃 (장 전)",
-      "tk": "TJX,LOW,TGT",
-      "when": "B"
-     },
-     {
-      "c": "earn",
-      "t": "팔로알토 (장 마감 후)",
-      "tk": "PANW"
+      "t": "팔로알토·TJX Companies·로우스 (시간 미정)",
+      "tk": "PANW,TJX,LOW"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 7곳: Everpure(후)·Woodward(후)·UGI(후)·Global-E Online(전)·StoneX(후)·NewJersey Resources(후)·Copa(후)"
+      "t": "미국 실적 8곳: 타깃·Everpure·Woodward·UGI·StoneX·Global-E Online·NewJersey Resources·Copa"
      }
     ],
     "2026-11-19": [
@@ -2246,11 +2225,15 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 6곳: 동진쎄미켐·한솔아이원스·네오위즈·아로마티카·아이에스티이·누보",
+      "t": "국내 실적 10곳: 동진쎄미켐·이엔에프테크놀로지·한솔아이원스·네오위즈·한국알콜·아이엘·퓨릿·아로마티카·아이에스티이·누보",
       "kw": [
        "동진쎄미켐",
+       "이엔에프테크놀로지",
        "한솔아이원스",
        "네오위즈",
+       "한국알콜",
+       "아이엘",
+       "퓨릿",
        "아로마티카",
        "아이에스티이",
        "누보"
@@ -2288,7 +2271,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 7곳: Williams-Sonoma(전)·Warner Music(전)·Futu Limited(전)·Full Truck(전)·Elastic(후)·ESCO Technologies(후)·Gap (후)"
+      "t": "미국 실적 7곳: Williams-Sonoma(전)·Warner Music(전)·Futu Limited(전)·Elastic(후)·Full Truck(전)·ESCO Technologies(후)·Gap (후)"
      }
     ],
     "2026-11-20": [
@@ -2353,10 +2336,11 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 2곳: 교촌에프앤비·경동도시가스",
+      "t": "국내 실적 3곳: 교촌에프앤비·경동도시가스·갤럭시아머니트리",
       "kw": [
        "교촌에프앤비",
-       "경동도시가스"
+       "경동도시가스",
+       "갤럭시아머니트리"
       ]
      },
      {
@@ -2406,33 +2390,6 @@
   }
  ],
  "earnings": [
-  {
-   "d": "2026-10-29",
-   "n": "아마존",
-   "tk": "AMZN",
-   "when": "A"
-  },
-  {
-   "d": "2026-10-29",
-   "n": "인텔",
-   "tk": "INTC",
-   "auto": true,
-   "when": "A"
-  },
-  {
-   "d": "2026-10-29",
-   "n": "일라이릴리",
-   "tk": "LLY",
-   "auto": true,
-   "when": "B"
-  },
-  {
-   "d": "2026-10-29",
-   "n": "마스터카드",
-   "tk": "MA",
-   "auto": true,
-   "when": "B"
-  },
   {
    "d": "2026-10-30",
    "n": "애브비",
