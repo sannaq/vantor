@@ -1,10 +1,9 @@
 {
-  "week": "2026년 11월 3주차",
-  "range": "11/16~11/20",
-  "updated": "2026-11-17",
+  "week": "2026년 11월 4주차",
+  "range": "11/23~11/27",
+  "updated": "2026-11-23",
   "events": [
-    {"date": "2026-11-17", "time": "02:00", "market": "COIN", "type": "policy", "imp": 3, "title": "연준 의장 발언", "note": "의장 발언 — 크립토 변동성 주의.", "src": "ff:Fed Chairman Warsh Speaks"},
-    {"date": "2026-11-17", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.4% · 직전 0.9%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.4%", "Retail Sales m/m": "0.1%"}},
-    {"date": "2026-11-19", "time": "04:00", "market": "COIN", "type": "policy", "imp": 3, "title": "FOMC 의사록 공개", "note": "연준 톤 변화 — 매파면 크립토 하락 압력.", "src": "ff:FOMC Meeting Minutes"}
+    {"date": "2026-11-25", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준 핵심 물가 — 금리·달러 민감한 크립토에 직결.", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}},
+    {"date": "2026-11-25", "time": "22:30", "market": "COIN", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 방향 — 위험자산 심리에 영향.", "src": "ff:Prelim GDP q/q", "fc": {"Prelim GDP q/q": "3.5%"}}
   ]
 }

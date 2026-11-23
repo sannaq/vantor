@@ -1,18 +1,18 @@
 {
-  "week": "2026년 11월 3주차",
-  "range": "11/16~11/20",
-  "updated": "2026-11-21",
-  "intro": "이번 주 핵심: **연준 의장 발언**, **소매판매**, **FOMC 의사록 공개** (★★★ = 매우 중요)",
+  "week": "2026년 11월 4주차",
+  "range": "11/23~11/27",
+  "updated": "2026-11-23",
+  "intro": "이번 주 핵심: **PCE 물가지수**, **GDP 성장률**, **한은 금통위 기준금리 결정** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
-    {"date": "2026-11-17", "time": "02:00", "market": "US", "type": "policy", "imp": 3, "title": "연준 의장 발언", "note": "금리 경로 힌트. 발언 톤에 시장 민감.", "src": "ff:Fed Chairman Warsh Speaks", "rx": {"day": "2026-11-16", "mk": "US", "items": [["S&P500", -1.92, "pct"], ["나스닥", -2.49, "pct"], ["미 10년물", -3, "bp"], ["달러지수", 0.11, "pct"]]}},
-    {"date": "2026-11-17", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "소매판매", "note": "소비 체력 확인. 강하면 금리 부담. (예상 0.4% · 직전 0.9%)", "src": "ff:Core Retail Sales m/m", "fc": {"Core Retail Sales m/m": "0.4%", "Retail Sales m/m": "0.1%"}, "rx": {"day": "2026-11-17", "mk": "US", "items": [["S&P500", -1.03, "pct"], ["나스닥", -0.74, "pct"], ["미 10년물", -2, "bp"], ["달러지수", 0.05, "pct"]]}},
-    {"date": "2026-11-19", "time": "04:00", "market": "US", "type": "policy", "imp": 3, "title": "FOMC 의사록 공개", "note": "직전 회의에서 추가 인상·인하 논의가 얼마나 강했는지. 매파적이면 금리·달러↑.", "src": "ff:FOMC Meeting Minutes", "rx": {"day": "2026-11-18", "mk": "US", "items": [["S&P500", -0.23, "pct"], ["나스닥", 0.42, "pct"], ["미 10년물", -4, "bp"], ["달러지수", 0.35, "pct"]]}},
-    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 1, "title": "지역 제조업 지수", "note": "제조업 체감 경기 참고. (예상 19.2 · 직전 20.9)", "src": "ff:Philly Fed Manufacturing Index", "fc": {"Philly Fed Manufacturing Index": "20.6"}, "rx": {"day": "2026-11-19", "mk": "US", "items": [["S&P500", -2.02, "pct"], ["나스닥", -2.25, "pct"], ["미 10년물", -1, "bp"], ["달러지수", 0.08, "pct"]]}},
-    {"date": "2026-11-19", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 199K · 직전 200K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "198K"}, "rx": {"day": "2026-11-19", "mk": "US", "items": [["S&P500", -2.02, "pct"], ["나스닥", -2.25, "pct"], ["미 10년물", -1, "bp"], ["달러지수", 0.08, "pct"]]}},
-    {"date": "2026-11-21", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 소비자심리", "note": "소비 심리와 함께 나오는 기대 인플레이션이 관건. (예상 52.1 · 직전 51.0)", "src": "ff:Revised UoM Consumer Sentiment", "rx": {"day": "2026-11-20", "mk": "US", "items": [["S&P500", -3.7, "pct"], ["나스닥", -5.28, "pct"], ["미 10년물", -14, "bp"], ["달러지수", -0.06, "pct"]]}},
-    {"date": "2026-11-21", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "미시간대 기대 인플레이션", "note": "기대 물가가 오르면 금리 부담. (직전 4.3%)", "src": "ff:Revised UoM Inflation Expectations", "rx": {"day": "2026-11-20", "mk": "US", "items": [["S&P500", -3.7, "pct"], ["나스닥", -5.28, "pct"], ["미 10년물", -14, "bp"], ["달러지수", -0.06, "pct"]]}},
-    {"date": "2026-11-21", "time": "02:00", "market": "US", "type": "event", "imp": 2, "title": "트럼프 대통령 연설", "note": "관세·정책 발언에 따라 변동성 확대 가능.", "src": "ff:President Trump Speaks", "rx": {"day": "2026-11-20", "mk": "US", "items": [["S&P500", -3.7, "pct"], ["나스닥", -5.28, "pct"], ["미 10년물", -14, "bp"], ["달러지수", -0.06, "pct"]]}}
+    {"date": "2026-11-23", "time": "23:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 제조업 PMI(속보)", "note": "제조업 체감 경기 속보치. (예상 54.5 · 직전 56.0)", "src": "ff:Flash Manufacturing PMI"},
+    {"date": "2026-11-23", "time": "23:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 서비스업 PMI(속보)", "note": "서비스업 체감 경기 속보치. (예상 55.6 · 직전 57.9)", "src": "ff:Flash Services PMI"},
+    {"date": "2026-11-25", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 92.1 · 직전 91.7)", "src": "ff:CB Consumer Confidence"},
+    {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑. (예상 0.3% · 직전 0.3%)", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}},
+    {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 전체 성적표. (예상 3.5% · 직전 3.4%)", "src": "ff:Prelim GDP q/q", "fc": {"Prelim GDP q/q": "3.5%"}},
+    {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "GDP 물가지수", "note": "성장 속 물가 압력. (예상 2.3% · 직전 2.3%)", "src": "ff:Prelim GDP Price Index q/q"},
+    {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "주간 신규 실업수당 청구건수", "note": "고용 둔화를 가장 빨리 보여주는 주간 지표. (예상 201K · 직전 203K)", "src": "ff:Unemployment Claims", "fc": {"Unemployment Claims": "201K"}},
+    {"date": "2026-11-26", "time": "10:00", "market": "KR", "type": "policy", "imp": 3, "title": "한은 금통위 기준금리 결정", "note": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향.", "src": "kr:mpc:2026-11-26"}
   ],
-  "keys": [{"t": "연준 의장 발언 (11/17 02:00)", "b": "금리 경로 힌트. 발언 톤에 시장 민감."}, {"t": "소매판매 (11/17 22:30)", "b": "소비 체력 확인. 강하면 금리 부담. (예상 0.4% · 직전 0.9%)"}, {"t": "FOMC 의사록 공개 (11/19 04:00)", "b": "직전 회의에서 추가 인상·인하 논의가 얼마나 강했는지. 매파적이면 금리·달러↑."}]
+  "keys": [{"t": "PCE 물가지수 (11/25 22:30)", "b": "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑. (예상 0.3% · 직전 0.3%)"}, {"t": "GDP 성장률 (11/25 22:30)", "b": "경기 전체 성적표. (예상 3.5% · 직전 3.4%)"}, {"t": "한은 금통위 기준금리 결정 (11/26 10:00)", "b": "기준금리와 총재 기자회견 톤. 원화·채권금리·은행주에 직접 영향."}]
 }
