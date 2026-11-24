@@ -1366,9 +1366,7 @@ function liveRefresh(r){
   });
   if(!isUS) proxyJson('/flow?'+base).then(function(j){
     if(!SEL||SEL.c!==r.c||!j) return;
-    r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
-             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r); renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
+    applyStockFlow(r,j);
   });
 }
 /* 차트 아래 매수/매도세 + 투자자 순매수(개인·기관·외국인) 패널 */
@@ -2008,6 +2006,31 @@ function markReal(part){
   var on=Object.keys(_realParts).map(function(k){return nm[k];}).filter(Boolean);
   d.textContent='연결된 자료: '+on.join(' · ')+'. 항목별 기준일·출처를 확인해 주세요. — 표시는 자료 미제공 또는 확인 대기입니다.'+(_realParts.chart?'':' 차트 연결 미확인: 예시일 수 있어요.');
 }
+function applyStockFlow(r,j){
+  ['m-str','m-bid','m-prog','m-inv'].forEach(function(id){setMet(id,'—','자료 미제공');});
+    var got=false;
+    if(hasNum(j.strength)){
+      // 토스는 체결강도를 직접 주지 않아 프록시가 틱룰로 근사한다 → 근사임을 표기
+      setMet('m-str',Math.round(j.strength)+(j.strengthApprox?'*':''),
+        (j.strengthApprox?'근사· ':'')+(j.strength>=100?'매수 우위':'매도 우위'), j.strength>=100?'up':'down'); got=true;
+    }
+    if(hasNum(j.bp)){ setMet('m-bid',(j.bp>=55?'+':'')+j.bp+'%',j.bp>=55?'매수 우위':'균형',j.bp>=55?'up':''); got=true; }
+    if(hasNum(j.progNet)){
+      setMet('m-prog',(j.progNet>=0?'+':'')+(+j.progNet).toLocaleString('en-US'),
+        '프로그램 순매수(주)'+(j.progDate?' · '+j.progDate:''), cls(j.progNet)); got=true;
+    }
+    if(hasNum(j.foreign)&&hasNum(j.inst)){
+      var both=j.foreign>0&&j.inst>0, sell=j.foreign<0&&j.inst<0;
+      setMet('m-inv', both?'동반매수':sell?'동반매도':'혼조', both?'수급 양호':'', both?'up':sell?'down':''); got=true;
+    }
+    var ft=flowTabReal(j);
+    var el=$('#stab-flow');if(el)el.innerHTML=ft||'<p class="ui-caution">투자자 수급 자료 미제공 · 다음 갱신 때 다시 확인합니다.</p>';if(ft)got=true;
+    if(got) markReal('flow');
+    // /flow가 체결강도·호가를 안 줄 때(장외 등) RADAR가 이미 가진 값을 유지
+    r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
+             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
+    renderPressureFlow(r); renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
+}
 /* 투자자별 순매수 — 토스는 당일 누적 "수량(주)"을 준다(금액 아님) */
 function flowTabReal(j){
   var rows=[['개인',j.retail],['외국인',j.foreign],['기관',j.inst]].filter(function(x){return x[1]!=null;});
@@ -2090,28 +2113,7 @@ async function enrichStock(r){
   }
   else proxyJson('/flow?'+base).then(function(j){
     if(!live()||!j) return;
-    var got=false;
-    if(hasNum(j.strength)){
-      // 토스는 체결강도를 직접 주지 않아 프록시가 틱룰로 근사한다 → 근사임을 표기
-      setMet('m-str',Math.round(j.strength)+(j.strengthApprox?'*':''),
-        (j.strengthApprox?'근사· ':'')+(j.strength>=100?'매수 우위':'매도 우위'), j.strength>=100?'up':'down'); got=true;
-    }
-    if(hasNum(j.bp)){ setMet('m-bid',(j.bp>=55?'+':'')+j.bp+'%',j.bp>=55?'매수 우위':'균형',j.bp>=55?'up':''); got=true; }
-    if(hasNum(j.progNet)){
-      setMet('m-prog',(j.progNet>=0?'+':'')+(+j.progNet).toLocaleString('en-US'),
-        '프로그램 순매수(주)'+(j.progDate?' · '+j.progDate:''), cls(j.progNet)); got=true;
-    }
-    if(hasNum(j.foreign)&&hasNum(j.inst)){
-      var both=j.foreign>0&&j.inst>0, sell=j.foreign<0&&j.inst<0;
-      setMet('m-inv', both?'동반매수':sell?'동반매도':'혼조', both?'수급 양호':'', both?'up':sell?'down':''); got=true;
-    }
-    var ft=flowTabReal(j);
-    if(ft){ var el=$('#stab-flow'); if(el) el.innerHTML=ft; got=true; }
-    if(got) markReal('flow');
-    // /flow가 체결강도·호가를 안 줄 때(장외 등) RADAR가 이미 가진 값을 유지
-    r._flow={strength:hasNum(j.strength)?j.strength:r.strength, bp:hasNum(j.bp)?j.bp:r.bidRatio,
-             foreign:j.foreign,inst:j.inst,retail:j.retail,approx:j.strengthApprox,investDate:j.investDate};
-    renderPressureFlow(r); renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
+    applyStockFlow(r,j);
   });
 
   /* 4) 호가 10단 */

@@ -47,5 +47,10 @@ const root=path.resolve(__dirname,'..'),base='https://sannaq.github.io/vantor/';
  assert(!(await page.locator('#stab-flow').innerText()).includes('억원·데모'));assert.equal((await page.locator('#m-mcap .v').innerText()).trim(),'—');for(const id of ['m-str','m-bid','m-prog','m-inv'])assert.equal((await page.locator('#'+id+' .v').innerText()).trim(),'—');
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await page.screenshot({path:'/tmp/vantor-fix-stock-'+width+'.png',fullPage:true});
+ await context.route('**/flow?mkt=KR&code=005930',r=>r.fulfill({json:{investDate:'20261123',foreign:100,inst:50,retail:-150,progNet:0,progDate:'20261123'}}));
+ await page.evaluate(()=>liveRefresh(SEL));await page.waitForFunction(()=>document.querySelector('#stab-flow tbody tr'));
+ assert((await page.locator('#stab-flow').innerText()).includes('2026-11-23 기준'));assert.equal((await page.locator('#m-prog .v').innerText()).trim(),'+0');
+ await page.evaluate(()=>applyStockFlow(SEL,{}));assert.equal((await page.locator('#m-prog .v').innerText()).trim(),'—');assert((await page.locator('#stab-flow').innerText()).includes('자료 미제공'));
+
  assert.deepEqual(errors,[]);console.log('PASS: hierarchy, mobile picks, turnover, events, briefing, colors and inbox at '+width);await context.close();
  }}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
