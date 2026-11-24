@@ -13,6 +13,7 @@ on:
         description: '공시 공개 자료 연결 확인 (AI 호출 없음)'
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: paper-portfolios
   cancel-in-progress: false
@@ -58,3 +59,9 @@ jobs:
           git commit -m 'auto: AI 퀀트 모의계좌 상태'
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
+
+  health:
+    needs: paper
+    if: always()
+    uses: ./.github/workflows/health.yml
+    secrets: inherit

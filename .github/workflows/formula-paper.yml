@@ -9,6 +9,7 @@ on:
     - cron: '31 1,3 * * 2-6'
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: formula-paper-portfolios
   cancel-in-progress: false
@@ -37,3 +38,9 @@ jobs:
           git commit -m 'auto: 미장 공식 모의 비교'
           for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
           exit 1
+
+  health:
+    needs: compare
+    if: always()
+    uses: ./.github/workflows/health.yml
+    secrets: inherit

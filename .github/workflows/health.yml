@@ -3,7 +3,7 @@ on:
   workflow_call:
   workflow_dispatch:
   workflow_run:
-    workflows: ['종합 평점 → 사이트·디스코드', '미장 종합 평점 → 사이트·디스코드', 'AI 퀀트 모의계좌', '미장 공식 모의 비교']
+    workflows: ['종합 평점 → 사이트·디스코드', '미장 종합 평점 → 사이트·디스코드']
     types: [completed]
   schedule:
     - cron: '43 * * * *'
