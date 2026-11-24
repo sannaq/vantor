@@ -1454,6 +1454,7 @@ function _vsHTML(v,src,cut,us){
       +'<div style="flex:1;min-width:220px">'+parts+'</div>'
       +'<div style="flex:1.3;min-width:240px">'+(why||'<div style="font-size:12.5px;color:var(--faint)">뚜렷한 특징이 없어요</div>')+'</div>'
     +'</div>'
+    +(v.perSource?'<div class="ui-caution" style="padding:0 20px 10px">'+esc(v.perSource)+'</div>':'')
     +'<div style="font-size:11px;color:var(--faint);padding:0 20px 14px">'+(us?'미장 공식: 1년 모멘텀 67 · 흑자 33':'안정성 40 · 고점 근접 30 · 이익 30')+' = 100점 · '+cutTxt+' · 백테스트로 고른 공식 · 60일 보유 기준(추천 화면 \'검증 결과\') · 교육용 참고 지표이며 매매 신호가 아닙니다.</div></div>';
 }
 function renderVScore(r){
@@ -1464,7 +1465,7 @@ function renderVScore(r){
   (isUS?_loadVScoresUS():_loadVScores()).then(function(j){
     var it=j&&j.items&&j.items[code];
     if(it){ var e=still(); if(!e)return;
-      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8]}, (isUS?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · 채점 PER: 네이버 증권 수집값 (종목 정보 PER과 출처·산출 기준이 다를 수 있음)', j.bp&&j.bp.cut, isUS); return; }
+      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8],perSource:'채점 PER은 네이버 증권 수집값입니다. 종목 정보 PER과 출처·산출 기준이 다를 수 있어요.'}, (isUS?'미국 ':'')+_vsDate(j.date)+' 장마감 기준', j.bp&&j.bp.cut, isUS); return; }
     if(!j||!j.bp||typeof proxyJson!=='function'){ var e0=still(); if(e0)e0.innerHTML=''; return; }
     var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(code)+(isUS?'&exch='+usExch(r.mk):'');
     Promise.all([ proxyJson('/candles?'+base+'&tf=D&limit=260').catch(function(){return null;}), proxyJson('/info?'+base).catch(function(){return null;}) ]).then(function(a){
