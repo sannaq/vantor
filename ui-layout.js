@@ -13,10 +13,46 @@ function uiHomeUS(p){
 function uiHomeAccounts(kr,us){
   return '<section class="ui-home-accounts" aria-label="모의계좌 손익"><h2>모의계좌 손익</h2><div>'+[['KR',kr],['US',us]].map(function(row){var a=row[1]?.account,us=row[0]==='US',ok=a&&Number.isFinite(a.equity)&&a.initialCapital>0,pnl=ok?a.equity-a.initialCapital:null;var money=function(n){return (n<0?'−':'')+(us?'$':'₩')+Math.abs(n).toLocaleString('ko-KR',{maximumFractionDigits:us?2:0});};return '<button type="button" data-gv="quant" data-qmarket="'+row[0]+'"><b>'+(us?'미국 · 달러':'국내 · 원화')+'</b><strong class="'+(pnl>0?'up':pnl<0?'down':'flat')+'">'+(ok?(pnl>0?'+':'')+money(pnl):'자료 확인 대기')+'</strong><span>'+(ok?'누적 '+(pnl/a.initialCapital*100).toFixed(2)+'% · 총 평가액 '+money(a.equity):'계좌 자료를 불러오지 못했어요')+'</span><small>'+(ok?'평가 기준 '+quantDate(row[1].valuationDate||a.lastDate):'')+' · 모의투자</small></button>';}).join('')+'</div></section>';
 }
+/* Explicit KST times may fall on a different day from the weekly US-date bucket. */
+function uiEventDay(item,bucket){
+  var text=String(item.sub||''),m=text.match(/한국시간\s+(\d{1,2})\/(\d{1,2})\s/);
+  if(m){
+    var y=Number(bucket.slice(0,4)),month=Number(bucket.slice(5,7)),mm=Number(m[1]);
+    if(month===12&&mm===1)y++;else if(month===1&&mm===12)y--;
+    return {date:y+'-'+String(mm).padStart(2,'0')+'-'+m[2].padStart(2,'0'),known:true};
+  }
+  if(/한국시간\s+\d{1,2}:\d{2}/.test(text)||/^(국내|韓|한은|신규상장|공모청약)/.test(item.t||''))return {date:bucket,known:true};
+  return {date:bucket,known:false};
+}
 function uiTodayEvents(calendar,today){
-  var week=(calendar.weeks||[]).find(function(w){return w.from<=today&&today<=w.to;}),list=week?.days?.[today]||[];
-  var rows=list.map(function(item){return '<li><b>'+esc(item.t)+'</b>'+(item.sub?'<span>'+esc(item.sub)+'</span>':'')+'</li>';});
-  return '<section class="card ui-today" data-ui-open="1"><div class="ch"><h2>오늘 일정 <small>'+esc(today)+'</small></h2></div><div class="pad">'+(rows.length?'<ul>'+rows.slice(0,3).join('')+'</ul>'+(rows.length>3?'<details><summary>오늘 일정 전체 '+rows.length+'건</summary><ul>'+rows.slice(3).join('')+'</ul></details>':''):'<p>'+(week?'등록된 오늘 일정이 없어요.':'오늘 날짜의 일정 자료가 아직 없어요.')+'</p>')+'<small>위클리 캘린더 기준 · 일정에 적힌 시간은 미국 기준</small></div></section>';
+  var weeks=calendar.weeks||[],week=weeks.find(function(w){return w.from<=today&&today<=w.to;}),list=[],unknown=[],seen=new Set();
+  weeks.forEach(function(w){Object.entries(w.days||{}).forEach(function(pair){pair[1].forEach(function(item){
+    var d=uiEventDay(item,pair[0]),key=d.date+'|'+item.t+'|'+(item.sub||'');
+    if(d.date!==today||seen.has(key))return;seen.add(key);(d.known?list:unknown).push(item);
+  });});});
+  var row=function(item){return '<li><b>'+esc(item.t)+'</b>'+(item.sub?'<span>'+esc(item.sub)+'</span>':'')+'</li>';},rows=list.map(row);
+  return '<section class="card ui-today" data-ui-open="1"><div class="ch"><h2>오늘 일정 <small>'+esc(today)+' · 한국시간</small></h2></div><div class="pad">'+(rows.length?'<ul>'+rows.slice(0,3).join('')+'</ul>'+(rows.length>3?'<details><summary>오늘 일정 전체 '+rows.length+'건</summary><ul>'+rows.slice(3).join('')+'</ul></details>':''):'<p>'+(week?'등록된 오늘 일정이 없어요.':'오늘 날짜의 일정 자료가 아직 없어요.')+'</p>')+(unknown.length?'<details><summary>원문 날짜 '+esc(today)+' 일정 '+unknown.length+'건 · 한국시간 미확인</summary><p>미국 실적·현지 행사 등은 정확한 한국 날짜가 확인되기 전까지 오늘 일정에 합치지 않아요.</p><ul>'+unknown.map(row).join('')+'</ul></details>':'')+'<small>한국시간이 확인된 일정만 위에 표시 · 주간 표는 원문 날짜 유지</small></div></section>';
+}
+function uiFlowDate(j){var d=String(j.investDate||'');return /^\d{8}$/.test(d)?d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8)+' 기준':'기준일 미확인';}
+function uiAccountHealth(state,source){
+  var actual=String(state?.valuationDate||''),target=String(source?.date||''),signal=String(state?.sourceDate||state?.lastSignalDate||'');
+  if(!/^\d{8}$/.test(actual)||!/^\d{8}$/.test(target))return {label:'확인 불가',tone:'unknown'};
+  return actual<target||!/^\d{8}$/.test(signal)||signal<target||['update_failed','feed_stale','formula_feed_stale','error'].includes(state.status)?{label:'갱신 지연',tone:'delayed'}:{label:'정상',tone:'current'};
+}
+async function uiRefreshHealth(){
+  var el=document.getElementById('uiHealth');if(!el)return;
+  var names=['paper-kr','paper-us','formula-paper-us','stock-picks','stock-picks-us','stock-scores-us','automation-health'];
+  var data=await Promise.all(names.map(function(name){return fetch('feeds/'+name+'.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
+  var states=[uiAccountHealth(data[0],data[3]),uiAccountHealth(data[1],data[4]),uiAccountHealth(data[2],data[5])],labels=['국내 계좌','미국 계좌','공식 비교'];
+  var report=data[6],stamp=Date.parse(report?.checkedAt||''),fresh=Number.isFinite(stamp)&&Date.now()-stamp<4*3600e3&&stamp<=Date.now()+60000;
+  var alertLabel=!fresh?'연결 확인 대기':report.failureAlertConfigured===true?'설정 연결됨 · 전송 검증 별도':report.failureAlertConfigured===false?'미연결':'연결 확인 대기';
+  el.innerHTML='<summary>자료 상태 · '+states.map(function(x,i){return '<span class="ui-health-'+x.tone+'">'+labels[i]+' '+x.label+'</span>';}).join(' · ')+' · 실패 알림 '+alertLabel+'</summary><div>'+states.map(function(x,i){return '<p><b>'+labels[i]+' '+x.label+'</b> · 평가 '+esc(data[i]?.valuationDate||'미확인')+' / 추천 '+esc(data[i+3]?.date||'미확인')+'<br><small>계좌 저장 '+esc(data[i]?.updatedAt?new Date(data[i].updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미확인')+' (한국시간)</small></p>';}).join('')+'<p>정상은 공개된 최신 추천 기준일까지 평가됐다는 뜻이에요. AI 심사·매수 여부와 알림 전송 성공은 별도입니다.</p><p>실패 알림: '+alertLabel+' · '+(fresh?'설정 확인 '+esc(new Date(stamp).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})):'설정 확인 자료가 없거나 4시간 이상 지났어요.')+'</p></div>';
+}
+function uiCoinBar(){
+  var el=document.getElementById('idxbar');if(!el)return;
+  var recent=window._uiCoinAt&&Date.now()-window._uiCoinAt<120000;
+  el.title='누르면 코인 홈';
+  el.innerHTML='<span class="ib-lb">코인 · USDT</span>'+['BTC','ETH','SOL'].map(function(sym){var row=(window._uiCoinRows||[]).find(function(x){return x.s===sym;});return '<span><span class="ib-nm">'+sym+'</span><span class="ib-v">'+(recent&&row?coinPx(row.px):'—')+'</span>'+(recent&&row?'<span class="'+(row.ch>=0?'ui-coin-up':'ui-coin-down')+'">'+(row.ch>0?'+':'')+row.ch.toFixed(2)+'%</span>':'');}).map(function(x){return x+'</span>';}).join('')+'<span class="ib-t">'+(recent?'24시간 등락 · '+new Date(window._uiCoinAt).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit'})+' KST':'시세 연결 확인 중')+'</span>';
 }
 function uiHoldingCards(account,money){
   if(!account.positions.length)return '<div class="ui-holdings"><p>현재 보유 종목이 없어요.</p></div>';
@@ -42,3 +78,5 @@ document.addEventListener('DOMContentLoaded',function(){
   wrap.querySelector('#uiNoticeClear').onclick=function(){_uiNotices=[];uiNoticeRender();};
   document.addEventListener('click',function(e){if(!wrap.contains(e.target))close();});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!panel.hidden){close();button.focus();}});uiNoticeRender();
 });
+
+document.addEventListener('DOMContentLoaded',function(){uiRefreshHealth();setInterval(uiRefreshHealth,5*60e3);setInterval(function(){if(typeof coinMode!=='undefined'&&coinMode)uiCoinBar();},30000);});

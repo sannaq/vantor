@@ -1,0 +1,47 @@
+name: 계좌 갱신 상태와 복구
+on:
+  workflow_call:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ['종합 평점 → 사이트·디스코드', '미장 종합 평점 → 사이트·디스코드', 'AI 퀀트 모의계좌', '미장 공식 모의 비교']
+    types: [completed]
+  schedule:
+    - cron: '43 * * * *'
+permissions:
+  contents: write
+  actions: write
+concurrency:
+  group: automation-health
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: 추천 기준일과 계좌 평가일 대조·누락 복구
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ALERT_CONFIGURED: ${{ secrets.DISCORD_ALERT_WEBHOOK != '' }}
+        run: python3 scripts/automation_health.py
+      - name: 공개 상태 저장 (비밀값 제외)
+        if: always()
+        run: |
+          test -f feeds/automation-health.json || exit 1
+          git add feeds/automation-health.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'auto: 계좌 갱신·알림 연결 상태'
+          for i in 1 2 3; do git pull --rebase && git push && exit 0; sleep 5; done
+          exit 1
+      - name: 상태 화면 사이트 반영 요청
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages-refresh.yml --ref main

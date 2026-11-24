@@ -774,7 +774,7 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 #vtGate input:focus{border-color:#d4a73a}#vtGate button{width:100%;margin-top:10px;padding:11px;border:none;border-radius:10px;background:#d4a73a;color:#0b0f16;font-weight:800;font-size:14px;cursor:pointer}
 #vtGate .er{color:#f6465d;font-size:12px;min-height:16px;margin-top:8px}</style>
 <link rel="stylesheet" href="quant.css?v=7">
-<link rel="stylesheet" href="ui-layout.css?v=1">
+<link rel="stylesheet" href="ui-layout.css?v=2">
 </head>
 <body>
 <div id="vtGate"><form class="bx" onsubmit="return vtGateTry(event)"><h1>⚡ VANTOR</h1><p>비밀번호를 입력해 주세요</p>
@@ -836,8 +836,9 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
   <div class="demoban" id="demoban">⏳ <b>실시간 데이터 연결 중</b> — 연결되면 자동으로 바뀌어요.</div>
 
   <!-- 맨 위 '지수' 한 줄 — 모든 화면 공통 (10/12 얇은 지수 줄 → 10/19 맨 위로·공포탐욕·VIX·금리 추가) -->
-  <div id="idxbar" onclick="showView('macro')" title="누르면 시장지표 화면"></div>
+  <div id="idxbar" onclick="coinMode?coinNav('home'):showView('macro')" title="누르면 시장지표 화면"></div>
   <!-- 메뉴 묶음 안의 하위 탭 (10/19 메뉴 9개 개편: 시장=마켓·레이더, 추천=오늘·변동, 종목=상세·AI 분석, 브리핑·뉴스) -->
+  <details id="uiHealth" class="ui-health"><summary>자료 상태 확인 중</summary></details>
   <div id="subtabs"></div>
 
   <!-- 한눈에 보기 (HOME 맨 위, 다른 탭 요약 타일 — 누르면 그 탭으로) 2026-10-12 -->
@@ -1063,9 +1064,9 @@ var VT_GATE='9e56862530fc1c1a6411582d0040cee789b230505f6a8bb78b2fe7b7338f8c04'; 
 <div id="moreSheet" onclick="if(event.target===this)this.classList.remove('on')"><div class="ms-box"></div></div>
 <script src="score-core.js?v=10"></script>
 <script src="sync-core.js?v=1"></script>
-<script src="ui-layout.js?v=1"></script>
+<script src="ui-layout.js?v=2"></script>
 <script src="quant.js?v=12"></script>
-<script src="app.js?v=181"></script>
+<script src="app.js?v=182"></script>
 <script>/* 새 버전 자동 반영 (10/12) — 깃허브 Pages 는 화면 파일을 브라우저에 최대 10분 붙잡아 둔다. 휴대폰은 탭을 오래 열어 두니 더 오래 간다.
    열 때·다시 볼 때·5분마다 최신 index.html 을 캐시 없이 받아 app.js 번호가 올라갔으면 한 번 새로고침 */
 (function(){ var sc=document.querySelector('script[src*="app.js?v="]'), cur=sc?+(sc.getAttribute('src').match(/v=(\d+)/)||[0,0])[1]:0, busy=false;

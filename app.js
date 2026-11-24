@@ -520,6 +520,8 @@ function _usIdx(code,etf,fc){ var M=_MACRO||{}, ix=(M.idx||{})[code], fu=(M.fut|
   return ix?{v:ix.v,c:ix.c}:null; }
 function renderIdxBar(){
   var ib=$('#idxbar'); if(!ib)return;
+  if(coinMode){uiCoinBar();return;}
+  ib.title='누르면 시장지표 화면';
   if(!_MACRO&&!renderIdxBar._m){ renderIdxBar._m=1; _macroLoad(); setInterval(_macroLoad,5*60e3); }
   if(!_FS&&!renderIdxBar._fs){ renderIdxBar._fs=1; _fsLoad(function(j){ if(j)renderIdxBar(); }); }
   function f2(v,d){ return (+v).toLocaleString('en-US',{minimumFractionDigits:d==null?2:d,maximumFractionDigits:d==null?2:d}); }
@@ -1391,7 +1393,7 @@ function renderPressureFlow(r){
   var inv=[['개인',f.retail],['외국인',f.foreign],['기관',f.inst]].filter(function(x){return hasNum(x[1]);});
   if(inv.length){
     var mx=Math.max.apply(null,inv.map(function(x){return Math.abs(x[1]);}))||1;
-    var idt=f.investDate&&/^\d{8}$/.test(f.investDate)?(f.investDate.slice(4,6)+'/'+f.investDate.slice(6,8)+' 기준'):'당일 누적';
+    var idt=uiFlowDate(f);
     parts.push('<div style="font-size:12px;font-weight:800;margin:14px 0 5px">🏦 투자자 순매수 <span style="color:var(--faint);font-weight:600">('+idt+'·주)</span></div>');
     inv.forEach(function(x){ var v=x[1], w=Math.round(Math.abs(v)/mx*49), pos=v>=0;
       parts.push('<div class="invbar"><span class="lbl">'+x[0]+'</span>'
@@ -1462,7 +1464,7 @@ function renderVScore(r){
   (isUS?_loadVScoresUS():_loadVScores()).then(function(j){
     var it=j&&j.items&&j.items[code];
     if(it){ var e=still(); if(!e)return;
-      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8]}, (isUS?'미국 ':'')+_vsDate(j.date)+' 장마감 기준', j.bp&&j.bp.cut, isUS); return; }
+      e.innerHTML=_vsHTML({total:it[0],view:it[1],rank:it[2],n:j.n,parts:it[3],good:it[4],bad:it[5],ref:it[8]}, (isUS?'미국 ':'')+_vsDate(j.date)+' 장마감 기준 · 채점 PER: 네이버 증권 수집값 (종목 정보 PER과 출처·산출 기준이 다를 수 있음)', j.bp&&j.bp.cut, isUS); return; }
     if(!j||!j.bp||typeof proxyJson!=='function'){ var e0=still(); if(e0)e0.innerHTML=''; return; }
     var base='mkt='+(isUS?'US':'KR')+'&code='+encodeURIComponent(code)+(isUS?'&exch='+usExch(r.mk):'');
     Promise.all([ proxyJson('/candles?'+base+'&tf=D&limit=260').catch(function(){return null;}), proxyJson('/info?'+base).catch(function(){return null;}) ]).then(function(a){
@@ -2003,20 +2005,20 @@ function markReal(part){
   var d=$('#stkDisc'); if(!d) return;
   var nm={chart:'차트',info:'시총·거래량·재무',flow:'투자자 수급·체결강도',book:'호가'};
   var on=Object.keys(_realParts).map(function(k){return nm[k];}).filter(Boolean);
-  d.innerHTML='✅ 실시간 데이터 — '+on.join(' · ')+'. 그 외 항목(프로그램 매매 등)은 아직 데모 값입니다.';
+  d.textContent='연결된 자료: '+on.join(' · ')+'. 항목별 기준일·출처를 확인해 주세요. — 표시는 자료 미제공 또는 확인 대기입니다.'+(_realParts.chart?'':' 차트 연결 미확인: 예시일 수 있어요.');
 }
 /* 투자자별 순매수 — 토스는 당일 누적 "수량(주)"을 준다(금액 아님) */
 function flowTabReal(j){
   var rows=[['개인',j.retail],['외국인',j.foreign],['기관',j.inst]].filter(function(x){return x[1]!=null;});
   if(!rows.length) return null;
-  return '<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">(당일 누적·주)</span></div>'
+  return '<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">('+esc(uiFlowDate(j))+' · 주)</span></div>'
     +'<table><thead><tr><th class="l">구분</th><th>순매수 수량</th><th>방향</th></tr></thead><tbody>'
     +rows.map(function(x){ var v=+x[1];
       return '<tr><td class="l" style="font-weight:700">'+x[0]+'</td>'
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>=0?'+':'')+v.toLocaleString('en-US')+'</td>'
         +'<td class="'+cls(v)+'" style="font-weight:700">'+(v>0?'순매수':v<0?'순매도':'－')+'</td></tr>'; }).join('')
     +'</tbody></table>'
-    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">실시간 데이터 · 금액이 아닌 수량 기준입니다.</div>';
+    +'<div style="font-size:11px;color:var(--faint);margin-top:6px">'+esc(uiFlowDate(j))+' · 토스 수급 · 금액이 아닌 수량 기준입니다.</div>';
 }
 /* 호가 10단 — 잔량 막대 + 매수/매도 총잔량 비율 */
 function bookHtml(ob,r){
@@ -2068,7 +2070,7 @@ async function enrichStock(r){
     var got=false;
     if(j.mcap!=null&&j.mcap>0){ setMet('m-mcap', j.mcapUnit==='억원'?fmtEok(j.mcap):('$'+fmtBig(j.mcap)), r.mk+' 상장', null); got=true; }
     if(j.vol!=null&&j.vol>0){ addMet('m-volume','거래량',(+j.vol).toLocaleString('en-US')+'주','당일 누적 거래량',null); got=true; }
-    if(j.per!=null&&j.per>0){ addMet('m-per','PER',(+j.per).toFixed(2),(j.pbr!=null&&j.pbr>0)?('PBR '+(+j.pbr).toFixed(2)):'',null); got=true; }
+    if(j.per!=null&&j.per>0){ addMet('m-per','PER · 종목 정보',(+j.per).toFixed(2),'시세 프록시 제공 · 재무 기준일 미제공'+((j.pbr!=null&&j.pbr>0)?(' · PBR '+(+j.pbr).toFixed(2)):''),null); got=true; }
     if(j.h52!=null&&j.l52!=null&&j.h52>j.l52){
       var pos=Math.max(0,Math.min(100,Math.round((r.px-j.l52)/(j.h52-j.l52)*100)));
       // 토스는 52주 고저를 직접 주지 않아 프록시가 일봉 200개(≈10개월)에서 산출한다
@@ -2226,7 +2228,7 @@ function openStock(code,opt){
     +'<div id="stkPx" style="font-size:30px;font-weight:800;margin-top:4px" class="'+(r.px>0?cls(r.ch):'')+'">'+(r.px>0?(priceFmt(r,r.px)+' <span style="font-size:16px">'+arw(r.ch)+' '+pctTxt(r.ch)+'</span>'):(r.ccy!=='USD'&&/ETN/.test(r.n||'')?'<span style="font-size:14px;color:var(--faint);font-weight:700">ETN 은 실시간 시세를 받지 못해요 · <a href="https://m.stock.naver.com/domestic/stock/'+r.c+'/total" target="_blank" rel="noopener" style="color:#4a9eff">네이버 증권에서 보기 →</a></span>':'<span style="font-size:15px;color:var(--faint);font-weight:700">⏳ 시세 불러오는 중…</span>'))+'</div>'
     +'<div class="metrics" id="metGrid">'
       +met('거래대금',tradedValue>0?fmtEok(tradedValue/1e8):'—',tradedValue>0?'실제 거래대금':'실제 거래대금 미제공',null,'m-value')
-      +met('시가총액',mcapT,r.mk+' 상위',null,'m-mcap')
+      +met('시가총액','—','종목 정보 확인 대기',null,'m-mcap')
       +met('체결강도',numOrDash(r.strength,function(v){return Math.round(v);}),hasNum(r.strength)?(r.strength>=100?'매수 우위':'매도 우위'):'데이터 없음',hasNum(r.strength)?(r.strength>=100?'up':'down'):'','m-str')
       +met('호가 압력',numOrDash(r.bidRatio,function(v){return (v>=55?'+':'')+Math.round(v)+'%';}),hasNum(r.bidRatio)?(r.bidRatio>=55?'매수 우위':'균형'):'데이터 없음',hasNum(r.bidRatio)&&r.bidRatio>=55?'up':'','m-bid')
       +met('프로그램',numOrDash(r.progPct,function(v){return (v>=0?'+':'')+v.toFixed(1)+'%';}),hasNum(r.progPct)?'거래대금 대비':'데이터 없음',hasNum(r.progPct)?cls(r.progPct):'','m-prog')
@@ -2267,17 +2269,12 @@ function openStock(code,opt){
           +peers.map(function(p){return '<div class="cmprow"><span>'+p.n+'</span><span><span class="'+cls(p.ch)+'" style="font-weight:700">'+pctTxt(p.ch)+'</span> <span class="scorepill'+(p.score>=80?'':' s2')+'" style="margin-left:8px">'+p.score+'</span></span></div>';}).join('')+'</div></div>'
       +'</div>'
     +'</div>'
-    +'<div class="disc" id="stkDisc" style="margin-top:18px">🧪 차트·거래대금·시총·수급은 데모 값입니다. 시세 프록시 연결 시 실시간 시세·호가·투자자 수급이 채워집니다.</div>';
+    +'<div class="disc" id="stkDisc" style="margin-top:18px">자료 연결 확인 중 · 연결 전 차트는 예시일 수 있어요. —는 자료 미제공 또는 확인 대기입니다.</div>';
   window._chartZoom=Math.min(90,(r._candles&&r._candles.length)||90); window._chartPan=0; window._chartYScale=1; // 뷰 초기화
   drawStockChart($('#sChart'),r);
   renderWhy(r); if(typeof stockConfluence==='function')stockConfluence(r);
   // 탭
-  var flowHtml='<div style="font-size:12px;font-weight:800;margin:12px 0 8px">투자자별 순매수 <span style="color:var(--faint);font-weight:600">(억원·데모)</span></div>'
-    +'<table><thead><tr><th class="l">구분</th><th>개인</th><th>외국인</th><th>기관</th><th>프로그램</th></tr></thead><tbody>'
-    +[['당일',1],['5일',2.4],['20일',5.1],['60일',9.8]].map(function(p){var f=r.invest==='both'?1:r.invest==='sell'?-1:0.3;var base=r.px/1000*p[1];
-      var ind=-Math.round(base*1.2*f), fr=Math.round(base*f), ins=Math.round(base*0.6*f), pr=Math.round(base*0.5*f);
-      return '<tr><td class="l" style="font-weight:700">'+p[0]+'</td>'+[ind,fr,ins,pr].map(function(v){return '<td class="'+cls(v)+'" style="font-weight:700">'+(v>=0?'+':'')+v.toLocaleString()+'</td>';}).join('')+'</tr>';}).join('')
-    +'</tbody></table>';
+  var flowHtml='<p class="ui-caution">투자자 수급 확인 대기 · 제공된 자료가 있을 때 실제 기준일과 함께 표시합니다.</p>';
   var scoreHtml='<div style="margin-top:12px">'+['trade|거래 활성|35','price|가격 움직임|30','press|실시간 압력|25','flow|수급|5','trend|추세|5'].map(function(g){var p=g.split('|');var v=r.g[p[0]]==null?0:r.g[p[0]];var mx=(r.gmax&&r.gmax[p[0]]!=null)?r.gmax[p[0]]:+p[2];if(!mx)return '';return '<div class="bar"><span class="k">'+p[1]+'</span><div class="track"><div class="fill" style="width:'+Math.min(100,v/mx*100)+'%"></div></div><span class="vv">'+v+'/'+mx+'</span></div>';}).join('')
     +'<div style="font-size:12px;font-weight:800;color:var(--faint);text-transform:uppercase;margin:14px 0 6px">선정 이유</div><ul class="reasons" style="margin-top:0">'+r.reasons.map(function(x){return '<li>'+x+'</li>';}).join('')+'</ul></div>';
   $('#stab-flow').innerHTML=flowHtml; $('#stab-score').innerHTML=scoreHtml;
@@ -2354,7 +2351,7 @@ function renderGlance(force){ var el=$('#glance'); if(!el)return; if(!force&&Dat
       var acct=uiHomeAccounts(a[8],a[9]);
       return '<div class="gl-app"><div class="ga-sum" data-gv="macro"><div class="ga-ks ui-market-summary">'+ks.join('')+'</div><div id="gaBreadth" style="padding:10px 4px 0">'+_breadthBar(true)+'</div></div>'
         +(rk?'<div class="ga-reco"><div class="ga-h" data-gv="reco">🧭 국내 추천 <small>'+(pk?_vsDate(pk.date):'')+'</small><span>전체 ›</span></div>'+rk+'</div>':'')
-        +uiHomeUS(pu)+acct+'<div class="ga-grid">'+M.map(function(m){ return '<button data-gv="'+m[0]+'"><b>'+m[1]+'</b>'+m[2]+'</button>'; }).join('')+'</div></div>'; };
+        +uiHomeUS(pu)+acct+'<details class="ui-shortcuts"><summary>기능 바로가기</summary><div class="ga-grid">'+M.map(function(m){ return '<button data-gv="'+m[0]+'"><b>'+m[1]+'</b>'+m[2]+'</button>'; }).join('')+'</div></details></div>'; };
     var _apCss='#glance .gl-app{display:block}#glance .gl-full{display:block}'
       +'#glance .ga-sum{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 6px;margin-bottom:10px;cursor:pointer}#glance .ga-ks{display:flex}#glance .ga-k{flex:1;text-align:center;min-width:0;border-left:1px solid var(--line2)}#glance .ga-k:first-child{border-left:0}'
       +'#glance .ga-kn{font-size:11.5px;color:var(--sub);font-weight:700}#glance .ga-kv{font-size:18px;font-weight:800;margin:2px 0;font-variant-numeric:tabular-nums}#glance .ga-kc{font-size:11.5px}#glance .ga-kc small{color:var(--faint);font-size:10px}'
@@ -2836,7 +2833,8 @@ async function loadCoins(){
       var rp=(hi>lo)?Math.round((px-lo)/(hi-lo)*100):50, st;
       if(ch<=-3)st='avoid'; else if(rp>=65)st='avoid'; else if(rp<=45)st='buy'; else st=(ch>=2?'buy':'wait');
       return {s:u[0],k:u[1],px:px,ch:ch,qv:qv,st:st}; }).filter(Boolean);
-    if(!rows.length)throw 0; // 터미널과 동일한 고정 순서 유지(pill이 자연스럽게 섞이도록)
+    if(!rows.length)throw 0;
+    window._uiCoinRows=rows;window._uiCoinAt=Date.now();if(coinMode)uiCoinBar(); // 터미널과 동일한 고정 순서 유지(pill이 자연스럽게 섞이도록)
     var PILL={buy:['관심','#16b364','22,179,100'],wait:['관망','#e0a83e','224,168,62'],avoid:['주의','#f6465d','246,70,93']};
     rr.innerHTML='<thead><tr><th class="l">#</th><th class="l">코인</th><th>상태</th><th>가격</th><th>24h</th><th>거래대금</th></tr></thead><tbody>'
       +rows.map(function(c,i){ var p=PILL[c.st], col=cCol(c.ch);
@@ -4197,7 +4195,7 @@ window.runCoinBacktest=async function(){ var bt=$('#cBtBox'); if(!bt)return; var
       +'<div class="muted" style="font-size:11px;margin-top:7px;line-height:1.5">⚠️ 과거 통계일 뿐 미래를 보장하지 않습니다. 확률이 50% 근처거나 표본이 적으면 그 지표는 이 종목에서 <b>신뢰도가 낮다</b>는 뜻이에요. 지표 맹신 금물.</div>';
   }catch(e){bt.innerHTML='<div class="muted" style="font-size:12px">분석에 실패했어요.</div>';}
 };
-function setMode(m){ coinMode=(m==='coin'); if(m!=='coin')closeCoin();
+function setMode(m){ coinMode=(m==='coin'); renderIdxBar(); if(m!=='coin')closeCoin();
   try{ var _rt=document.documentElement; // 코인 모드는 다크 터미널 느낌으로 기본 전환, 나가면 원복
     if(coinMode){ if(window._preCoinTheme===undefined)window._preCoinTheme=_rt.getAttribute('data-theme'); _rt.setAttribute('data-theme','dark'); }
     else if(window._preCoinTheme!==undefined){ if(window._preCoinTheme)_rt.setAttribute('data-theme',window._preCoinTheme); else _rt.removeAttribute('data-theme'); window._preCoinTheme=undefined; } }catch(e){}

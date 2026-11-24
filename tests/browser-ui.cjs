@@ -26,5 +26,26 @@ const root=path.resolve(__dirname,'..'),base='https://sannaq.github.io/vantor/';
  assert(await page.locator('#briefPanel .tile .v.down').last().evaluate(e=>getComputedStyle(e).color===getComputedStyle(document.querySelector('.down')).color));
  await page.evaluate(()=>uiNotice('<img src=x onerror=alert(1)> 알림 검사','TEST'));await page.locator('#uiNoticeButton').click();assert(await page.locator('#uiNoticePanel').isVisible());assert.equal(await page.locator('#uiNoticeList img').count(),0);assert((await page.locator('#uiNoticeList').innerText()).includes('알림 검사'));await page.keyboard.press('Escape');assert(await page.locator('#uiNoticePanel').isHidden());
  await page.locator('#uiNoticeButton').click();await page.locator('#briefPanel h2').first().click();assert(await page.locator('#uiNoticePanel').isHidden());
+
+ // Patrol regressions: source dates, missing integrations, mobile duplication and coin mode.
+ const dated=await page.evaluate(()=>{
+   var cal={weeks:[{from:'2026-11-23',to:'2026-11-29',days:{'2026-11-23':[{t:'새벽 발언',sub:'한국시간 11/24 06:00'}],'2026-11-24':[{t:'내일 발표',sub:'한국시간 11/25 00:00'},{t:'국내 실적 테스트'},{t:'미국 실적 미정'}]}}]};
+   return {html:uiTodayEvents(cal,'2026-11-24'),year:uiEventDay({sub:'한국시간 1/1 02:00'},'2026-12-31'),flow:flowTabReal({foreign:1,inst:2,investDate:'20261123'}),unknown:uiFlowDate({}),stale:uiAccountHealth({valuationDate:'20261120',sourceDate:'20261123'},{date:'20261123'}),current:uiAccountHealth({valuationDate:'20261120',sourceDate:'20261120'},{date:'20261120'})};
+ });
+ assert(dated.html.includes('새벽 발언'));assert(!dated.html.includes('내일 발표'));assert(dated.html.includes('한국시간 미확인'));assert.equal(dated.year.date,'2027-01-01');assert(dated.flow.includes('2026-11-23 기준'));assert(!dated.flow.includes('당일 누적'));assert.equal(dated.unknown,'기준일 미확인');assert.equal(dated.stale.label,'갱신 지연');assert.equal(dated.current.label,'정상');
+ await context.route('**/feeds/automation-health.json',r=>r.fulfill({json:{checkedAt:new Date().toISOString(),failureAlertConfigured:false}}));
+ await page.evaluate(()=>uiRefreshHealth());assert((await page.locator('#uiHealth summary').innerText()).includes('실패 알림 미연결'));
+ await page.evaluate(()=>showView('home'));await page.locator('.ui-home-accounts').waitFor();
+ if(width<700){assert(await page.locator('#glance .ga-grid').isHidden());await page.locator('.ui-shortcuts summary').click();assert(await page.locator('#glance .ga-grid').isVisible());await page.locator('.ui-shortcuts [data-gv="events"]').click();assert(await page.locator('#v-events').isVisible());}
+ await page.evaluate(()=>{setMode('coin');window._uiCoinRows=[{s:'BTC',px:90000,ch:1.25},{s:'ETH',px:3000,ch:-2},{s:'SOL',px:150,ch:0}];window._uiCoinAt=Date.now();uiCoinBar();});
+ assert((await page.locator('#idxbar').innerText()).includes('BTC'));assert(!(await page.locator('#idxbar').innerText()).includes('KOSPI'));assert(await page.locator('#uiHealth').isHidden());
+ await page.locator('#idxbar').click();assert(await page.locator('#v-coin').isVisible());
+ await page.evaluate(()=>{window._uiCoinAt=Date.now()-180000;uiCoinBar();});assert((await page.locator('#idxbar').innerText()).includes('시세 연결 확인 중'));
+ await page.evaluate(()=>setMode('stock'));assert((await page.locator('#idxbar').innerText()).includes('KOSPI'));assert(await page.locator('#uiHealth').isVisible());
+
+ await page.evaluate(()=>openStock('005930'));await page.waitForFunction(()=>document.querySelector('#vscore')?.textContent.includes('네이버 증권'));
+ assert(!(await page.locator('#stab-flow').innerText()).includes('억원·데모'));assert.equal((await page.locator('#m-mcap .v').innerText()).trim(),'—');
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ await page.screenshot({path:'/tmp/vantor-fix-stock-'+width+'.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS: hierarchy, mobile picks, turnover, events, briefing, colors and inbox at '+width);await context.close();
  }}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

@@ -22,6 +22,10 @@ permissions:
   actions: write
 
 jobs:
+  health:
+    uses: ./.github/workflows/health.yml
+    secrets: inherit
+
   update:
     # (11/19) chain=hop 은 밤·주말에 사슬만 잇는 실행 — 수급은 받지 않는다
     if: github.event.inputs.chain != 'hop'

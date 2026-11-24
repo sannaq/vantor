@@ -1,7 +1,7 @@
 name: 동기화·자동화 회귀 검사
 on:
   push:
-    paths: ['index.html', 'quant.js', 'quant.css', 'ui-layout.js', 'ui-layout.css', 'app.js', 'sync-core.js', 'tests/**', 'scripts/paper-*.mjs', 'scripts/gemini-review.mjs', 'scripts/automation_schedule.py', 'scripts/kr_brief.py', 'scripts/us_brief.py', '.github/workflows/**']
+    paths: ['index.html', 'quant.js', 'quant.css', 'ui-layout.js', 'ui-layout.css', 'app.js', 'sync-core.js', 'tests/**', 'scripts/paper-*.mjs', 'scripts/gemini-review.mjs', 'scripts/automation_schedule.py', 'scripts/automation_health.py', 'scripts/kr_brief.py', 'scripts/us_brief.py', '.github/workflows/**']
   pull_request:
     paths: ['index.html', 'quant.js', 'quant.css', 'ui-layout.js', 'ui-layout.css', 'app.js', 'sync-core.js', 'tests/**', 'scripts/**', '.github/workflows/**']
 permissions:
