@@ -44,7 +44,7 @@ const root=path.resolve(__dirname,'..'),base='https://sannaq.github.io/vantor/';
  await page.evaluate(()=>setMode('stock'));assert((await page.locator('#idxbar').innerText()).includes('KOSPI'));assert(await page.locator('#uiHealth').isVisible());
 
  await page.evaluate(()=>openStock('005930'));await page.waitForFunction(()=>document.querySelector('#vscore')?.textContent.includes('네이버 증권'));
- assert(!(await page.locator('#stab-flow').innerText()).includes('억원·데모'));assert.equal((await page.locator('#m-mcap .v').innerText()).trim(),'—');
+ assert(!(await page.locator('#stab-flow').innerText()).includes('억원·데모'));assert.equal((await page.locator('#m-mcap .v').innerText()).trim(),'—');for(const id of ['m-str','m-bid','m-prog','m-inv'])assert.equal((await page.locator('#'+id+' .v').innerText()).trim(),'—');
  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
  await page.screenshot({path:'/tmp/vantor-fix-stock-'+width+'.png',fullPage:true});
  assert.deepEqual(errors,[]);console.log('PASS: hierarchy, mobile picks, turnover, events, briefing, colors and inbox at '+width);await context.close();

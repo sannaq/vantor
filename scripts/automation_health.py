@@ -36,6 +36,8 @@ def recovery_allowed(runs, now):
 
 def api(path, method='GET', body=None):
     cmd = ['gh', 'api', path, '--method', method]
+    if '/contents/' in path:
+        cmd += ['-H', 'Accept: application/vnd.github.raw+json']
     if body is not None:
         cmd += ['--input', '-']
     r = subprocess.run(cmd, input=json.dumps(body) if body is not None else None,
@@ -44,12 +46,10 @@ def api(path, method='GET', body=None):
 
 
 def main():
-    import base64
     repo = os.environ['GITHUB_REPOSITORY']
     now = datetime.now(timezone.utc)
     def feed(name):
-        content = api(f'repos/{repo}/contents/feeds/{name}.json?ref=main')
-        return json.loads(base64.b64decode(content['content']))
+        return api(f'repos/{repo}/contents/feeds/{name}.json?ref=main')
     rows, requests = [], {}
     for label, name, source, workflow in TARGETS:
         try:

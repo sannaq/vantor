@@ -2204,7 +2204,8 @@ function _stkTabs(r){ var el=$('#stockPanel'); if(!el)return; var sg=el.querySel
     h.parentNode.insertBefore(s2,h.nextSibling); });
 }
 function openStock(code,opt){
-  var r=scoredOf(code,opt); /* opt={n,mk}: 목록에 없는 미장 종목(추천 화면)의 이름·거래소 */ SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
+  var r=Object.assign({},scoredOf(code,opt)); /* 상세는 실제 수급 도착 전 예시 RADAR 값을 섞지 않는다. */
+  r.strength=null;r.bidRatio=null;r.progPct=null;r.invest=null;r._flow=null; SEL=r; _stkScroll=window.scrollY; _chartTF='D'; showView('stock',true);
   var el=$('#stockPanel'); if(!el)return;
   var isUS=r.ccy==='USD';
   var subs=stockSubs(r), grd=gradeTxt(r.score);

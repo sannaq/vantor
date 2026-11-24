@@ -23,14 +23,13 @@ class HealthTest(unittest.TestCase):
         self.assertTrue(h.recovery_allowed([{'status':'completed','created_at':'2026-11-24T06:30:00Z'}],now)[0])
 
     def test_recovery_requests_once_for_shared_workflow(self):
-        import base64
         from unittest.mock import patch
         calls = []
         def fake(path, method='GET', body=None):
             calls.append((path, method))
             if '/contents/' in path:
                 value = {'date':'20261123'} if '/stock-' in path else {'valuationDate':'20261120','sourceDate':'20261120'}
-                return {'content':base64.b64encode(h.json.dumps(value).encode()).decode()}
+                return value
             if '/runs?' in path: return {'workflow_runs':[]}
         with patch.dict(h.os.environ, {'GITHUB_REPOSITORY':'test/repo','ALERT_CONFIGURED':'false'}), patch.object(h,'api',side_effect=fake), patch.object(h.Path,'write_text') as write:
             h.main()

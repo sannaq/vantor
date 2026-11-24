@@ -41,10 +41,13 @@ function uiAccountHealth(state,source){
 }
 async function uiRefreshHealth(){
   var el=document.getElementById('uiHealth');if(!el)return;
-  var names=['paper-kr','paper-us','formula-paper-us','stock-picks','stock-picks-us','stock-scores-us','automation-health'];
-  var data=await Promise.all(names.map(function(name){return fetch('feeds/'+name+'.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
-  var states=[uiAccountHealth(data[0],data[3]),uiAccountHealth(data[1],data[4]),uiAccountHealth(data[2],data[5])],labels=['국내 계좌','미국 계좌','공식 비교'];
-  var report=data[6],stamp=Date.parse(report?.checkedAt||''),fresh=Number.isFinite(stamp)&&Date.now()-stamp<4*3600e3&&stamp<=Date.now()+60000;
+  // Public health feed contains dates only; do not redownload multi-megabyte review histories on every page.
+  var names=['stock-picks','stock-picks-us','automation-health'];
+  var docs=await Promise.all(names.map(function(name){return fetch('feeds/'+name+'.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}));
+  var report=docs[2],stamp=Date.parse(report?.checkedAt||''),fresh=Number.isFinite(stamp)&&Date.now()-stamp<4*3600e3&&stamp<=Date.now()+60000;
+  var data=(report?.accounts||[]).map(function(row){return {valuationDate:row.valuationDate,sourceDate:row.signalDate,status:row.accountStatus,updatedAt:row.updatedAt};});
+  data=[data[0],data[1],data[2],docs[0],docs[1],docs[1]];
+  var labels=['국내 계좌','미국 계좌','공식 비교'],states=labels.map(function(_,i){return fresh?uiAccountHealth(data[i],data[i+3]):{label:'확인 대기',tone:'unknown'};});
   var alertLabel=!fresh?'연결 확인 대기':report.failureAlertConfigured===true?'설정 연결됨 · 전송 검증 별도':report.failureAlertConfigured===false?'미연결':'연결 확인 대기';
   el.innerHTML='<summary>자료 상태 · '+states.map(function(x,i){return '<span class="ui-health-'+x.tone+'">'+labels[i]+' '+x.label+'</span>';}).join(' · ')+' · 실패 알림 '+alertLabel+'</summary><div>'+states.map(function(x,i){return '<p><b>'+labels[i]+' '+x.label+'</b> · 평가 '+esc(data[i]?.valuationDate||'미확인')+' / 추천 '+esc(data[i+3]?.date||'미확인')+'<br><small>계좌 저장 '+esc(data[i]?.updatedAt?new Date(data[i].updatedAt).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미확인')+' (한국시간)</small></p>';}).join('')+'<p>정상은 공개된 최신 추천 기준일까지 평가됐다는 뜻이에요. AI 심사·매수 여부와 알림 전송 성공은 별도입니다.</p><p>실패 알림: '+alertLabel+' · '+(fresh?'설정 확인 '+esc(new Date(stamp).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})):'설정 확인 자료가 없거나 4시간 이상 지났어요.')+'</p></div>';
 }
