@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-25T23:47:24.546510+00:00",
+  "checkedAt": "2026-11-25T23:48:11.956020+00:00",
   "accounts": [
     {
       "label": "국내 모의계좌",
@@ -7,18 +7,17 @@
       "sourceDate": "20261125",
       "valuationDate": "20261125",
       "signalDate": "20261125",
-      "updatedAt": "2026-11-25T20:12:15.228Z",
+      "updatedAt": "2026-11-25T23:47:12.522Z",
       "accountStatus": "daily_review_limit"
     },
     {
       "label": "미국 모의계좌",
-      "status": "delayed",
+      "status": "current",
       "sourceDate": "20261125",
-      "valuationDate": "20261124",
-      "signalDate": "20261124",
-      "updatedAt": "2026-11-25T20:12:26.070Z",
-      "accountStatus": "waiting_evidence",
-      "recovery": "실행 중이거나 대기 중"
+      "valuationDate": "20261125",
+      "signalDate": "20261125",
+      "updatedAt": "2026-11-25T23:47:51.972Z",
+      "accountStatus": "daily_review_limit"
     },
     {
       "label": "미국 공식 비교",
