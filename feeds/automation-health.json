@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-25T05:27:54.506700+00:00",
+  "checkedAt": "2026-11-25T05:28:29.759515+00:00",
   "accounts": [
     {
       "label": "국내 모의계좌",
@@ -7,7 +7,7 @@
       "sourceDate": "20261124",
       "valuationDate": "20261124",
       "signalDate": "20261124",
-      "updatedAt": "2026-11-25T05:26:00.287Z",
+      "updatedAt": "2026-11-25T05:28:17.073Z",
       "accountStatus": "waiting_evidence"
     },
     {
@@ -16,7 +16,7 @@
       "sourceDate": "20261124",
       "valuationDate": "20261124",
       "signalDate": "20261124",
-      "updatedAt": "2026-11-25T05:26:10.104Z",
+      "updatedAt": "2026-11-25T05:28:26.439Z",
       "accountStatus": "waiting_evidence"
     },
     {
@@ -25,7 +25,7 @@
       "sourceDate": "20261124",
       "valuationDate": "20261124",
       "signalDate": "20261124",
-      "updatedAt": "2026-11-25T04:49:51.036Z",
+      "updatedAt": "2026-11-25T05:28:03.493Z",
       "accountStatus": "ready"
     }
   ],
