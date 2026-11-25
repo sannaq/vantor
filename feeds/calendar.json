@@ -2430,24 +2430,13 @@
      },
      {
       "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 4곳: HL D&I·하나마이크론·성광벤드·엠로",
-      "kw": [
-       "HL D&I",
-       "하나마이크론",
-       "성광벤드",
-       "엠로"
-      ]
-     },
-     {
-      "c": "earn",
-      "t": "Hewlett Packard·Agilent Technologies (장 마감 후)",
-      "tk": "HPE,A"
+      "t": "크라우드스트라이크 (시간 미정)",
+      "tk": "CRWD"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 5곳: Trip.com Limited·Zoom Communications(후)·Symbotic(후)·Jacobs Solutions(후)·Semtech(후)"
+      "t": "미국 실적 8곳: Hewlett Packard·Agilent Technologies·Zscaler·Zoom Communications·Symbotic·Jacobs Solutions·Semtech·Amentum"
      }
     ],
     "2026-11-24": [
@@ -2464,11 +2453,13 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 4곳: KCC글라스·성호전자·쿠콘·오픈놀",
+      "t": "국내 실적 6곳: KCC글라스·성호전자·쿠콘·이랜텍·브리지텍·오픈놀",
       "kw": [
        "KCC글라스",
        "성호전자",
        "쿠콘",
+       "이랜텍",
+       "브리지텍",
        "오픈놀"
       ]
      },
@@ -2561,7 +2552,7 @@
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 11곳: Dollar Tree(전)·HP(후)·Best Buy(전)·Burlington Stores(전)·Nutanix(후)·The J.M.(전)·Dick's Sporting(전)·Urban Outfitters(후)·Dycom Industries(전)·Vipshop Limited(전)·Abercrombie &(전)"
+      "t": "미국 실적 11곳: Dollar Tree(전)·HP(후)·Best Buy(전)·Nutanix(후)·Burlington Stores(전)·The J.M.(전)·Dick's Sporting(전)·Urban Outfitters(후)·Dycom Industries(전)·Vipshop Limited(전)·Abercrombie &(전)"
      }
     ],
     "2026-11-25": [
@@ -2596,11 +2587,22 @@
       ]
      },
      {
+      "c": "talk",
+      "t": "연준 보우먼 위원 발언",
+      "kw": [
+       "보우먼",
+       "Bowman"
+      ],
+      "sub": "한국시간 11/25 21:25"
+     },
+     {
       "c": "earn",
       "lo": 1,
-      "t": "국내 실적 3곳: 한국가스공사·NHN KCP·데이원컴퍼니",
+      "t": "국내 실적 5곳: 한국가스공사·세방전지·주성엔지니어링·NHN KCP·데이원컴퍼니",
       "kw": [
        "한국가스공사",
+       "세방전지",
+       "주성엔지니어링",
        "NHN KCP",
        "데이원컴퍼니"
       ]
@@ -2790,13 +2792,6 @@
   }
  ],
  "earnings": [
-  {
-   "d": "2026-11-03",
-   "n": "AMD",
-   "tk": "AMD",
-   "auto": true,
-   "when": "A"
-  },
   {
    "d": "2026-11-06",
    "n": "버크셔",

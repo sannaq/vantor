@@ -1,13 +1,13 @@
 {
   "week": "2026년 11월 4주차",
   "range": "11/23~11/27",
-  "updated": "2026-11-24",
+  "updated": "2026-11-25",
   "intro": "이번 주 핵심: **PCE 물가지수**, **GDP 성장률**, **한은 금통위 기준금리 결정** (★★★ = 매우 중요)",
   "dayNotes": {},
   "events": [
     {"date": "2026-11-23", "time": "23:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 제조업 PMI(속보)", "note": "제조업 체감 경기 속보치. (예상 54.5 · 직전 56.0)", "src": "ff:Flash Manufacturing PMI", "rx": {"day": "2026-11-23", "mk": "US", "items": [["S&P500", 4.73, "pct"], ["나스닥", 6.51, "pct"], ["미 10년물", 1, "bp"], ["달러지수", 0.49, "pct"]]}},
     {"date": "2026-11-23", "time": "23:45", "market": "US", "type": "data", "imp": 2, "title": "S&P 서비스업 PMI(속보)", "note": "서비스업 체감 경기 속보치. (예상 55.6 · 직전 57.9)", "src": "ff:Flash Services PMI", "rx": {"day": "2026-11-23", "mk": "US", "items": [["S&P500", 4.73, "pct"], ["나스닥", 6.51, "pct"], ["미 10년물", 1, "bp"], ["달러지수", 0.49, "pct"]]}},
-    {"date": "2026-11-25", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 92.1 · 직전 91.7)", "src": "ff:CB Consumer Confidence"},
+    {"date": "2026-11-25", "time": "00:00", "market": "US", "type": "data", "imp": 2, "title": "컨퍼런스보드 소비자신뢰지수", "note": "소비 심리. (예상 92.1 · 직전 91.7)", "src": "ff:CB Consumer Confidence", "rx": {"day": "2026-11-24", "mk": "US", "items": [["S&P500", -0.5, "pct"], ["나스닥", -1.48, "pct"], ["미 10년물", -1, "bp"], ["달러지수", -0.33, "pct"]]}},
     {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "PCE 물가지수", "note": "연준이 가장 중시하는 물가. 뜨거우면 인상 확률↑. (예상 0.3% · 직전 0.3%)", "src": "ff:Core PCE Price Index m/m", "fc": {"Core PCE Price Index m/m": "0.3%"}},
     {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 3, "title": "GDP 성장률", "note": "경기 전체 성적표. (예상 3.5% · 직전 3.4%)", "src": "ff:Prelim GDP q/q", "fc": {"Prelim GDP q/q": "3.5%"}},
     {"date": "2026-11-25", "time": "22:30", "market": "US", "type": "data", "imp": 2, "title": "GDP 물가지수", "note": "성장 속 물가 압력. (예상 2.3% · 직전 2.3%)", "src": "ff:Prelim GDP Price Index q/q"},
