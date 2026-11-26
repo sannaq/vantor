@@ -2451,19 +2451,6 @@
       ]
      },
      {
-      "c": "earn",
-      "lo": 1,
-      "t": "국내 실적 6곳: KCC글라스·성호전자·쿠콘·이랜텍·브리지텍·오픈놀",
-      "kw": [
-       "KCC글라스",
-       "성호전자",
-       "쿠콘",
-       "이랜텍",
-       "브리지텍",
-       "오픈놀"
-      ]
-     },
-     {
       "c": "data",
       "lo": 1,
       "t": "美 주간 ADP 취업자 변동",
@@ -2535,24 +2522,13 @@
      },
      {
       "c": "earn",
-      "t": "아날로그디바이스·Medtronic (장 전)",
-      "tk": "ADI,MDT",
-      "when": "B"
-     },
-     {
-      "c": "earn",
-      "t": "델·Autodesk·Workday (장 마감 후)",
-      "tk": "DELL,ADSK,WDAY"
-     },
-     {
-      "c": "earn",
-      "t": "BHP (시간 미정)",
-      "tk": "BHP"
+      "t": "델·아날로그디바이스·Medtronic (시간 미정)",
+      "tk": "DELL,ADI,MDT"
      },
      {
       "c": "earn",
       "lo": 1,
-      "t": "미국 실적 11곳: Dollar Tree(전)·HP(후)·Best Buy(전)·Nutanix(후)·Burlington Stores(전)·The J.M.(전)·Dick's Sporting(전)·Urban Outfitters(후)·Dycom Industries(전)·Vipshop Limited(전)·Abercrombie &(전)"
+      "t": "미국 실적 15곳: Autodesk·Workday·Dollar Tree·HP·Best Buy·Burlington Stores·Nutanix·The J.M.·Dick's Sporting·Urban Outfitters·Abercrombie &·Vipshop Limited·Dycom Industries·MiniMed·CMB.TECH NV"
      }
     ],
     "2026-11-25": [
@@ -2696,12 +2672,6 @@
       ],
       "sub": "한국시간 12:00",
       "lo": 1
-     },
-     {
-      "c": "earn",
-      "t": "디어 (장 전)",
-      "tk": "DE",
-      "when": "B"
      },
      {
       "c": "earn",
