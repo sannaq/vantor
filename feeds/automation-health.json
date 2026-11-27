@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-27T04:14:01.449527+00:00",
+  "checkedAt": "2026-11-27T04:17:58.023759+00:00",
   "accounts": [
     {
       "label": "국내 모의계좌",
@@ -7,8 +7,8 @@
       "sourceDate": "20261126",
       "valuationDate": "20261126",
       "signalDate": "20261126",
-      "updatedAt": "2026-11-27T04:01:16.286Z",
-      "accountStatus": "api_error"
+      "updatedAt": "2026-11-27T04:17:22.771Z",
+      "accountStatus": "waiting_evidence"
     },
     {
       "label": "미국 모의계좌",
@@ -16,7 +16,7 @@
       "sourceDate": "20261125",
       "valuationDate": "20261125",
       "signalDate": "20261125",
-      "updatedAt": "2026-11-27T04:01:30.188Z",
+      "updatedAt": "2026-11-27T04:17:36.982Z",
       "accountStatus": "waiting_evidence"
     },
     {
